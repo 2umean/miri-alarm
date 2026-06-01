@@ -1,20 +1,14 @@
-import {
-  AndroidConfig,
-  type ConfigPlugin,
-  withAndroidManifest,
-} from '@expo/config-plugins';
-
-type ManifestApplication = AndroidConfig.Manifest.ManifestApplication;
-// Loose alias — manifest sub-nodes are bags of { $: {...} } in the AST.
-type ManifestNode = { $: Record<string, string>; [key: string]: unknown };
+// CommonJS config plugin (NOT .ts): eas-cli does not transpile referenced
+// TypeScript plugin files, so the plugin must be plain JS that any tool can require.
+const { AndroidConfig, withAndroidManifest } = require('@expo/config-plugins');
 
 const PACKAGE = 'expo.modules.schedularmalarm';
 
 /** All permissions the bespoke alarm pipeline needs. */
-const PERMISSIONS: Array<{ name: string; maxSdkVersion?: string }> = [
+const PERMISSIONS = [
   // Auto-granted "core alarm app" declaration — preferred over SCHEDULE_EXACT_ALARM.
   { name: 'android.permission.USE_EXACT_ALARM' },
-  // User-grantable fallback on API ≤ 32 (deprecated by USE_EXACT_ALARM on 33+).
+  // User-grantable fallback on API <= 32 (deprecated by USE_EXACT_ALARM on 33+).
   { name: 'android.permission.SCHEDULE_EXACT_ALARM', maxSdkVersion: '32' },
   { name: 'android.permission.USE_FULL_SCREEN_INTENT' },
   { name: 'android.permission.FOREGROUND_SERVICE' },
@@ -25,45 +19,32 @@ const PERMISSIONS: Array<{ name: string; maxSdkVersion?: string }> = [
   { name: 'android.permission.VIBRATE' },
 ];
 
-function addPermissions(manifest: AndroidConfig.Manifest.AndroidManifest): void {
-  const list = (manifest.manifest['uses-permission'] ??=
-    []) as ManifestNode[];
+function addPermissions(manifest) {
+  const list = (manifest.manifest['uses-permission'] ??= []);
   for (const perm of PERMISSIONS) {
-    const existing = list.find((p) => p.$?.['android:name'] === perm.name);
+    const existing = list.find((p) => p.$ && p.$['android:name'] === perm.name);
     if (existing) {
-      if (perm.maxSdkVersion) {
-        existing.$['android:maxSdkVersion'] = perm.maxSdkVersion;
-      }
+      if (perm.maxSdkVersion) existing.$['android:maxSdkVersion'] = perm.maxSdkVersion;
       continue;
     }
-    const entry: ManifestNode = { $: { 'android:name': perm.name } };
-    if (perm.maxSdkVersion) {
-      entry.$['android:maxSdkVersion'] = perm.maxSdkVersion;
-    }
+    const entry = { $: { 'android:name': perm.name } };
+    if (perm.maxSdkVersion) entry.$['android:maxSdkVersion'] = perm.maxSdkVersion;
     list.push(entry);
   }
 }
 
 /** Insert-or-replace a component (by android:name) with the given attributes. */
-function upsert(
-  collection: ManifestNode[],
-  name: string,
-  attributes: Record<string, string>,
-  extra?: Record<string, unknown>,
-): void {
-  const idx = collection.findIndex((c) => c.$?.['android:name'] === name);
-  const node: ManifestNode = { $: attributes, ...(extra ?? {}) };
-  if (idx >= 0) {
-    collection[idx] = node;
-  } else {
-    collection.push(node);
-  }
+function upsert(collection, name, attributes, extra) {
+  const idx = collection.findIndex((c) => c.$ && c.$['android:name'] === name);
+  const node = Object.assign({ $: attributes }, extra || {});
+  if (idx >= 0) collection[idx] = node;
+  else collection.push(node);
 }
 
-function addComponents(application: ManifestApplication): void {
-  const services = (application.service ??= []) as unknown as ManifestNode[];
-  const activities = (application.activity ??= []) as unknown as ManifestNode[];
-  const receivers = (application.receiver ??= []) as unknown as ManifestNode[];
+function addComponents(application) {
+  const services = (application.service ??= []);
+  const activities = (application.activity ??= []);
+  const receivers = (application.receiver ??= []);
 
   // Looping-audio foreground service (systemExempted: alarm-app FGS exemption).
   upsert(services, `${PACKAGE}.AlarmForegroundService`, {
@@ -117,14 +98,12 @@ function addComponents(application: ManifestApplication): void {
   );
 }
 
-const withSchedularmAlarm: ConfigPlugin = (config) =>
+const withSchedularmAlarm = (config) =>
   withAndroidManifest(config, (cfg) => {
     addPermissions(cfg.modResults);
-    const application = AndroidConfig.Manifest.getMainApplicationOrThrow(
-      cfg.modResults,
-    );
+    const application = AndroidConfig.Manifest.getMainApplicationOrThrow(cfg.modResults);
     addComponents(application);
     return cfg;
   });
 
-export default withSchedularmAlarm;
+module.exports = withSchedularmAlarm;

@@ -3,6 +3,7 @@ import { ExpoConfig } from 'expo/config';
 const config: ExpoConfig = {
   name: 'schedularm',
   slug: 'schedularm',
+  owner: 'kgulag98',
   scheme: 'schedularm',
   version: '0.1.0',
   orientation: 'portrait',
