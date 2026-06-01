@@ -1,0 +1,7 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!--
+    Components (service / activity / receivers) and permissions are injected into
+    the *app* manifest by plugin/withSchedularmAlarm.ts so the lock-screen / FGS
+    flags land in the merged manifest exactly as aggressive OEMs require.
+  -->
+</manifest>
