@@ -22,6 +22,11 @@ const config: ExpoConfig = {
     // below — single source of truth in modules/schedularm-alarm/plugin.
   },
   plugins: ['./modules/schedularm-alarm/plugin/withSchedularmAlarm'],
+  extra: {
+    eas: {
+      projectId: 'ff51bf5f-ee0b-48d7-9cf3-7b83f44a0fd8',
+    },
+  },
 };
 
 export default config;
