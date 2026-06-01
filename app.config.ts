@@ -16,17 +16,11 @@ const config: ExpoConfig = {
   },
   android: {
     package: 'com.umean.schedularm',
-    permissions: [
-      'USE_EXACT_ALARM',
-      'USE_FULL_SCREEN_INTENT',
-      'FOREGROUND_SERVICE',
-      'FOREGROUND_SERVICE_SPECIAL_USE',
-      'RECEIVE_BOOT_COMPLETED',
-      'POST_NOTIFICATIONS',
-      'WAKE_LOCK',
-      'VIBRATE',
-    ],
+    // Alarm permissions (incl. SCHEDULE_EXACT_ALARM maxSdkVersion + the
+    // service/activity/receiver components) are injected by the config plugin
+    // below — single source of truth in modules/schedularm-alarm/plugin.
   },
+  plugins: ['./modules/schedularm-alarm/plugin/withSchedularmAlarm'],
 };
 
 export default config;
