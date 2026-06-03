@@ -17,6 +17,7 @@ import {
 } from '../modules/schedularm-alarm';
 
 const RING_DELAY_MS = 2 * 60 * 1000; // "Ring in 2 min"
+const REBOOT_TEST_DELAY_MS = 15 * 60 * 1000; // long lead so a reboot finishes before it fires
 
 export default function AlarmSpike() {
   const [status, setStatus] = useState<PermissionStatus | null>(null);
@@ -45,9 +46,9 @@ export default function AlarmSpike() {
     }
   }, [refreshStatus]);
 
-  const onRingIn2Min = useCallback(() => {
+  const armIn = useCallback((ms: number) => {
     try {
-      const fireAt = Date.now() + RING_DELAY_MS;
+      const fireAt = Date.now() + ms;
       scheduleAlarm(fireAt);
       setLastAction(`Armed for ${new Date(fireAt).toLocaleTimeString()}`);
     } catch (e) {
@@ -75,7 +76,8 @@ export default function AlarmSpike() {
       </View>
 
       <Button label="Request permissions" onPress={onRequestPermissions} />
-      <Button label="Ring in 2 min" onPress={onRingIn2Min} kind="primary" />
+      <Button label="Ring in 2 min" onPress={() => armIn(RING_DELAY_MS)} kind="primary" />
+      <Button label="Ring in 15 min (reboot test)" onPress={() => armIn(REBOOT_TEST_DELAY_MS)} kind="primary" />
       <Button label="Dismiss" onPress={onDismiss} kind="danger" />
       <Button label="Refresh status" onPress={refreshStatus} kind="ghost" />
 
