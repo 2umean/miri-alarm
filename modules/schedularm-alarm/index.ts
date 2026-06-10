@@ -35,7 +35,7 @@ export function canPostNotifications(): boolean {
   return SchedularmAlarm.canPostNotifications();
 }
 
-/** Snapshot of all three permission gates. */
+/** Snapshot of all five permission gates. */
 export function getPermissionsStatus(): PermissionStatus {
   return SchedularmAlarm.getPermissionsStatus();
 }
@@ -48,4 +48,29 @@ export function getPermissionsStatus(): PermissionStatus {
  */
 export async function requestPermissions(): Promise<PermissionStatus> {
   return SchedularmAlarm.requestPermissions();
+}
+
+/** Build.MANUFACTURER — used to detect aggressive battery-killing OEMs. */
+export function getManufacturer(): string {
+  return SchedularmAlarm.getManufacturer();
+}
+
+/** Whether the app can draw over other apps ("Appear on top"). */
+export function canDrawOverlays(): boolean {
+  return SchedularmAlarm.canDrawOverlays();
+}
+
+/** Whether this package is exempt from battery optimization. */
+export function isBatteryOptimizationIgnored(): boolean {
+  return SchedularmAlarm.isBatteryOptimizationIgnored();
+}
+
+/** Open the system "Appear on top" settings for this app. Re-read status after. */
+export async function requestOverlayPermission(): Promise<PermissionStatus> {
+  return SchedularmAlarm.requestOverlayPermission();
+}
+
+/** Show the battery-optimization-exemption dialog for this app. Re-read status after. */
+export async function requestDisableBatteryOptimization(): Promise<PermissionStatus> {
+  return SchedularmAlarm.requestDisableBatteryOptimization();
 }
