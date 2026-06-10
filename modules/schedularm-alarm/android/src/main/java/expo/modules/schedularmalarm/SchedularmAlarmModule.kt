@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
 import android.provider.Settings
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
@@ -39,6 +40,22 @@ class SchedularmAlarmModule : Module() {
 
     Function("getPermissionsStatus") { permissionsStatus() }
 
+    Function("getManufacturer") { Build.MANUFACTURER ?: "" }
+
+    Function("canDrawOverlays") { canDrawOverlays() }
+
+    Function("isBatteryOptimizationIgnored") { isBatteryOptimizationIgnored() }
+
+    AsyncFunction("requestOverlayPermission") { promise: Promise ->
+      openSettings(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+      promise.resolve(permissionsStatus())
+    }
+
+    AsyncFunction("requestDisableBatteryOptimization") { promise: Promise ->
+      requestIgnoreBatteryOptimization()
+      promise.resolve(permissionsStatus())
+    }
+
     AsyncFunction("requestPermissions") { promise: Promise ->
       requestMostCriticalMissingPermission()
       promise.resolve(permissionsStatus())
@@ -63,10 +80,31 @@ class SchedularmAlarmModule : Module() {
   private fun canPostNotifications(): Boolean =
     NotificationManagerCompat.from(context).areNotificationsEnabled()
 
+  private fun canDrawOverlays(): Boolean =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) Settings.canDrawOverlays(context) else true
+
+  private fun isBatteryOptimizationIgnored(): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return true
+    val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+    return powerManager.isIgnoringBatteryOptimizations(context.packageName)
+  }
+
+  @android.annotation.SuppressLint("BatteryLife")
+  private fun requestIgnoreBatteryOptimization() {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
+    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+      data = Uri.parse("package:${context.packageName}")
+      addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    (appContext.currentActivity ?: context).startActivity(intent)
+  }
+
   private fun permissionsStatus(): Map<String, Any> = mapOf(
     "canScheduleExactAlarms" to canScheduleExactAlarms(),
     "canUseFullScreenIntent" to canUseFullScreenIntent(),
-    "canPostNotifications" to canPostNotifications()
+    "canPostNotifications" to canPostNotifications(),
+    "canDrawOverlays" to canDrawOverlays(),
+    "isBatteryOptimizationIgnored" to isBatteryOptimizationIgnored()
   )
 
   // --- Permission routing -----------------------------------------------------
