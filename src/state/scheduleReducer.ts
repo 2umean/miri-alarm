@@ -44,15 +44,7 @@ export function toSchedule(state: ScheduleState): Schedule | null {
 }
 
 function writeBack(state: ScheduleState, s: Schedule): ScheduleState {
-  return {
-    ...state,
-    arrival: s.arrival,
-    zone: s.zone,
-    contingency: s.contingency,
-    travel: s.travel,
-    prep: s.prep,
-    sleep: s.sleep,
-  };
+  return { ...state, ...s };
 }
 
 /**

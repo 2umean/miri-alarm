@@ -47,6 +47,34 @@ test('edit-wake adjusts prep and leaves arrival fixed (wiring to editResolver)',
   expect(after.arrival).toBe(at(6, 0));
 });
 
+test('edit-leave-home adjusts travel and leaves arrival fixed (wiring to editResolver)', () => {
+  const armed = scheduleReducer(start(), { type: 'set-arrival', instant: at(6, 0), zone: 'UTC' });
+  // leaveHome = 06:00 − (15+60)m = 04:45; move 15 min earlier to 04:30
+  // editLeaveHome: travel = toMinutes(arrival − contingency*ms − newLeave)
+  //              = toMinutes(at(5,45) − at(4,30)) = 75
+  const after = scheduleReducer(armed, { type: 'edit-leave-home', instant: at(4, 30) });
+  expect(after.travel).toBe(SEED_DEFAULTS.travel + 15); // 60 + 15 = 75
+  expect(after.arrival).toBe(at(6, 0));
+  expect(after.contingency).toBe(SEED_DEFAULTS.contingency);
+});
+
+test('edit-fall-asleep adjusts sleep and leaves arrival fixed (wiring to editResolver)', () => {
+  const armed = scheduleReducer(start(), { type: 'set-arrival', instant: at(6, 0), zone: 'UTC' });
+  // wake = leaveHome − prep*ms = at(4,45) − 45m = at(4,0)
+  // move fallAsleep to at(2,0): sleep = toMinutes(at(4,0) − at(2,0)) = 120
+  const after = scheduleReducer(armed, { type: 'edit-fall-asleep', instant: at(2, 0) });
+  expect(after.sleep).toBe(120);
+  expect(after.arrival).toBe(at(6, 0));
+  expect(after.prep).toBe(SEED_DEFAULTS.prep);
+});
+
+test('infeasible edit result is written back (negative duration allowed; spec §6)', () => {
+  const armed = scheduleReducer(start(), { type: 'set-arrival', instant: at(6, 0), zone: 'UTC' });
+  // wake = at(4,0); move fallAsleep after wake → sleep = toMinutes(at(4,0) − at(5,0)) = −60
+  const after = scheduleReducer(armed, { type: 'edit-fall-asleep', instant: at(5, 0) });
+  expect(after.sleep).toBe(-60);
+});
+
 test('edit-arrival shifts the anchor; durations unchanged', () => {
   const armed = scheduleReducer(start(), { type: 'set-arrival', instant: at(6, 0), zone: 'UTC' });
   const after = scheduleReducer(armed, { type: 'edit-arrival', instant: at(7, 0) });
