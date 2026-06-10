@@ -1,5 +1,5 @@
 import { DateTime } from 'luxon';
-import { relativeDayLabel, toLocalClock } from '../domain';
+import { relativeDayLabel, toLocalClock, DayLabel } from '../domain';
 
 /** Minutes → "H:MM" (e.g. 480 → "8:00", 45 → "0:45"). */
 export function formatDuration(minutes: number): string {
@@ -12,7 +12,7 @@ export function formatDuration(minutes: number): string {
 
 export type ClockWithDay = { clock: string; day: string };
 
-const DAY_TEXT: Record<string, string> = {
+const DAY_TEXT: Record<DayLabel, string> = {
   'same-day': 'today',
   'prev-day': 'last night',
   'next-day': 'tomorrow',

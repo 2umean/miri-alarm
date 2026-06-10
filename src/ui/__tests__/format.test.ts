@@ -8,6 +8,8 @@ test('formatDuration renders H:MM', () => {
   expect(formatDuration(480)).toBe('8:00');
   expect(formatDuration(45)).toBe('0:45');
   expect(formatDuration(70)).toBe('1:10');
+  expect(formatDuration(0)).toBe('0:00');
+  expect(formatDuration(-70)).toBe('-1:10');
 });
 
 test('formatClockWithDay shows the clock and a relative-day label', () => {
