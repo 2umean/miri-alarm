@@ -55,7 +55,7 @@ export function getManufacturer(): string {
   return SchedularmAlarm.getManufacturer();
 }
 
-/** Whether the app can draw over other apps ("Appear on top"). */
+/** Whether the app can draw over other apps ("Appear on top" / "Display over other apps"). */
 export function canDrawOverlays(): boolean {
   return SchedularmAlarm.canDrawOverlays();
 }
@@ -65,7 +65,7 @@ export function isBatteryOptimizationIgnored(): boolean {
   return SchedularmAlarm.isBatteryOptimizationIgnored();
 }
 
-/** Open the system "Appear on top" settings for this app. Re-read status after. */
+/** Open the system "Appear on top" / "Display over other apps" settings for this app. Re-read status after. */
 export async function requestOverlayPermission(): Promise<PermissionStatus> {
   return SchedularmAlarm.requestOverlayPermission();
 }
