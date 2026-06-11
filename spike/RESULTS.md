@@ -49,3 +49,30 @@ Dev client: EAS build d1c4dacf (all Plan 2 native hardening: SYSTEM_ALERT_WINDOW
 **Device findings fixed during testing:**
 1. Android time-picker double-dialog — the `display="spinner"` picker is itself a system dialog and stacked over the custom modal card. Fixed in `5b70125` (bare dialog on Android, commit via set/dismissed events; picker now also seeds from the edited row's current time).
 2. Fall-asleep / leave-home alerts were not part of Plan 2 scope (deferred to Plans 3/4) — user pulled forward as simple push alerts; implemented in `1e5e0aa` via expo-notifications (scheduled on arm, cancelled on disarm; wake stays the full native alarm). Requires the next dev build (1e1eb947).
+
+---
+
+# ⏯ RESUME HERE — on-device testing checkpoint (2026-06-11)
+
+**State:** All Plan 2 code is done, reviewed, and committed locally on `main` (NOT pushed). Two device-found fixes landed mid-testing: bare Android time-picker (5b70125) and fall-asleep/leave-home push alerts (1e5e0aa).
+
+**Install this build** (includes the push alerts — replaces the previous one in place):
+https://expo.dev/artifacts/eas/ZwZ5lUZTe0EK4q13687mPQ78PG_HZ-ihUWe6AaE1pOg.apk
+
+**To connect the dev server** (VPN breaks LAN + ngrok tunnel):
+- Home Wi-Fi, no VPN: `npx expo start --dev-client`, pick the server in the app.
+- Or USB anywhere: `adb reverse tcp:8081 tcp:8081 && npx expo start --dev-client`, then in the app "Enter URL manually" → `http://localhost:8081`. (adb is installed via Homebrew.)
+
+**Already verified PASS on S24+:**
+- Auto full-screen ring over the locked screen (the M0 gate) ✅
+- Time-picker fix + row-seeded picker (verify visually after reload) ✅ shipped
+
+**Remaining checklist:**
+1. First-run onboarding: clear app data → 4 steps incl. battery (Samsung), each Enable routes correctly, Continue gated.
+2. Push alerts (NEW build): arm with fall-asleep/leave-home in the near future → 🌙 and 🚪 notifications fire at those instants; Disarm cancels them.
+3. Armed banner survives app kill + relaunch; Disarm prevents the ring.
+4. Sticky presets: change duration + arm → sticks; change without arm → doesn't.
+5. Reboot re-arm: arm ~15-20 min out, reboot, leave locked → fires; `adb logcat -s SchedularmAlarm` shows `BootReceiver.reArm`.
+6. App-kill survival, silent+DND ring, Doze (`adb shell dumpsys deviceidle force-idle`).
+
+**Then:** report PASS/FAIL per item → record final acceptance here → commit → decide on pushing the ~35 local commits.
