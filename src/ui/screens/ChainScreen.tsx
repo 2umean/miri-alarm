@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -5,43 +6,29 @@ import { AlarmService } from '../../alarm/AlarmService';
 import { BOUNDS, resolveArrivalInstant, reverseCalc, ValidationIssue } from '../../domain';
 import { useArming } from '../../hooks/useArming';
 import { useSchedule } from '../../hooks/useSchedule';
+import { t } from '../../i18n';
 import { DurationEditorModal } from '../components/DurationEditorModal';
 import { DurationPill } from '../components/DurationPill';
 import { StatusBanner } from '../components/StatusBanner';
 import { TimeEditorModal } from '../components/TimeEditorModal';
 import { TimeRow } from '../components/TimeRow';
 import { formatClockWithDay, pickedTimeToInstant } from '../format';
+import { colors, fonts, radii, shadows, spacing } from '../theme';
 
 type DurationField = 'contingency' | 'travel' | 'prep' | 'sleep';
 type TimeField = 'arrival' | 'wake' | 'leaveHome' | 'fallAsleep';
 
-const TIME_LABEL: Record<TimeField, string> = {
-  arrival: 'arrival',
-  wake: 'wake up',
-  leaveHome: 'leave home',
-  fallAsleep: 'fall asleep',
-};
-const DURATION_LABEL: Record<DurationField, string> = {
-  contingency: 'contingency',
-  travel: 'travel',
-  prep: 'prep',
-  sleep: 'sleep',
+const DURATION_EMOJI: Record<DurationField, string> = {
+  contingency: '🛟',
+  travel: '🚕',
+  prep: '🚿',
+  sleep: '😴',
 };
 
-const ISSUE_TEXT = (i: ValidationIssue): string => {
-  switch (i.kind) {
-    case 'infeasible':
-      return 'This timing is impossible — a step would take negative time.';
-    case 'past-wake':
-      return 'The wake-up time has already passed.';
-    case 'sleep-debt':
-      return 'Heads up: not much time left to sleep.';
-    case 'chain-too-long':
-      return 'The total span is unrealistically long.';
-    case 'out-of-range':
-      return `The ${i.field} duration is out of range.`;
-  }
-};
+const issueText = (i: ValidationIssue): string =>
+  i.kind === 'out-of-range'
+    ? t('issue.out-of-range', { field: t(`duration.${i.field}`) })
+    : t(`issue.${i.kind}`);
 
 export function ChainScreen() {
   const { state, zone, schedule, derived, issues, armable, nowMs, dispatch, persistPresets } =
@@ -122,8 +109,10 @@ export function ChainScreen() {
   };
 
   return (
-    <View style={styles.screen}>
+    <LinearGradient colors={[colors.skyBgTop, colors.skyBgBottom]} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.scroll}>
+        <Text style={styles.wordmark}>{t('chain.wordmark')}</Text>
+
         <StatusBanner
           health={health}
           armedSummary={armedSummary}
@@ -135,7 +124,7 @@ export function ChainScreen() {
 
         {issues.map((i, idx) => (
           <Text key={idx} style={styles.issue}>
-            ⚠ {ISSUE_TEXT(i)}
+            ⚠ {issueText(i)}
           </Text>
         ))}
 
@@ -143,7 +132,7 @@ export function ChainScreen() {
           <View style={styles.chain}>
             <TimeRow
               icon="🌙"
-              label="Fall asleep"
+              label={t('chain.fallAsleep')}
               {...fmt(derived.fallAsleep)}
               onPress={() => openTime('fallAsleep')}
             />
@@ -151,8 +140,8 @@ export function ChainScreen() {
 
             <TimeRow
               icon="⏰"
-              label="Wake up"
-              badge="ALARM"
+              label={t('chain.wakeUp')}
+              badge={t('chain.alarmBadge')}
               emphasis="alarm"
               {...fmt(derived.wake)}
               onPress={() => openTime('wake')}
@@ -161,7 +150,7 @@ export function ChainScreen() {
 
             <TimeRow
               icon="🚪"
-              label="Leave home"
+              label={t('chain.leaveHome')}
               {...fmt(derived.leaveHome)}
               onPress={() => openTime('leaveHome')}
             />
@@ -176,7 +165,7 @@ export function ChainScreen() {
 
             <TimeRow
               icon="📍"
-              label="Arrive by"
+              label={t('chain.arriveBy')}
               emphasis="anchor"
               {...fmt(derived.arrival)}
               onPress={() => openTime('arrival')}
@@ -184,7 +173,9 @@ export function ChainScreen() {
           </View>
         ) : (
           <Pressable style={styles.empty} onPress={() => openTime('arrival')}>
-            <Text style={styles.emptyText}>＋ Set your arrival time</Text>
+            <Text style={styles.emptyIcon}>🛬</Text>
+            <Text style={styles.emptyTitle}>{t('chain.emptyTitle')}</Text>
+            <Text style={styles.emptySub}>{t('chain.emptySub')}</Text>
           </Pressable>
         )}
 
@@ -192,9 +183,26 @@ export function ChainScreen() {
           <Pressable
             onPress={armed ? disarm : onArm}
             disabled={!armed && !armable}
-            style={[styles.arm, armed ? styles.disarm : armable ? styles.armActive : styles.armDisabled]}
+            style={styles.armWrap}
           >
-            <Text style={styles.armText}>{armed ? 'Disarm' : 'Arm alarm'}</Text>
+            {armed ? (
+              <View style={[styles.armInner, styles.disarm]}>
+                <Text style={styles.armText}>{t('chain.disarm')}</Text>
+              </View>
+            ) : armable ? (
+              <LinearGradient
+                colors={[colors.sky500, colors.sky700]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.armInner}
+              >
+                <Text style={styles.armText}>{t('chain.arm')}</Text>
+              </LinearGradient>
+            ) : (
+              <View style={[styles.armInner, styles.armDisabled]}>
+                <Text style={[styles.armText, styles.armTextDisabled]}>{t('chain.arm')}</Text>
+              </View>
+            )}
           </Pressable>
         ) : null}
       </ScrollView>
@@ -202,7 +210,7 @@ export function ChainScreen() {
       {timeEditor ? (
         <TimeEditorModal
           visible
-          title={`Set ${TIME_LABEL[timeEditor]}`}
+          title={t('editor.setTime', { field: t(`timeField.${timeEditor}`) })}
           initial={timeEditorInitial()}
           onCancel={() => setTimeEditor(null)}
           onConfirm={confirmTime}
@@ -212,35 +220,61 @@ export function ChainScreen() {
       {durationEditor ? (
         <DurationEditorModal
           visible
-          title={`Set ${DURATION_LABEL[durationEditor]}`}
+          title={`${DURATION_EMOJI[durationEditor]} ${t(`duration.${durationEditor}`)}`}
           initialMinutes={state[durationEditor]}
           max={BOUNDS[durationEditor][1]}
           onCancel={() => setDurationEditor(null)}
           onConfirm={confirmDuration}
         />
       ) : null}
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#0B1021' },
-  scroll: { padding: 20, paddingTop: 64 },
-  issue: { color: '#FFB870', fontSize: 14, marginBottom: 6 },
-  chain: { backgroundColor: '#11172B', borderRadius: 16, padding: 16 },
-  pillRow: { flexDirection: 'row', gap: 8 },
+  screen: { flex: 1 },
+  scroll: { padding: spacing.xl, paddingTop: 56 },
+  wordmark: {
+    color: colors.ink2,
+    fontSize: 11,
+    fontFamily: fonts.extra,
+    letterSpacing: 1.5,
+    marginBottom: spacing.s,
+    marginLeft: spacing.xs,
+  },
+  issue: {
+    backgroundColor: colors.warnBg,
+    color: colors.warnText,
+    fontSize: 12,
+    fontFamily: fonts.bold,
+    borderRadius: radii.bubble - 4,
+    paddingVertical: spacing.s + 1,
+    paddingHorizontal: spacing.l - 2,
+    marginBottom: spacing.s - 2,
+    overflow: 'hidden',
+  },
+  chain: { gap: spacing.xs + 2 },
+  pillRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing.s },
   empty: {
-    borderWidth: 1,
-    borderColor: '#2A3A66',
+    borderWidth: 2,
+    borderColor: '#A9CFF5',
     borderStyle: 'dashed',
-    borderRadius: 16,
-    padding: 32,
+    borderRadius: radii.bubble,
+    padding: spacing.xxl + 8,
+    alignItems: 'center',
+    backgroundColor: colors.skyBgBottom,
+  },
+  emptyIcon: { fontSize: 30 },
+  emptyTitle: { color: colors.sky700, fontSize: 15, fontFamily: fonts.extra, marginTop: spacing.s },
+  emptySub: { color: colors.ink2, fontSize: 11, fontFamily: fonts.semi, marginTop: 3 },
+  armWrap: { marginTop: spacing.xxl, ...shadows.button },
+  armInner: {
+    borderRadius: radii.pill,
+    paddingVertical: spacing.l + 1,
     alignItems: 'center',
   },
-  emptyText: { color: '#7E8AB0', fontSize: 18 },
-  arm: { marginTop: 24, borderRadius: 14, paddingVertical: 18, alignItems: 'center' },
-  armActive: { backgroundColor: '#3D6BFF' },
-  armDisabled: { backgroundColor: '#27314F' },
-  disarm: { backgroundColor: '#B5304A' },
-  armText: { color: '#FFFFFF', fontSize: 18, fontWeight: '700' },
+  disarm: { backgroundColor: colors.coral },
+  armDisabled: { backgroundColor: colors.disabledBg },
+  armText: { color: colors.white, fontSize: 15, fontFamily: fonts.extra },
+  armTextDisabled: { color: colors.disabledText },
 });
