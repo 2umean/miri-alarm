@@ -1,0 +1,96 @@
+<h2>Section 1 — Soft Sky foundation + ChainScreen</h2>
+<p class="subtitle">Tokens on the left, the real ChainScreen layout in the middle, key states on the right. Reply in the terminal: looks right, or what to change.</p>
+
+<div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
+
+  <!-- TOKENS -->
+  <div style="flex:0 0 240px;">
+    <h3>Tokens</h3>
+    <div style="font-family:-apple-system,sans-serif;font-size:12px;">
+      <div class="label" style="margin-top:10px;">Palette</div>
+      <div style="display:flex;gap:6px;margin:6px 0;flex-wrap:wrap;">
+        <div style="width:64px;"><div style="height:36px;border-radius:8px;background:#F2F8FF;border:1px solid #D8E9FB;"></div><span style="font-size:9px;">sky bg F2F8FF</span></div>
+        <div style="width:64px;"><div style="height:36px;border-radius:8px;background:#FFFFFF;border:1px solid #D8E9FB;"></div><span style="font-size:9px;">bubble FFFFFF</span></div>
+        <div style="width:64px;"><div style="height:36px;border-radius:8px;background:#4FA8FF;"></div><span style="font-size:9px;">sky500 4FA8FF</span></div>
+        <div style="width:64px;"><div style="height:36px;border-radius:8px;background:#2C7BD4;"></div><span style="font-size:9px;">sky700 2C7BD4</span></div>
+        <div style="width:64px;"><div style="height:36px;border-radius:8px;background:#FFB84C;"></div><span style="font-size:9px;">amber FFB84C</span></div>
+        <div style="width:64px;"><div style="height:36px;border-radius:8px;background:#1F3349;"></div><span style="font-size:9px;">ink 1F3349</span></div>
+        <div style="width:64px;"><div style="height:36px;border-radius:8px;background:#6E84A3;"></div><span style="font-size:9px;">ink2 6E84A3</span></div>
+        <div style="width:64px;"><div style="height:36px;border-radius:8px;background:#E9F9F0;border:1px solid #BDE8CF;"></div><span style="font-size:9px;">mint E9F9F0</span></div>
+        <div style="width:64px;"><div style="height:36px;border-radius:8px;background:#1E9E5C;"></div><span style="font-size:9px;">green 1E9E5C</span></div>
+        <div style="width:64px;"><div style="height:36px;border-radius:8px;background:#FFECEC;border:1px solid #F5C9C9;"></div><span style="font-size:9px;">blush FFECEC</span></div>
+        <div style="width:64px;"><div style="height:36px;border-radius:8px;background:#D64545;"></div><span style="font-size:9px;">red D64545</span></div>
+      </div>
+      <div class="label" style="margin-top:10px;">Type — Nunito (rounded)</div>
+      <div style="font-weight:800;font-size:22px;color:#1F3349;">06:30 — clocks 800</div>
+      <div style="font-weight:700;font-size:14px;color:#1F3349;">Labels 700 / 14</div>
+      <div style="font-weight:600;font-size:12px;color:#6E84A3;">Secondary 600 / 12</div>
+      <div class="label" style="margin-top:10px;">Shape</div>
+      <div>Bubbles r=20 · chips/buttons r=999 · soft shadow rgba(40,90,160,.08)</div>
+    </div>
+  </div>
+
+  <!-- MAIN MOCKUP -->
+  <div style="flex:0 0 290px;">
+    <h3>ChainScreen</h3>
+    <div style="width:280px;background:linear-gradient(180deg,#EAF4FF,#F7FBFF);border-radius:28px;padding:16px;font-family:-apple-system,sans-serif;box-shadow:0 6px 20px rgba(40,90,160,.14);">
+      <div style="font-size:11px;font-weight:800;color:#6E84A3;letter-spacing:1px;margin:2px 0 8px 4px;">SCHEDULARM ✈</div>
+      <div style="background:#E9F9F0;border-radius:999px;padding:9px 14px;font-size:12px;font-weight:800;color:#1E9E5C;">✓ Armed · Wake 06:30 · Leave 07:15</div>
+
+      <div style="margin-top:12px;">
+        <div style="background:#FFFFFF;border-radius:20px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(40,90,160,.08);">
+          <span style="font-size:13px;font-weight:700;color:#1F3349;">🌙 Fall asleep</span>
+          <span style="text-align:right;"><b style="font-size:16px;color:#1F3349;">22:30</b><br><span style="font-size:9px;color:#6E84A3;">tonight</span></span>
+        </div>
+        <div style="display:flex;justify-content:center;margin:4px 0;"><span style="background:#FFFFFF;border:1.5px solid #D8E9FB;border-radius:999px;padding:3px 10px;font-size:10px;font-weight:700;color:#6E84A3;">😴 8:00</span></div>
+
+        <div style="background:#FFFFFF;border:2px solid #4FA8FF;border-radius:20px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 10px rgba(79,168,255,.22);">
+          <span style="font-size:13px;font-weight:700;color:#1F3349;">⏰ Wake up<br><span style="background:#4FA8FF;color:#fff;font-size:8px;font-weight:800;border-radius:999px;padding:1px 6px;">ALARM</span></span>
+          <span style="text-align:right;"><b style="font-size:18px;color:#2C7BD4;">06:30</b><br><span style="font-size:9px;color:#6E84A3;">tomorrow</span></span>
+        </div>
+        <div style="display:flex;justify-content:center;margin:4px 0;"><span style="background:#FFFFFF;border:1.5px solid #D8E9FB;border-radius:999px;padding:3px 10px;font-size:10px;font-weight:700;color:#6E84A3;">🚿 0:45</span></div>
+
+        <div style="background:#FFFFFF;border-radius:20px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(40,90,160,.08);">
+          <span style="font-size:13px;font-weight:700;color:#1F3349;">🚪 Leave home</span>
+          <span style="text-align:right;"><b style="font-size:16px;color:#1F3349;">07:15</b><br><span style="font-size:9px;color:#6E84A3;">tomorrow</span></span>
+        </div>
+        <div style="display:flex;justify-content:center;gap:6px;margin:4px 0;">
+          <span style="background:#FFFFFF;border:1.5px solid #D8E9FB;border-radius:999px;padding:3px 10px;font-size:10px;font-weight:700;color:#6E84A3;">🚕 1:00</span>
+          <span style="background:#FFFFFF;border:1.5px solid #D8E9FB;border-radius:999px;padding:3px 10px;font-size:10px;font-weight:700;color:#6E84A3;">🛟 0:15</span>
+        </div>
+
+        <div style="background:#FFB84C;border-radius:20px;padding:11px 14px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 3px 10px rgba(255,184,76,.35);">
+          <span style="font-size:13px;font-weight:800;color:#1F3349;">📍 Arrive by</span>
+          <b style="font-size:20px;color:#1F3349;">08:30</b>
+        </div>
+      </div>
+
+      <div style="margin-top:14px;background:linear-gradient(90deg,#4FA8FF,#2C7BD4);border-radius:999px;text-align:center;padding:13px;font-size:14px;font-weight:800;color:#fff;box-shadow:0 4px 12px rgba(79,168,255,.4);">Disarm</div>
+    </div>
+  </div>
+
+  <!-- STATES -->
+  <div style="flex:0 0 250px;">
+    <h3>Key states</h3>
+    <div style="font-family:-apple-system,sans-serif;">
+      <div class="label">Empty (first open)</div>
+      <div style="width:240px;background:#F7FBFF;border:2px dashed #A9CFF5;border-radius:20px;padding:22px;text-align:center;margin:6px 0 14px;">
+        <div style="font-size:26px;">🛬</div>
+        <div style="font-size:13px;font-weight:800;color:#2C7BD4;">When do you need to arrive?</div>
+        <div style="font-size:10px;color:#6E84A3;margin-top:2px;">Tap to set — we'll plan backwards</div>
+      </div>
+      <div class="label">Ready (not armed)</div>
+      <div style="width:240px;background:#FFFFFF;border-radius:999px;padding:9px 14px;font-size:12px;font-weight:700;color:#6E84A3;margin:6px 0 14px;box-shadow:0 2px 8px rgba(40,90,160,.08);">🛏 Ready — set your arrival time</div>
+      <div class="label">At-risk (tap to fix)</div>
+      <div style="width:240px;background:#FFECEC;border-radius:16px;padding:10px 14px;margin:6px 0 14px;">
+        <div style="font-size:12px;font-weight:800;color:#D64545;">⚠ Your alarm may NOT ring — tap to fix</div>
+        <div style="font-size:10px;color:#B36B6B;margin-top:3px;">• Battery optimization may kill the alarm</div>
+      </div>
+      <div class="label">Validation warning</div>
+      <div style="width:240px;background:#FFF6E5;border-radius:16px;padding:9px 14px;font-size:11px;font-weight:700;color:#9A6B1F;margin:6px 0;">⚠ Heads up: not much time left to sleep.</div>
+      <div class="label" style="margin-top:8px;">Arm (when not armed)</div>
+      <div style="width:240px;background:linear-gradient(90deg,#4FA8FF,#2C7BD4);border-radius:999px;text-align:center;padding:11px;font-size:13px;font-weight:800;color:#fff;margin-top:6px;">Arm alarm ✈</div>
+    </div>
+  </div>
+
+</div>

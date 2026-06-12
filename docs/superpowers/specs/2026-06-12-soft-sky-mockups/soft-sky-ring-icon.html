@@ -1,0 +1,84 @@
+<h2>Section 3 — Ring screen, app icon &amp; splash, Korean type</h2>
+<p class="subtitle">Two choices on this page: pick an app icon (top) and a Korean font (bottom). The ring screen is for feedback, not voting.</p>
+
+<div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;font-family:-apple-system,sans-serif;">
+
+  <!-- RING SCREEN -->
+  <div style="flex:0 0 270px;">
+    <h3>Ring screen (native, the wake moment)</h3>
+    <div style="width:250px;height:430px;background:linear-gradient(170deg,#2C7BD4 0%,#4FA8FF 45%,#FFB84C 130%);border-radius:30px;padding:24px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 8px 24px rgba(40,90,160,.3);">
+      <div style="text-align:center;margin-top:30px;">
+        <div style="font-size:34px;">☀️</div>
+        <div style="color:#FFFFFF;font-size:16px;font-weight:800;margin-top:6px;">좋은 아침!</div>
+        <div style="color:#EAF4FF;font-size:11px;font-weight:600;margin-top:2px;">이제 일어날 시간이에요</div>
+        <div style="color:#FFFFFF;font-size:56px;font-weight:800;letter-spacing:1px;margin-top:18px;">06:30</div>
+        <div style="color:#EAF4FF;font-size:11px;font-weight:700;background:rgba(255,255,255,.18);border-radius:999px;display:inline-block;padding:4px 12px;margin-top:10px;">🚪 07:15 출발까지 45분</div>
+      </div>
+      <div style="background:#FFFFFF;border-radius:999px;text-align:center;padding:16px;font-size:16px;font-weight:800;color:#2C7BD4;box-shadow:0 4px 16px rgba(0,0,0,.18);">알람 끄기</div>
+    </div>
+    <p style="font-size:11px;color:#6E84A3;margin-top:8px;">Sky→sunrise-amber gradient (night ends, sun comes up). Shows the leave-home countdown so the first thing you see is what matters. Buildable with plain Kotlin views: gradient drawable + 4 texts + 1 button.</p>
+  </div>
+
+  <!-- ICONS -->
+  <div style="flex:0 0 300px;">
+    <h3>App icon — pick one</h3>
+    <div class="options">
+      <div class="option" data-choice="icon-plane-sun" onclick="toggleSelect(this)">
+        <div class="letter" style="background:linear-gradient(160deg,#4FA8FF,#2C7BD4);border-radius:14px;width:56px;height:56px;display:flex;align-items:center;justify-content:center;position:relative;">
+          <span style="position:absolute;top:7px;right:8px;width:14px;height:14px;border-radius:999px;background:#FFB84C;"></span>
+          <span style="font-size:26px;">✈️</span>
+        </div>
+        <div class="content"><h3>Plane &amp; sunrise</h3><p>White plane climbing past an amber sun on sky gradient. Travel-first.</p></div>
+      </div>
+      <div class="option" data-choice="icon-clock-wing" onclick="toggleSelect(this)">
+        <div class="letter" style="background:linear-gradient(160deg,#4FA8FF,#2C7BD4);border-radius:14px;width:56px;height:56px;display:flex;align-items:center;justify-content:center;">
+          <span style="font-size:26px;">⏰</span>
+        </div>
+        <div class="content"><h3>Alarm with a wing</h3><p>Round amber-bell alarm clock with a small white wing. Alarm-first.</p></div>
+      </div>
+      <div class="option" data-choice="icon-monogram" onclick="toggleSelect(this)">
+        <div class="letter" style="background:#FFFFFF;border:2px solid #4FA8FF;border-radius:14px;width:56px;height:56px;display:flex;align-items:center;justify-content:center;">
+          <span style="font-size:24px;font-weight:800;color:#2C7BD4;">S<span style="color:#FFB84C;">.</span></span>
+        </div>
+        <div class="content"><h3>Monogram</h3><p>Bold S + amber dot on white. Cleanest, most "brand".</p></div>
+      </div>
+    </div>
+    <h3 style="margin-top:14px;">Splash</h3>
+    <div style="width:130px;height:230px;background:linear-gradient(180deg,#EAF4FF,#F7FBFF);border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 12px rgba(40,90,160,.12);">
+      <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(160deg,#4FA8FF,#2C7BD4);display:flex;align-items:center;justify-content:center;font-size:20px;">✈️</div>
+      <div style="font-size:11px;font-weight:800;color:#1F3349;">schedularm</div>
+    </div>
+    <p style="font-size:10px;color:#6E84A3;margin-top:6px;">Pale sky, centered icon + lowercase wordmark. (Icon shown = whichever you pick.)</p>
+  </div>
+
+  <!-- KOREAN TYPE -->
+  <div style="flex:0 0 300px;">
+    <h3>Korean font — pick one</h3>
+    <div class="options">
+      <div class="option" data-choice="font-pretendard" onclick="toggleSelect(this)">
+        <div class="content">
+          <h3>Pretendard <span style="font-weight:400;font-size:11px;color:#6E84A3;">+ Nunito clock digits</span></h3>
+          <p style="font-family:'Pretendard','Apple SD Gothic Neo',sans-serif;font-size:15px;color:#1F3349;"><b>도착 시간을 알려주세요</b><br>역산해서 알람을 맞춰드려요 · 06:30</p>
+          <p style="font-size:10px;color:#6E84A3;">The Korean UI standard. Cleanest reading, huge weight range; friendliness comes from shapes, not letterforms.</p>
+        </div>
+      </div>
+      <div class="option" data-choice="font-nanumround" onclick="toggleSelect(this)">
+        <div class="content">
+          <h3>NanumSquareRound</h3>
+          <p style="font-family:'NanumSquareRound','Apple SD Gothic Neo',sans-serif;font-size:15px;color:#1F3349;"><b>도착 시간을 알려주세요</b><br>역산해서 알람을 맞춰드려요 · 06:30</p>
+          <p style="font-size:10px;color:#6E84A3;">Rounded corners on the Hangul itself — matches the bubble visual language. Slightly less crisp at small sizes.</p>
+        </div>
+      </div>
+      <div class="option" data-choice="font-jua" onclick="toggleSelect(this)">
+        <div class="content">
+          <h3>Jua <span style="font-weight:400;font-size:11px;color:#6E84A3;">headings only + Pretendard body</span></h3>
+          <p style="font-family:'Jua','Apple SD Gothic Neo',sans-serif;font-size:16px;color:#1F3349;">도착 시간을 알려주세요</p>
+          <p style="font-family:'Pretendard',sans-serif;font-size:12px;color:#1F3349;">역산해서 알람을 맞춰드려요 · 06:30</p>
+          <p style="font-size:10px;color:#6E84A3;">Maximum playful (Duolingo-KR vibe) for titles; body stays Pretendard for legibility.</p>
+        </div>
+      </div>
+    </div>
+    <p style="font-size:10px;color:#6E84A3;">Note: your browser may substitute fonts it doesn't have installed — judge by the described character as much as the render.</p>
+  </div>
+
+</div>

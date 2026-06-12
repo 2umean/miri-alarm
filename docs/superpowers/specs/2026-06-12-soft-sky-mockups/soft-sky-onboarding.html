@@ -1,0 +1,76 @@
+<h2>Section 2 — Onboarding + editor dialogs</h2>
+<p class="subtitle">Same Soft Sky language. Note: the time picker stays Android's system dialog (we fixed it to be the bare native one), so only the duration editor is ours to style.</p>
+
+<div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;font-family:-apple-system,sans-serif;">
+
+  <!-- ONBOARDING -->
+  <div style="flex:0 0 290px;">
+    <h3>OnboardingScreen</h3>
+    <div style="width:280px;background:linear-gradient(180deg,#EAF4FF,#F7FBFF);border-radius:28px;padding:18px;box-shadow:0 6px 20px rgba(40,90,160,.14);">
+      <div style="font-size:30px;">🛫</div>
+      <div style="font-size:18px;font-weight:800;color:#1F3349;line-height:1.25;margin-top:4px;">Let's make sure your alarm can wake you</div>
+      <div style="font-size:11px;font-weight:600;color:#6E84A3;margin:6px 0 12px;">Your phone's brand is known to kill alarms — two quick settings keep you safe.</div>
+
+      <div style="background:#FFFFFF;border-radius:18px;padding:11px 13px;margin-bottom:8px;box-shadow:0 2px 8px rgba(40,90,160,.08);">
+        <div style="font-size:12px;font-weight:800;color:#1E9E5C;">✓ Notifications &amp; exact alarms</div>
+        <div style="font-size:10px;color:#6E84A3;margin-top:2px;">So the alarm can fire on time and show up.</div>
+      </div>
+
+      <div style="background:#FFFFFF;border-radius:18px;padding:11px 13px;margin-bottom:8px;box-shadow:0 2px 8px rgba(40,90,160,.08);">
+        <div style="font-size:12px;font-weight:800;color:#1E9E5C;">✓ Show over the lock screen</div>
+        <div style="font-size:10px;color:#6E84A3;margin-top:2px;">So the alarm takes over the screen, not just a banner.</div>
+      </div>
+
+      <div style="background:#FFFFFF;border:2px solid #4FA8FF;border-radius:18px;padding:11px 13px;margin-bottom:8px;box-shadow:0 2px 10px rgba(79,168,255,.18);">
+        <div style="font-size:12px;font-weight:800;color:#1F3349;">○ Appear on top</div>
+        <div style="font-size:10px;color:#6E84A3;margin:2px 0 7px;">Forces full-screen on phones that suppress it.</div>
+        <span style="background:#4FA8FF;color:#fff;border-radius:999px;padding:5px 16px;font-size:11px;font-weight:800;">Enable</span>
+      </div>
+
+      <div style="background:#FFFFFF;border:2px solid #FFB84C;border-radius:18px;padding:11px 13px;margin-bottom:8px;box-shadow:0 2px 10px rgba(255,184,76,.2);">
+        <div style="font-size:12px;font-weight:800;color:#1F3349;">○ Disable battery optimization <span style="background:#FFF6E5;color:#9A6B1F;font-size:8px;font-weight:800;border-radius:4px;padding:1px 5px;">REQUIRED</span></div>
+        <div style="font-size:10px;color:#6E84A3;margin:2px 0 7px;">Otherwise your phone kills the alarm in the background.</div>
+        <span style="background:#FFB84C;color:#1F3349;border-radius:999px;padding:5px 16px;font-size:11px;font-weight:800;">Enable</span>
+      </div>
+
+      <div style="margin-top:12px;background:#DCE7F3;border-radius:999px;text-align:center;padding:12px;font-size:13px;font-weight:800;color:#8CA0BC;">Finish the required steps</div>
+      <div style="text-align:center;font-size:11px;font-weight:700;color:#4FA8FF;padding:8px;">Re-check ↻</div>
+    </div>
+  </div>
+
+  <!-- ONBOARDING DONE STATE -->
+  <div style="flex:0 0 250px;">
+    <h3>…when all green</h3>
+    <div style="width:240px;background:linear-gradient(90deg,#4FA8FF,#2C7BD4);border-radius:999px;text-align:center;padding:12px;font-size:13px;font-weight:800;color:#fff;box-shadow:0 4px 12px rgba(79,168,255,.4);margin-bottom:22px;">Continue ✈</div>
+
+    <h3>DurationEditorModal</h3>
+    <div style="width:250px;background:rgba(31,51,73,.35);border-radius:24px;padding:20px;display:flex;align-items:center;justify-content:center;">
+      <div style="background:#FFFFFF;border-radius:24px;padding:18px;width:200px;box-shadow:0 10px 30px rgba(31,51,73,.25);">
+        <div style="font-size:14px;font-weight:800;color:#1F3349;">😴 Sleep</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin:14px 0;">
+          <span style="background:#EAF4FF;color:#2C7BD4;border-radius:999px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;">−</span>
+          <span style="font-size:26px;font-weight:800;color:#1F3349;">8:00</span>
+          <span style="background:#4FA8FF;color:#fff;border-radius:999px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;">＋</span>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;">
+          <span style="font-size:12px;font-weight:700;color:#6E84A3;padding:8px 6px;">Cancel</span>
+          <span style="background:#4FA8FF;color:#fff;border-radius:999px;padding:8px 20px;font-size:12px;font-weight:800;">Set</span>
+        </div>
+      </div>
+    </div>
+    <p style="font-size:11px;color:#6E84A3;margin-top:8px;">Modal floats on a dimmed-sky backdrop; the editor title gets the field's emoji.</p>
+  </div>
+
+  <!-- NOTES -->
+  <div style="flex:0 0 240px;">
+    <h3>Decisions in this section</h3>
+    <ul style="font-size:12px;color:#1F3349;line-height:1.7;">
+      <li>Onboarding becomes <b>warm, not scary</b>: plane emoji hero, completed steps collapse to a slim ✓ row, the <i>current</i> step gets the outline + Enable pill.</li>
+      <li><b>Battery step gets amber + REQUIRED chip</b> — it's the one Samsung actually kills you with.</li>
+      <li>Continue: gray pill until reliable → sky gradient "Continue ✈".</li>
+      <li>Time picker = system dialog (unstyled, by design). Duration editor = our bubble stepper.</li>
+      <li>Step copy stays short and benefit-first ("So the alarm can…").</li>
+    </ul>
+  </div>
+
+</div>
