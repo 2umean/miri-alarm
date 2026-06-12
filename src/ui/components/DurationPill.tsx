@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { formatDuration } from '../format';
+import { colors, fonts, radii } from '../theme';
 
 type Props = {
   icon: string;
@@ -20,13 +21,13 @@ export function DurationPill({ icon, minutes, onPress }: Props) {
 
 const styles = StyleSheet.create({
   pill: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#1B2340',
-    borderRadius: 999,
-    paddingVertical: 6,
+    alignSelf: 'center',
+    backgroundColor: colors.bubble,
+    borderWidth: 1.5,
+    borderColor: colors.line,
+    borderRadius: radii.pill,
+    paddingVertical: 3,
     paddingHorizontal: 12,
-    marginLeft: 32,
-    marginVertical: 2,
   },
-  text: { color: '#AEB7DA', fontSize: 14 },
+  text: { color: colors.ink2, fontSize: 12, fontFamily: fonts.bold },
 });
