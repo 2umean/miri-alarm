@@ -1,0 +1,6 @@
+<resources>
+    <string name="ring_greeting">Good morning!</string>
+    <string name="ring_subtitle">Time to wake up</string>
+    <string name="ring_leave_chip">🚪 %2$d min until %1$s departure</string>
+    <string name="ring_dismiss">Dismiss alarm</string>
+</resources>

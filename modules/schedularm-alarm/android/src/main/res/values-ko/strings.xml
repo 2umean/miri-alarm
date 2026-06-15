@@ -1,0 +1,6 @@
+<resources>
+    <string name="ring_greeting">좋은 아침!</string>
+    <string name="ring_subtitle">이제 일어날 시간이에요</string>
+    <string name="ring_leave_chip">🚪 %1$s 출발까지 %2$d분</string>
+    <string name="ring_dismiss">알람 끄기</string>
+</resources>
