@@ -1,4 +1,5 @@
 import { Schedule, reverseCalc, toLocalClock } from '../domain';
+import { t } from '../i18n';
 
 /**
  * Companion push alerts for the non-wake chain times (spec §7: leave-home =
@@ -37,13 +38,13 @@ export async function scheduleChainAlerts(schedule: Schedule): Promise<void> {
     const alerts = [
       {
         at: d.fallAsleep,
-        title: '🌙 Time to fall asleep',
-        body: `Sleep now to be rested for your ${toLocalClock(d.wake, schedule.zone)} wake-up.`,
+        title: t('alerts.fallAsleep.title'),
+        body: t('alerts.fallAsleep.body', { wake: toLocalClock(d.wake, schedule.zone) }),
       },
       {
         at: d.leaveHome,
-        title: '🚪 Leave home now',
-        body: `Leave by ${toLocalClock(d.leaveHome, schedule.zone)} to arrive on time.`,
+        title: t('alerts.leaveHome.title'),
+        body: t('alerts.leaveHome.body', { leave: toLocalClock(d.leaveHome, schedule.zone) }),
       },
     ];
 
