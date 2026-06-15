@@ -6,8 +6,7 @@ Pod::Spec.new do |s|
   s.author         = ''
   s.homepage       = 'https://github.com/umean/schedularm'
   s.platforms      = {
-    :ios => '15.1',
-    :tvos => '15.1'
+    :ios => '26.0'
   }
   s.source         = { git: '' }
   s.static_framework = true
@@ -20,4 +19,5 @@ Pod::Spec.new do |s|
   }
 
   s.source_files = "**/*.{h,m,mm,swift,hpp,cpp}"
+  s.resources = "**/*.lproj/*.strings"
 end
