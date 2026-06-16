@@ -11,6 +11,9 @@ const config: ExpoConfig = {
   ios: {
     bundleIdentifier: 'com.umean.schedularm',
     deploymentTarget: '26.0',
+    config: {
+      usesNonExemptEncryption: false,
+    },
     infoPlist: {
       NSAlarmKitUsageDescription:
         'schedularm sets alarms so airline crew reliably wake up and leave on time for their duties.',
