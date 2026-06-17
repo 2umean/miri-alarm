@@ -25,6 +25,10 @@ web-build/
 .env.*
 !.env.example
 
+# Apple App Store Connect API key — NEVER commit the private key
+/credentials/
+*.p8
+
 # Editor
 .idea/
 *.swp
