@@ -81,3 +81,16 @@ export function primaryEventInstant(chain: Chain): number | null {
   const computed = computeChain(chain);
   return computed ? primaryInstantFromComputed(computed) : null;
 }
+
+/**
+ * The LATEST alarm-pill end instant (the last alarm to ring), or null if there's
+ * no alarm pill / no arrival. Used to decide whether an armed chain is still
+ * live: with several alarm pills it stays armed until the LAST one has passed,
+ * not the first (primaryEventInstant).
+ */
+export function latestAlarmInstant(chain: Chain): number | null {
+  const computed = computeChain(chain);
+  if (!computed) return null;
+  const alarmEnds = computed.items.filter((it) => it.pill.type === 'alarm').map((it) => it.endAt);
+  return alarmEnds.length ? Math.max(...alarmEnds) : null;
+}

@@ -15,6 +15,16 @@ import expo.modules.kotlin.Promise
 import expo.modules.kotlin.exception.Exceptions
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import expo.modules.kotlin.records.Field
+import expo.modules.kotlin.records.Record
+
+/** JS NativeAlarm → native. JS numbers arrive as Double (epoch ms exceeds Int). */
+class NativeAlarmRecord : Record {
+  @Field var id: String = ""
+  @Field var at: Double = 0.0
+  @Field var label: String = ""
+  @Field var leaveAt: Double = 0.0
+}
 
 class SchedularmAlarmModule : Module() {
   private val context: Context
@@ -23,13 +33,17 @@ class SchedularmAlarmModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("SchedularmAlarm")
 
-    // JS numbers arrive as Double; epoch ms exceeds Int range, so use Double → Long.
-    Function("scheduleAlarm") { epochMs: Double, leaveEpochMs: Double ->
-      AlarmController.scheduleAlarm(context, epochMs.toLong(), leaveEpochMs.toLong())
+    // Arm the whole set atomically (Phase 3). reqCode is assigned inside the
+    // controller (base + index); 0 here is just a placeholder.
+    Function("scheduleAlarms") { alarms: List<NativeAlarmRecord> ->
+      AlarmController.scheduleAlarms(
+        context,
+        alarms.map { AlarmEntry(it.id, it.at.toLong(), it.label, it.leaveAt.toLong(), 0) },
+      )
     }
 
-    Function("dismiss") {
-      AlarmController.dismiss(context)
+    Function("dismissAll") {
+      AlarmController.dismissAll(context)
     }
 
     Function("canScheduleExactAlarms") { canScheduleExactAlarms() }

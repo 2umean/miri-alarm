@@ -23,8 +23,11 @@ import java.util.Locale
  * strings come from res/values{,-ko}/strings.xml so the OS localizes them.
  */
 class AlarmActivity : Activity() {
+  private var firingId: String? = null
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    firingId = intent?.getStringExtra(AlarmConstants.EXTRA_ALARM_ID)
     showOverLockScreen()
     setContentView(buildView())
   }
@@ -81,6 +84,10 @@ class AlarmActivity : Activity() {
       gravity = Gravity.CENTER
       setPadding(0, 4, 0, 0)
     }
+
+    // Which alarm fired (the pill label) — distinguishes one alarm from another.
+    val entry = firingId?.let { AlarmController.findAlarm(applicationContext, it) }
+    val label = entry?.label.orEmpty()
     val clock = TextView(this).apply {
       text = clockFmt.format(Date())
       textSize = 64f
@@ -93,10 +100,21 @@ class AlarmActivity : Activity() {
     root.addView(sun)
     root.addView(greeting)
     root.addView(subtitle)
+    if (label.isNotBlank()) {
+      val labelView = TextView(this).apply {
+        text = label
+        textSize = 15f
+        setTextColor(Color.WHITE)
+        typeface = Typeface.DEFAULT_BOLD
+        gravity = Gravity.CENTER
+        setPadding(0, 10, 0, 0)
+      }
+      root.addView(labelView)
+    }
     root.addView(clock)
 
     // Leave-home countdown chip — only when a future leave instant is known.
-    val leaveAt = AlarmController.persistedLeaveAt(applicationContext)
+    val leaveAt = entry?.leaveAt ?: 0L
     val now = System.currentTimeMillis()
     if (leaveAt > now) {
       val minutesLeft = ((leaveAt - now) / 60000L).toInt()
@@ -141,7 +159,9 @@ class AlarmActivity : Activity() {
   }
 
   private fun dismissAlarm() {
-    AlarmController.dismiss(applicationContext)
+    // Dismiss only the alarm that rang (known id) or just silence the ring
+    // (unknown id) — never cancel the whole set. See AlarmController.dismissFired.
+    AlarmController.dismissFired(applicationContext, firingId)
     finish()
   }
 

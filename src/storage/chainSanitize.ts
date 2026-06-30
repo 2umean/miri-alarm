@@ -1,6 +1,6 @@
 import { IANAZone } from 'luxon';
 
-import { Pill, PILL_TYPES, PillType } from '../domain';
+import { Chain, Pill, PILL_TYPES, PillType } from '../domain';
 
 /**
  * Shared boundary sanitizers for persisted chains. Used by BOTH draftChain and
@@ -53,4 +53,27 @@ export function sanitizePills(value: unknown): Pill[] {
   return (Array.isArray(value) ? value : [])
     .map(sanitizePill)
     .filter((p): p is Pill => p !== null);
+}
+
+/**
+ * Parse a stored chain payload (draft OR armed) into a sanitised Chain, or null
+ * for a missing / corrupt / non-object payload. The single parse+guard+wrapper
+ * shared by both restore paths so they can't drift (a bare JSON primitive or
+ * array is treated as absent, so callers reliably distinguish "no chain" from a
+ * restored empty chain).
+ */
+export function parseStoredChain(raw: string | null): Chain | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    const obj = parsed as Record<string, unknown>;
+    return {
+      arrival: sanitizeArrival(obj.arrival),
+      zone: sanitizeZone(obj.zone),
+      pills: sanitizePills(obj.pills),
+    };
+  } catch {
+    return null;
+  }
 }

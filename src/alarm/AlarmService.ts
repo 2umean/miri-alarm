@@ -30,32 +30,34 @@ export const AlarmService = {
   isSupported: isAndroid || isIos,
 
   /**
-   * Arm a chain (Schedularm UI v2). Phase-2 single-alarm BRIDGE: the earliest
-   * alarm pill becomes the one native strong alarm; every other event pill (push,
-   * and any later alarm pill) fires a best-effort push. Phase 3 upgrades this to
-   * N true native alarms. No-op without a usable arrival.
+   * Arm a chain (Schedularm UI v2, Phase 3): EVERY alarm pill becomes an
+   * OS-guaranteed native alarm; push pills go through expo-notifications. Awaits
+   * the native scheduling and REJECTS if it fails (e.g. iOS AlarmKit auth), so the
+   * caller never marks a chain "armed" when nothing was actually scheduled. No-op
+   * without a usable arrival.
    */
-  armChain(chain: Chain): void {
+  async armChain(chain: Chain): Promise<void> {
     if (!isAndroid && !isIos) return;
     const computed = computeChain(chain);
     if (!computed) return;
-    const alarmItem = computed.items.find((it) => it.pill.type === 'alarm');
-    if (alarmItem) {
-      // The ring countdown's "leave" target is the start of the FINAL pill (the
-      // commute/last leg = when the user must head out), not the arrival anchor.
-      const last = computed.items[computed.items.length - 1];
-      const leave = last ? last.startAt : computed.arrival;
-      native.scheduleAlarm(alarmItem.endAt, leave);
-    }
+    // The ring countdown's "leave" target is the start of the FINAL pill (the
+    // commute/last leg = when the user must head out), shared by every alarm.
+    const last = computed.items[computed.items.length - 1];
+    const leaveAt = last ? last.startAt : computed.arrival;
+    const alarms = computed.items
+      .filter((it) => it.pill.type === 'alarm')
+      .map((it) => ({ id: it.pill.id, at: it.endAt, label: it.pill.name, leaveAt }));
+    // Await native FIRST — if it throws, the caller leaves the chain un-armed.
+    if (alarms.length) await native.scheduleAlarms(alarms);
     if (isIos) ensureIosNotificationPermission();
-    // Skip the native-armed pill by identity (endAt is not unique).
-    void scheduleChainPush(chain, computed, alarmItem?.pill.id);
+    // Push pills only; alarm pill ids are excluded (they ring natively).
+    void scheduleChainPush(chain, computed, new Set(alarms.map((a) => a.id)));
   },
 
   /** Cancel any ringing + scheduled alarm (also clears native boot re-arm on Android). */
   dismiss(): void {
     if (!isAndroid && !isIos) return;
-    native.dismiss();
+    native.dismissAll();
     void cancelChainPush();
   },
 

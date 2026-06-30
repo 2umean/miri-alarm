@@ -1,6 +1,6 @@
 import { DateTime } from 'luxon';
 
-import { computeChain, primaryEventInstant, totalSpanMinutes } from '../chainEngine';
+import { computeChain, latestAlarmInstant, primaryEventInstant, totalSpanMinutes } from '../chainEngine';
 import { Chain, Pill, PillType } from '../pill';
 
 const at = (zone: string, y: number, mo: number, d: number, h: number, mi: number) =>
@@ -118,6 +118,27 @@ describe('primaryEventInstant', () => {
   test('falls back to the arrival when no pill carries an event', () => {
     const c: Chain = { arrival: at('UTC', 2026, 6, 30, 9, 0), zone: 'UTC', pills: [pill('a', 60)] };
     expect(primaryEventInstant(c)).toBe(c.arrival);
+  });
+
+  test('latestAlarmInstant returns the last alarm end (so a multi-alarm chain stays armed until the last fires)', () => {
+    const zone = 'UTC';
+    const c: Chain = {
+      arrival: at(zone, 2026, 6, 30, 9, 0),
+      zone,
+      pills: [pill('wake', 420, 'alarm'), pill('gap', 30), pill('backup', 15, 'alarm')],
+    };
+    // wake ends 09:00 − (30+15) = 08:15; backup is the last pill so it ends AT arrival 09:00.
+    expect(clock(latestAlarmInstant(c)!, zone)).toBe('09:00'); // last alarm to ring
+    expect(clock(primaryEventInstant(c)!, zone)).toBe('08:15'); // earliest, for contrast
+  });
+
+  test('latestAlarmInstant is null with no alarm pills', () => {
+    const c: Chain = {
+      arrival: at('UTC', 2026, 6, 30, 9, 0),
+      zone: 'UTC',
+      pills: [pill('p', 30, 'push')],
+    };
+    expect(latestAlarmInstant(c)).toBeNull();
   });
 
   test('anchors on the alarm even when a push ends earlier (deliberate: avoids deferring the alarm a day)', () => {

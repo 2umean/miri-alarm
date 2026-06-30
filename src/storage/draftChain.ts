@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { Chain } from '../domain';
 import { LegacyDurations } from '../domain/chainMigration';
-import { sanitizeArrival, sanitizePills, sanitizeZone } from './chainSanitize';
+import { parseStoredChain, sanitizeArrival, sanitizeZone } from './chainSanitize';
 
 /**
  * The whole in-progress (editable) v2 chain — arrival anchor + captured zone +
@@ -17,22 +17,7 @@ const DRAFT_KEY = 'schedularm.draft.v2';
 const LEGACY_DRAFT_KEY = 'schedularm.draft.v1';
 
 export async function loadDraftChain(): Promise<Chain | null> {
-  const raw = await AsyncStorage.getItem(DRAFT_KEY);
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    // A bare JSON primitive (5, true, "x") or array isn't a draft — treat as absent
-    // so callers reliably distinguish "no draft → seed" from a restored empty chain.
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
-    const obj = parsed as Record<string, unknown>;
-    return {
-      arrival: sanitizeArrival(obj.arrival),
-      zone: sanitizeZone(obj.zone),
-      pills: sanitizePills(obj.pills),
-    };
-  } catch {
-    return null;
-  }
+  return parseStoredChain(await AsyncStorage.getItem(DRAFT_KEY));
 }
 
 export async function saveDraftChain(chain: Chain): Promise<void> {

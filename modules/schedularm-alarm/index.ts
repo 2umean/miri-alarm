@@ -1,24 +1,27 @@
 import { requireNativeModule } from 'expo';
 
-import type { PermissionStatus } from './SchedularmAlarm.types';
+import type { NativeAlarm, PermissionStatus } from './SchedularmAlarm.types';
 
-export type { PermissionStatus } from './SchedularmAlarm.types';
+export type { NativeAlarm, PermissionStatus } from './SchedularmAlarm.types';
 
-// Backed by the native SchedularmAlarmModule (Android: bespoke Kotlin; iOS: stub).
+// Backed by the native SchedularmAlarmModule (Android: bespoke Kotlin; iOS: AlarmKit).
 const SchedularmAlarm = requireNativeModule('SchedularmAlarm');
 
 /**
- * Arm the single active alarm to fire at an absolute instant (epoch ms).
- * Persists for boot re-arm and uses AlarmManager.setAlarmClock (exact + Doze-exempt).
- * `leaveEpochMs` rides along so the ring screen can show the leave-home countdown.
+ * Arm a set of OS-guaranteed alarms atomically (Phase 3). Each fires at its own
+ * instant via AlarmManager.setAlarmClock (Android, exact + Doze-exempt, persisted
+ * for boot re-arm) / AlarmKit (iOS). Re-arming REPLACES the whole set; pass [] to
+ * arm nothing. Returns the native promise — Android resolves immediately (sync);
+ * iOS resolves once every alarm is scheduled and REJECTS if any fails (auth
+ * revoked, schedule error), so callers must await it before claiming "armed".
  */
-export function scheduleAlarm(epochMs: number, leaveEpochMs: number): void {
-  SchedularmAlarm.scheduleAlarm(epochMs, leaveEpochMs);
+export function scheduleAlarms(alarms: NativeAlarm[]): Promise<void> {
+  return SchedularmAlarm.scheduleAlarms(alarms);
 }
 
-/** Stop a ringing alarm AND cancel the scheduled one (clears boot re-arm). */
-export function dismiss(): void {
-  SchedularmAlarm.dismiss();
+/** Stop any ringing alarm AND cancel every scheduled one (clears boot re-arm). */
+export function dismissAll(): void {
+  SchedularmAlarm.dismissAll();
 }
 
 /** Whether exact alarms can be scheduled right now (else the alarm silently drops). */

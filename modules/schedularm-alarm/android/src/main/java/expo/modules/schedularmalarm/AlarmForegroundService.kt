@@ -29,17 +29,23 @@ class AlarmForegroundService : Service() {
   private var mediaPlayer: MediaPlayer? = null
   private var vibrator: Vibrator? = null
   private var wakeLock: PowerManager.WakeLock? = null
+  private var firingId: String? = null
 
   override fun onBind(intent: Intent?): IBinder? = null
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    // Which alarm fired — threaded onto the ring Activity + dismiss action so a
+    // per-alarm dismiss leaves later alarms armed. Read before building anything.
+    firingId = intent?.getStringExtra(AlarmConstants.EXTRA_ALARM_ID)
     startInForeground()
     launchFullScreenIfPermitted()
     acquireWakeLock()
     startAudio()
     startVibration()
-    // START_STICKY: if the OS kills us under memory pressure, come back ringing.
-    return START_STICKY
+    // REDELIVER_INTENT (not STICKY): if the OS kills us under memory pressure, come
+    // back ringing AND redeliver the ORIGINAL intent so EXTRA_ALARM_ID survives —
+    // otherwise a null-id restart would dismiss the wrong scope.
+    return START_REDELIVER_INTENT
   }
 
   /**
@@ -53,6 +59,7 @@ class AlarmForegroundService : Service() {
     try {
       val intent = Intent(this, AlarmActivity::class.java).apply {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        putExtra(AlarmConstants.EXTRA_ALARM_ID, firingId)
       }
       startActivity(intent)
     } catch (e: Exception) {
@@ -107,12 +114,14 @@ class AlarmForegroundService : Service() {
   private fun buildNotification(): Notification {
     val fullScreenIntent = Intent(this, AlarmActivity::class.java).apply {
       flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+      putExtra(AlarmConstants.EXTRA_ALARM_ID, firingId)
     }
     val fullScreenPi = PendingIntent.getActivity(
-      this, AlarmConstants.REQ_SHOW, fullScreenIntent, piFlags()
+      this, AlarmConstants.REQ_SHOW_BASE, fullScreenIntent, piFlags()
     )
     val dismissIntent = Intent(this, AlarmReceiver::class.java).apply {
       action = AlarmConstants.ACTION_ALARM_DISMISS
+      putExtra(AlarmConstants.EXTRA_ALARM_ID, firingId)
     }
     val dismissPi = PendingIntent.getBroadcast(
       this, AlarmConstants.REQ_DISMISS, dismissIntent, piFlags()

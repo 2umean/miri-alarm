@@ -6,27 +6,42 @@ import SwiftUI
 // iOS reverse-alarm via AlarmKit (iOS 26). Fulfils the same JS contract as the
 // Android Kotlin module so src/alarm/AlarmService.ts needs no special-casing
 // beyond a platform branch. AlarmKit guarantees firing through silent mode and
-// Focus, presents the system alarm UI over the lock screen, and survives reboot
-// — no foreground service, boot receiver, Doze, or battery handling needed.
+// Focus, presents the system alarm UI over the lock screen, supports N alarms
+// natively (one per id), and survives reboot — no foreground service, boot
+// receiver, Doze, or battery handling needed.
 
 /// AlarmKit's alarm attributes are generic over a Metadata type. We carry no
 /// custom data, so this is an empty conformer (Codable/Hashable/Sendable are
 /// synthesized). AlarmKit provides no built-in empty-metadata type.
 struct EmptyMetadata: AlarmMetadata {}
 
+/// One alarm from JS (NativeAlarm). `label`/`leaveAt` are accepted for contract
+/// parity with Android but unused on iOS (AlarmKit presents its own system UI;
+/// per-alarm label + leave-home chip are deferred).
+struct NativeAlarmRecord: Record {
+  @Field var id: String = ""
+  @Field var at: Double = 0
+  @Field var label: String = ""
+  @Field var leaveAt: Double = 0
+}
+
 public class SchedularmAlarmModule: Module {
-  // Persist the scheduled alarm id so dismiss() can cancel it across launches.
-  private let alarmIdKey = "schedularm.alarm.id"
+  // Persist the scheduled alarm UUIDs so dismissAll can cancel them across launches.
+  private let alarmIdsKey = "schedularm.alarm.ids"
+  // Legacy single-alarm key (pre-Phase-3) — cancelled too so an upgrade can't
+  // leave an orphaned alarm armed.
+  private let legacyAlarmIdKey = "schedularm.alarm.id"
 
   public func definition() -> ModuleDefinition {
     Name("SchedularmAlarm")
 
-    // Schedule the wake alarm at an absolute instant (epoch ms). leaveEpochMs is
-    // accepted for contract parity with Android but unused on iOS (leave-home
-    // Live Activity deferred).
-    AsyncFunction("scheduleAlarm") { (epochMs: Double, _ leaveEpochMs: Double) in
-      let fireDate = Date(timeIntervalSince1970: epochMs / 1000.0)
+    // Arm the whole set atomically: cancel any prior alarms, then schedule one
+    // AlarmKit alarm per entry and persist their UUIDs. Re-arming replaces the set.
+    AsyncFunction("scheduleAlarms") { (alarms: [NativeAlarmRecord]) in
+      self.cancelPersisted()
 
+      // Presentation is identical for every alarm (label/leave unused on iOS), so
+      // build it once outside the loop.
       let alert = AlarmPresentation.Alert(
         title: LocalizedStringResource("ring_greeting", table: "SchedularmAlarm"),
         stopButton: AlarmButton(
@@ -40,23 +55,27 @@ public class SchedularmAlarmModule: Module {
         metadata: nil,
         tintColor: Color(red: 0x4F / 255.0, green: 0xA8 / 255.0, blue: 0xFF / 255.0) // sky500
       )
-      let id = UUID()
-      let configuration = AlarmManager.AlarmConfiguration.alarm(
-        schedule: .fixed(fireDate),
-        attributes: attributes,
-        sound: .default
-      )
-      _ = try await AlarmManager.shared.schedule(id: id, configuration: configuration)
-      UserDefaults.standard.set(id.uuidString, forKey: self.alarmIdKey)
+
+      var scheduled: [String] = []
+      for a in alarms {
+        let id = UUID()
+        // Persist the id BEFORE scheduling: if schedule(id:) throws mid-loop, the
+        // already-scheduled alarms (and this one) stay recorded, so a later
+        // dismissAll / re-arm can still cancel them — no uncancellable orphans.
+        scheduled.append(id.uuidString)
+        UserDefaults.standard.set(scheduled, forKey: self.alarmIdsKey)
+        let configuration = AlarmManager.AlarmConfiguration.alarm(
+          schedule: .fixed(Date(timeIntervalSince1970: a.at / 1000.0)),
+          attributes: attributes,
+          sound: .default
+        )
+        _ = try await AlarmManager.shared.schedule(id: id, configuration: configuration)
+      }
     }
 
-    // Cancel the scheduled (or ringing) alarm and clear the persisted id.
-    // cancel(id:) removes the alarm in any state and is synchronous (no await).
-    AsyncFunction("dismiss") {
-      if let s = UserDefaults.standard.string(forKey: self.alarmIdKey), let id = UUID(uuidString: s) {
-        try? AlarmManager.shared.cancel(id: id)
-        UserDefaults.standard.removeObject(forKey: self.alarmIdKey)
-      }
+    // Cancel every scheduled (or ringing) alarm and clear persistence.
+    AsyncFunction("dismissAll") {
+      self.cancelPersisted()
     }
 
     // AlarmKit authorization, requested lazily. Returns the resulting state.
@@ -89,6 +108,20 @@ public class SchedularmAlarmModule: Module {
     }
     AsyncFunction("requestOverlayPermission") { () -> [String: Bool] in [:] }
     AsyncFunction("requestDisableBatteryOptimization") { () -> [String: Bool] in [:] }
+  }
+
+  /// Cancel all persisted alarm ids (current list + legacy single key) and clear them.
+  private func cancelPersisted() {
+    if let ids = UserDefaults.standard.array(forKey: alarmIdsKey) as? [String] {
+      for s in ids where !s.isEmpty {
+        if let id = UUID(uuidString: s) { try? AlarmManager.shared.cancel(id: id) }
+      }
+    }
+    if let s = UserDefaults.standard.string(forKey: legacyAlarmIdKey), let id = UUID(uuidString: s) {
+      try? AlarmManager.shared.cancel(id: id)
+    }
+    UserDefaults.standard.removeObject(forKey: alarmIdsKey)
+    UserDefaults.standard.removeObject(forKey: legacyAlarmIdKey)
   }
 
   private static func stateString(_ state: AlarmManager.AuthorizationState) -> String {

@@ -2,19 +2,18 @@ import { Chain, ChainComputed, toLocalClock } from '../domain';
 import { t } from '../i18n';
 
 /**
- * v2 companion push alerts. Schedules a push for every event-bearing pill
- * (push, and — as a Phase-2 best-effort bridge — any alarm pill NOT taken by the
- * single native strong alarm, identified by `excludePillId`). Phase 3 routes
- * every alarm pill through the native module instead. Best-effort by design:
- * expo-notifications is imported dynamically so a dev client built without it
- * degrades gracefully.
+ * v2 companion push alerts. Schedules a best-effort push for every 'push' pill.
+ * Alarm pills are excluded (their ids are in `excludePillIds`) because Phase 3
+ * routes every alarm pill through the OS-guaranteed native module. Best-effort by
+ * design: expo-notifications is imported dynamically so a dev client built
+ * without it degrades gracefully.
  */
 const CHANNEL_ID = 'chain-alerts';
 
 export async function scheduleChainPush(
   chain: Chain,
   computed: ChainComputed,
-  excludePillId?: string,
+  excludePillIds?: Set<string>,
 ): Promise<void> {
   try {
     const Notifications = await import('expo-notifications');
@@ -40,7 +39,7 @@ export async function scheduleChainPush(
 
     for (const it of computed.items) {
       if (it.pill.type === 'none') continue; // timing only, no alert
-      if (it.pill.id === excludePillId) continue; // the native strong alarm fires this one
+      if (excludePillIds?.has(it.pill.id)) continue; // fired by a native strong alarm instead
       if (it.endAt <= Date.now()) continue; // already past (best-effort, skip)
       await Notifications.scheduleNotificationAsync({
         content: {
