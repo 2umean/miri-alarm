@@ -1,9 +1,10 @@
 import { Platform } from 'react-native';
 
 import * as native from '../../modules/schedularm-alarm';
-import { Schedule, reverseCalc } from '../domain';
+import { Chain, computeChain, Schedule, reverseCalc } from '../domain';
 import { AlarmHealth, deriveHealth, deriveIosHealth } from './alarmHealth';
 import { cancelChainAlerts, scheduleChainAlerts } from './chainAlerts';
+import { scheduleChainPush } from './chainPushAlerts';
 
 const isAndroid = Platform.OS === 'android';
 const isIos = Platform.OS === 'ios';
@@ -39,6 +40,23 @@ export const AlarmService = {
     // to affect the alarm itself (fire-and-forget, errors swallowed).
     if (isIos) ensureIosNotificationPermission();
     void scheduleChainAlerts(schedule);
+  },
+
+  /**
+   * v2 arm path (Schedularm UI v2). Phase-2 single-alarm BRIDGE: the earliest
+   * alarm pill becomes the one native strong alarm; every other event pill (push,
+   * and any later alarm pill) fires a best-effort push. Phase 3 upgrades this to
+   * N true native alarms. No-op without a usable arrival.
+   */
+  armChain(chain: Chain): void {
+    if (!isAndroid && !isIos) return;
+    const computed = computeChain(chain);
+    if (!computed) return;
+    const alarmItem = computed.items.find((it) => it.pill.type === 'alarm');
+    // leave-instant rides along for the ring countdown; use the arrival anchor.
+    if (alarmItem) native.scheduleAlarm(alarmItem.endAt, computed.arrival);
+    if (isIos) ensureIosNotificationPermission();
+    void scheduleChainPush(chain, alarmItem?.endAt);
   },
 
   /** Cancel any ringing + scheduled alarm (also clears native boot re-arm on Android). */

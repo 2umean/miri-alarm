@@ -1,4 +1,4 @@
-import type { DayLabel, ValidationIssue } from '../domain';
+import type { ChainValidationIssue, DayLabel, ValidationIssue } from '../domain';
 import type { HealthReason } from '../alarm/alarmHealth';
 
 /** English catalog — the FALLBACK locale. ko.ts must mirror this key set exactly. */
@@ -57,7 +57,62 @@ export const en = {
   alerts: {
     fallAsleep: { title: '🌙 Time to fall asleep', body: 'Sleep now to be rested for your {{wake}} wake-up.' },
     leaveHome: { title: '🚪 Leave home now', body: 'Leave by {{leave}} to arrive on time.' },
+    // v2: a push pill's end fires this — {{name}} is the pill, {{arrival}} the anchor.
+    pill: { title: '🔔 {{name}} ends', body: 'Head out at {{time}} to arrive by {{arrival}}.' },
   },
+
+  // ----- v2 (Schedularm UI v2 — pill chain) -----
+  /** Default display names for seed/migrated pills (resolved at materialize time). */
+  pill: {
+    sleep: 'Sleep',
+    shower: 'Shower',
+    breakfast: 'Breakfast',
+    commute: 'Commute',
+    prep: 'Prep',
+    travel: 'Travel',
+    contingency: 'Buffer',
+  },
+  pillType: { none: 'None', push: '🔔 Notify', alarm: '⏰ Alarm' },
+  chainScreen: {
+    emptyTitle: 'When do you need to arrive?',
+    emptySub: 'Set your arrival and we’ll plan everything backwards',
+    setArrival: 'Set arrival ✈',
+    arrivalSummary: '🛬 Arrive {{time}}',
+    addPill: '＋ Add pill',
+    bedtime: 'Bedtime',
+    eventEnds: '{{name}} ends',
+    armedSummary: '✓ Armed · {{label}} {{time}}',
+    totalPrep: 'Total prep time',
+    reorder: 'Reorder',
+    reorderTitle: 'Reorder pills',
+    reorderHint: 'Press and hold ⋮⋮ to drag up or down',
+  },
+  arrivalPicker: {
+    title: 'When do you need to arrive?',
+    subtitle: 'Just set your arrival — we’ll plan the rest backwards.',
+  },
+  pillEditor: {
+    createTitle: 'New pill',
+    editTitle: 'Edit pill',
+    namePlaceholder: 'Name',
+    typeSection: 'Type — when it ends?',
+    hintNone: '“None” — used only for timing, no alert.',
+    hintPush: 'On end: a push notification + a “{{label}}” row appears.',
+    hintAlarm: 'On end: a strong wake alarm rings.',
+    warnRowGone: 'The “{{label}}” row will disappear.',
+    add: 'Add',
+    save: 'Save',
+    delete: 'Delete',
+  },
+  chainIssue: {
+    'no-arrival': 'Set an arrival time to arm.',
+    'pill-out-of-range': 'A pill’s duration is out of range.',
+    infeasible: 'This timing is impossible — a step would take negative time.',
+    'chain-too-long': 'The total span is unrealistically long.',
+    'no-events': 'Add a notify or alarm pill — there’s nothing to ring yet.',
+    'past-event': 'This schedule has already passed.',
+    'bedtime-passed': 'Heads up: your start time has already passed.',
+  } satisfies Record<ChainValidationIssue['kind'], string>,
 };
 // NOTE: deliberately NOT `as const` — ko.ts is typed `typeof en`, which must
 // widen values to `string` (literal types would reject the Korean strings)
