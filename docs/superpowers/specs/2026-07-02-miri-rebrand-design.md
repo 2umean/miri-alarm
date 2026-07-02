@@ -17,7 +17,7 @@
 | Display name | `MIRI Alarm` | user's explicit words |
 | Korean launcher label | `미리` via `locales` config | **default (user AFK)** — matches brand mock; flip to "MIRI Alarm everywhere" by deleting the locales entry |
 | In-app wordmark | `MIRI ✈` | **default (user AFK)** — keeps crew plane motif; brand lockup alternative is `MIRI.` |
-| Korean running text | `MIRI는 …` | 미리 mid-sentence reads as the adverb "in advance"; Latin brand name avoids the mis-parse |
+| Korean running text | `미리는 …` | user decision 2026-07-02: brand is written in hangul in Korean sentences (overrides the earlier Latin-MIRI default) |
 | slug / scheme | `miri` | per brand handoff |
 | bundleId / package | `com.umean.miri` | per brand handoff |
 | NSAlarmKitUsageDescription | "MIRI Alarm sets alarms so airline crew reliably wake up and leave on time for their duties." | keeps the crew-specific wording Apple reviewers prefer; brand page's generic sentence rejected |
