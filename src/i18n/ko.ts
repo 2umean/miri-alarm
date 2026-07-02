@@ -31,7 +31,7 @@ export const ko: typeof en = {
   editor: { cancel: '취소', set: '설정' },
   onboarding: {
     title: '알람이 꼭 울리도록 설정할게요',
-    subtitle: '미리는 안전 알람이에요. 휴대폰이 알람을 조용히 종료하지 못하도록 설정해 주세요.',
+    subtitle: 'MIRI는 안전 알람이에요. 휴대폰이 알람을 조용히 종료하지 못하도록 설정해 주세요.',
     oemWarning: '이 휴대폰 브랜드는 알람을 강제 종료하는 것으로 알려져 있어요 — 배터리 단계는 필수예요.',
     enable: '허용하기',
     required: '필수',
