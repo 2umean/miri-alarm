@@ -40,6 +40,9 @@ const config: ExpoConfig = {
     // service/activity/receiver components) are injected by the config plugin
     // below — single source of truth in modules/schedularm-alarm/plugin.
   },
+  web: {
+    favicon: './assets/favicon.png',
+  },
   plugins: [
     './modules/schedularm-alarm/plugin/withSchedularmAlarm',
     'expo-font',
@@ -54,8 +57,9 @@ const config: ExpoConfig = {
   ],
   // extra.eas.projectId intentionally absent: EAS slugs are immutable, so the
   // old 'schedularm' project (ff51bf5f-ee0b-48d7-9cf3-7b83f44a0fd8) cannot be
-  // renamed to 'miri'. Run `eas init` once to create @kgulag98/miri — it will
-  // re-pin the new projectId here.
+  // renamed to 'miri'. Run `eas init` once to create @kgulag98/miri, then paste
+  // the projectId it prints here as extra.eas.projectId — eas-cli cannot write
+  // into a dynamic .ts config.
 };
 
 export default config;

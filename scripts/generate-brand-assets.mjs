@@ -1,5 +1,7 @@
 // Deterministic brand-asset generation from the SVG masters (run: node scripts/generate-brand-assets.mjs)
 // MIRI · "First Light" — an amber sun cresting a broken horizon.
+// Also writes assets/brand/logo.svg, so this script is the ONLY place the mark lives.
+import { writeFile } from 'node:fs/promises';
 import sharp from 'sharp';
 
 // The mark: a sun (amber) cresting a broken horizon (white). Two swappable colors
@@ -33,10 +35,13 @@ const monochrome = svg(`<g transform="translate(512 512) scale(0.62) translate(-
 const out = async (svgStr, size, file) =>
   sharp(Buffer.from(svgStr)).resize(size, size).png().toFile(file);
 
-await out(tile, 1024, 'assets/icon.png');
-await out(foreground, 1024, 'assets/android-icon-foreground.png');
-await out(background, 1024, 'assets/android-icon-background.png');
-await out(monochrome, 1024, 'assets/android-icon-monochrome.png');
-await out(tile, 512, 'assets/splash-icon.png');
-await out(tile, 48, 'assets/favicon.png');
+await Promise.all([
+  writeFile('assets/brand/logo.svg', `${tile}\n`),
+  out(tile, 1024, 'assets/icon.png'),
+  out(foreground, 1024, 'assets/android-icon-foreground.png'),
+  out(background, 1024, 'assets/android-icon-background.png'),
+  out(monochrome, 1024, 'assets/android-icon-monochrome.png'),
+  out(tile, 512, 'assets/splash-icon.png'),
+  out(tile, 48, 'assets/favicon.png'),
+]);
 console.log('brand assets generated');

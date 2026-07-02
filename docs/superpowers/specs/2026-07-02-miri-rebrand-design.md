@@ -37,14 +37,14 @@
 
 ## Architecture
 
-Asset pipeline stays exactly as before: `scripts/generate-brand-assets.mjs` is the single deterministic source (SVG masters inline, `sharp` renders PNGs); `assets/brand/logo.svg` is the standalone tile master. The script is the design project's drop-in replacement, plus one addition: a 48px `favicon.png` output (previously stale, never regenerated).
+Asset pipeline stays exactly as before: `scripts/generate-brand-assets.mjs` is the single deterministic source (SVG masters inline, `sharp` renders PNGs). The script is the design project's drop-in replacement plus two review-driven changes: it now also **writes** `assets/brand/logo.svg` (previously a hand-synced duplicate of the same geometry), and it emits a 48px `favicon.png`, now actually referenced via `web.favicon` in `app.config.ts` (previously stale and unreferenced). The Korean locale file also carries `NSAlarmKitUsageDescription` so the AlarmKit permission sheet is Korean on Korean devices, not just the launcher label.
 
 Because `ios/`/`android/` are gitignored (CNG), all identity changes flow from `app.config.ts` at prebuild time — no native project edits.
 
 ## Out-of-repo checklist (user actions, in order)
 
 1. **Back up the old project's Android keystore** before anything else: `eas credentials -p android` on the old `schedularm` project → download. (Only needed if the old APK ever needs touching again.) Note any EAS env vars/secrets/webhooks — they don't transfer.
-2. **`eas init`** (logged in as kgulag98) — creates the `@kgulag98/miri` project and writes the new `extra.eas.projectId` into `app.config.ts`. Build history, secrets, and update channels of the old project do not carry over (nothing critical there today).
+2. **`eas init`** (logged in as kgulag98) — creates the `@kgulag98/miri` project. eas-cli **cannot write into a dynamic `app.config.ts`**, so paste the projectId it prints into `extra.eas.projectId` by hand (the comment in the config marks the spot). Build history, secrets, and update channels of the old project do not carry over (nothing critical there today).
 3. **iOS credentials:** first `eas build -p ios` (or `eas credentials --platform ios`) interactively — EAS registers the new App ID `com.umean.miri` on the Developer Portal, reuses the account-level distribution cert, mints a fresh provisioning profile. Re-link the ASC API key for submit if prompted.
 4. **ASC app record:** either create it on appstoreconnect.apple.com (New App: "MIRI Alarm" — must be globally unique on the App Store — bundle ID `com.umean.miri`, SKU e.g. `com.umean.miri`), or let the first **interactive** `eas submit -p ios` auto-create it (needs Apple ID login; the ASC API key alone cannot create app records, and non-interactive submit fails without `ascAppId`). Then re-pin the new numeric Apple ID as `ascAppId` in `eas.json`.
 5. **TestFlight:** the new app is a separate TestFlight entry — re-invite testers. Old schedularm builds keep running until expiry but never update.
