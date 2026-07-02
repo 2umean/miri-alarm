@@ -13,7 +13,7 @@ export const ko: typeof en = {
     disarm: '알람 끄기',
     emptyTitle: '언제까지 도착해야 하나요?',
     emptySub: '탭해서 설정 — 거꾸로 계산해 드려요',
-    wordmark: 'SCHEDULARM ✈',
+    wordmark: 'MIRI ✈',
   },
   banner: {
     armed: '✓ 알람 설정됨 · 기상 {{wake}} · 출발 {{leave}}',
@@ -31,7 +31,7 @@ export const ko: typeof en = {
   editor: { cancel: '취소', set: '설정' },
   onboarding: {
     title: '알람이 꼭 울리도록 설정할게요',
-    subtitle: 'schedularm은 안전 알람이에요. 휴대폰이 알람을 조용히 종료하지 못하도록 설정해 주세요.',
+    subtitle: 'MIRI는 안전 알람이에요. 휴대폰이 알람을 조용히 종료하지 못하도록 설정해 주세요.',
     oemWarning: '이 휴대폰 브랜드는 알람을 강제 종료하는 것으로 알려져 있어요 — 배터리 단계는 필수예요.',
     enable: '허용하기',
     required: '필수',

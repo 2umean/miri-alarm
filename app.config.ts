@@ -5,26 +5,32 @@ import { ExpoConfig } from 'expo/config';
 import { version } from './package.json';
 
 const config: ExpoConfig = {
-  name: 'schedularm',
-  slug: 'schedularm',
+  name: 'MIRI Alarm',
+  slug: 'miri',
   owner: 'kgulag98',
-  scheme: 'schedularm',
+  scheme: 'miri',
   version,
   orientation: 'portrait',
   icon: './assets/icon.png',
   ios: {
-    bundleIdentifier: 'com.umean.schedularm',
+    bundleIdentifier: 'com.umean.miri',
     deploymentTarget: '26.0',
     config: {
       usesNonExemptEncryption: false,
     },
     infoPlist: {
+      // Required for the ko launcher label below to apply on iOS.
+      CFBundleAllowMixedLocalizations: true,
       NSAlarmKitUsageDescription:
-        'schedularm sets alarms so airline crew reliably wake up and leave on time for their duties.',
+        'MIRI Alarm sets alarms so airline crew reliably wake up and leave on time for their duties.',
     },
   },
+  // Korean devices show 미리 under the icon; everywhere else uses `name`.
+  locales: {
+    ko: './locales/ko.json',
+  },
   android: {
-    package: 'com.umean.schedularm',
+    package: 'com.umean.miri',
     adaptiveIcon: {
       foregroundImage: './assets/android-icon-foreground.png',
       backgroundImage: './assets/android-icon-background.png',
@@ -46,11 +52,10 @@ const config: ExpoConfig = {
       },
     ],
   ],
-  extra: {
-    eas: {
-      projectId: 'ff51bf5f-ee0b-48d7-9cf3-7b83f44a0fd8',
-    },
-  },
+  // extra.eas.projectId intentionally absent: EAS slugs are immutable, so the
+  // old 'schedularm' project (ff51bf5f-ee0b-48d7-9cf3-7b83f44a0fd8) cannot be
+  // renamed to 'miri'. Run `eas init` once to create @kgulag98/miri — it will
+  // re-pin the new projectId here.
 };
 
 export default config;

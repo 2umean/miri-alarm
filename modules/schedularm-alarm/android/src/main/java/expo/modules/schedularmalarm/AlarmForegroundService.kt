@@ -128,7 +128,7 @@ class AlarmForegroundService : Service() {
     )
 
     return NotificationCompat.Builder(this, AlarmConstants.CHANNEL_ID)
-      .setContentTitle("schedularm")
+      .setContentTitle("MIRI Alarm")
       .setContentText("Alarm — tap to dismiss")
       .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
       .setCategory(NotificationCompat.CATEGORY_ALARM)

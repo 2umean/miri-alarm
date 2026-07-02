@@ -1,12 +1,13 @@
 // Deterministic brand-asset generation from the SVG masters (run: node scripts/generate-brand-assets.mjs)
+// MIRI · "First Light" — an amber sun cresting a broken horizon.
 import sharp from 'sharp';
 
-const CLOCK = `
-  <circle cx="512" cy="546" r="222" fill="none" stroke="{COLOR}" stroke-width="60"/>
-  <line x1="512" y1="546" x2="512" y2="410" stroke="{COLOR}" stroke-width="60" stroke-linecap="round"/>
-  <line x1="512" y1="546" x2="418" y2="606" stroke="{COLOR}" stroke-width="60" stroke-linecap="round"/>
-  <path d="M 751 308 A 325 325 0 0 0 324 222" fill="none" stroke="{ARROW}" stroke-width="68" stroke-linecap="round"/>
-  <polygon points="256,120 222,290 376,238" fill="{ARROW}"/>`;
+// The mark: a sun (amber) cresting a broken horizon (white). Two swappable colors
+// so the tile, adaptive foreground, and monochrome icon all read from one place.
+const SUN = `
+  <path d="M302 600 A210 210 0 0 1 722 600 Z" fill="{SUN}"/>
+  <line x1="148" y1="600" x2="288" y2="600" stroke="{LINE}" stroke-width="66" stroke-linecap="round"/>
+  <line x1="736" y1="600" x2="876" y2="600" stroke="{LINE}" stroke-width="66" stroke-linecap="round"/>`;
 
 const svg = (body) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">${body}</svg>`;
 
@@ -16,18 +17,18 @@ const GRADIENT = `<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
 
 // Full tile (rounded square + mark) — the iOS/store icon and splash image.
 const tile = svg(`${GRADIENT}<rect width="1024" height="1024" rx="240" fill="url(#bg)"/>
-  ${CLOCK.replaceAll('{COLOR}', '#FFFFFF').replaceAll('{ARROW}', '#FFB84C')}`);
+  ${SUN.replaceAll('{LINE}', '#FFFFFF').replaceAll('{SUN}', '#FFB84C')}`);
 
 // Adaptive foreground: mark only, scaled into the ~66% safe zone, transparent bg.
 const foreground = svg(`<g transform="translate(512 512) scale(0.62) translate(-512 -512)">
-  ${CLOCK.replaceAll('{COLOR}', '#FFFFFF').replaceAll('{ARROW}', '#FFB84C')}</g>`);
+  ${SUN.replaceAll('{LINE}', '#FFFFFF').replaceAll('{SUN}', '#FFB84C')}</g>`);
 
 // Adaptive background: the gradient, full bleed (no rounding — the launcher masks it).
 const background = svg(`${GRADIENT}<rect width="1024" height="1024" fill="url(#bg)"/>`);
 
 // Monochrome (themed icons): white-only mark, transparent bg.
 const monochrome = svg(`<g transform="translate(512 512) scale(0.62) translate(-512 -512)">
-  ${CLOCK.replaceAll('{COLOR}', '#FFFFFF').replaceAll('{ARROW}', '#FFFFFF')}</g>`);
+  ${SUN.replaceAll('{LINE}', '#FFFFFF').replaceAll('{SUN}', '#FFFFFF')}</g>`);
 
 const out = async (svgStr, size, file) =>
   sharp(Buffer.from(svgStr)).resize(size, size).png().toFile(file);
@@ -37,4 +38,5 @@ await out(foreground, 1024, 'assets/android-icon-foreground.png');
 await out(background, 1024, 'assets/android-icon-background.png');
 await out(monochrome, 1024, 'assets/android-icon-monochrome.png');
 await out(tile, 512, 'assets/splash-icon.png');
+await out(tile, 48, 'assets/favicon.png');
 console.log('brand assets generated');
