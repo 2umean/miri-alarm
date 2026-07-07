@@ -14,7 +14,7 @@ export const en = {
     disarm: 'Disarm',
     emptyTitle: 'When do you need to arrive?',
     emptySub: 'Tap to set — we’ll plan backwards',
-    wordmark: 'SCHEDULARM ✈',
+    wordmark: 'MIRI ✈',
   },
   banner: {
     armed: '✓ Armed · Wake {{wake}} · Leave {{leave}}',
@@ -32,7 +32,7 @@ export const en = {
   editor: { cancel: 'Cancel', set: 'Set' },
   onboarding: {
     title: 'Let’s make sure your alarm can wake you',
-    subtitle: 'schedularm is a safety alarm. These settings stop your phone from silently killing it.',
+    subtitle: 'MIRI is a safety alarm. These settings stop your phone from silently killing it.',
     oemWarning: 'Your phone’s brand is known to kill alarms — the battery step is required.',
     enable: 'Enable',
     required: 'REQUIRED',
@@ -43,7 +43,7 @@ export const en = {
     fullScreen: { title: 'Show over the lock screen', desc: 'So the alarm takes over the screen, not just a banner.' },
     overlay: { title: 'Appear on top', desc: 'Forces full-screen on phones that suppress it.' },
     battery: { title: 'Disable battery optimization', desc: 'Otherwise your phone kills the alarm in the background.' },
-    alarmAuth: { title: 'Allow alarms', desc: 'schedularm needs permission to set alarms that wake you through silent mode and Focus.' },
+    alarmAuth: { title: 'Allow alarms', desc: 'MIRI needs permission to set alarms that wake you through silent mode and Focus.' },
   },
   alerts: {
     fallAsleep: { title: '🌙 Time to fall asleep', body: 'Sleep now to be rested for your {{wake}} wake-up.' },

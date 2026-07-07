@@ -2,7 +2,7 @@
 
 > Not needed until we're ready to ship. Captured now so the build phase keeps the
 > store constraints in mind (a few tie directly to the alarm permissions).
-> **schedularm is a personal project** (not a company app) — account-type and
+> **MIRI Alarm is a personal project** (not a company app) — account-type and
 > bundle-ID guidance below reflects that.
 
 ## Mental model
@@ -32,7 +32,7 @@ code → eas build (cloud) → eas submit → store review → testing track →
 ## Personal-project specifics
 
 - **Google account type / the 14-day wall:** a **personal** Play Console account created after 2023-11-13 must run a **closed test with ≥12 testers for 14 consecutive days** before it can apply to publish to Production. An *Organization* account avoids this but needs a free **D-U-N-S number** (registered to a business entity). As a personal project, plan for the **personal account + 14-day testing requirement** — start the closed test early. (Revisit if this is ever published under a company.)
-- **Bundle / package IDs (pick once, never changeable):** use a personal reverse-domain, e.g. `com.umean.schedularm` or `io.github.2umean.schedularm`. Set `ios.bundleIdentifier` and `android.package` in `app.config.ts` before the first build.
+- **Bundle / package IDs (pick once, never changeable):** the app's ID is `com.umean.miri`, set as `ios.bundleIdentifier` / `android.package` in `app.config.ts`. IDs really can't be renamed — the 2026-07 schedularm→MIRI rebrand had to mint a whole new app identity (new store records, new EAS project; old installs don't upgrade in place).
 - **Apple account type:** **Individual** (your legal name shows as the seller; no business paperwork / D-U-N-S needed).
 
 ## One-time setup
@@ -57,7 +57,7 @@ code → eas build (cloud) → eas submit → store review → testing track →
 5. **Test on real devices** (TestFlight / Internal track) — alarms behave differently than the simulator.
 6. **Submit for review → release.** Apple ~1 day; Google hours–days.
 
-## ⚠️ schedularm-specific store traps (tie to the alarm permissions)
+## ⚠️ MIRI-specific store traps (tie to the alarm permissions)
 
 - **iOS AlarmKit — do NOT add an "alarmkit" entitlement; it does not exist.** Apple confirmed (Developer Forums thread 797950, Aug 2025) that AI tools hallucinate `com.apple.developer.alarmkit`; adding it **breaks the build**. AlarmKit needs **only** `NSAlarmKitUsageDescription` + a runtime `requestAuthorization()` prompt.
 - **You do NOT need Critical Alerts.** That entitlement needs special approval and is reserved for health/safety apps. AlarmKit already rings through Silent/Focus. Skip it.
