@@ -55,11 +55,13 @@ const config: ExpoConfig = {
       },
     ],
   ],
-  // extra.eas.projectId intentionally absent: EAS slugs are immutable, so the
-  // old 'schedularm' project (ff51bf5f-ee0b-48d7-9cf3-7b83f44a0fd8) cannot be
-  // renamed to 'miri'. Run `eas init` once to create @kgulag98/miri, then paste
-  // the projectId it prints here as extra.eas.projectId — eas-cli cannot write
-  // into a dynamic .ts config.
+  extra: {
+    eas: {
+      // @kgulag98/miri — created 2026-07-06 for the MIRI rebrand; the old
+      // 'schedularm' project (ff51bf5f-…) is dead (EAS slugs are immutable).
+      projectId: 'eb01f77f-8c2f-4693-ba20-0560f3091517',
+    },
+  },
 };
 
 export default config;
