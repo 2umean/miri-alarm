@@ -4,7 +4,16 @@ Date: 2026-07-08
 Status: approved
 
 Visual mockup: [MIRI - Emoji Picker (Claude design)](https://claude.ai/design/p/11546e25-bada-4439-b772-b96f0bef7c9d?file=MIRI+-+Emoji+Picker.dc.html&via=share)
-— the mockup is the source of truth for styling details (tile sizes, spacing, hint placement).
+— the mockup is the source of truth for styling. Key values (all colors are
+existing theme tokens):
+
+| Element | Spec |
+| --- | --- |
+| Quick-pick tile | 42×42, radius 13, emoji 20pt, white bg, 1.5px `line` border; row spread `space-between` |
+| Quick-pick active | `sky500` bg + `sky500` border + focus glow (existing `emojiActive` style) |
+| Free-input tile | 46×46, radius 13, emoji 22pt, white bg, 1.5px `line` border, left of name field |
+| Free-input focused | 2px `sky500` border + 4px soft ring `rgba(79,168,255,.18)`, text selected |
+| Custom icon state | icon not in the 6 → no quick-pick tile highlighted (mockup frame C) |
 
 ## Problem
 
@@ -40,9 +49,8 @@ The event editor (`PillEditorSheet`) offers only a hardcoded 12-emoji palette
   it.
 - It always displays the current icon, whether set by quick pick or keyboard.
 - Neither platform can force the emoji keyboard open; the user taps the
-  emoji/globe key on their own keyboard. While the input is focused, a
-  one-line hint appears (new i18n key, `en` + `ko`):
-  "use the emoji key on your keyboard" / "키보드의 이모지 키를 눌러 선택하세요".
+  emoji/globe key on their own keyboard. No in-sheet hint text (per mockup —
+  the emoji-styled tile with its text pre-selected is the affordance).
 - The sheet's existing `KeyboardAvoidingView` logic already covers the
   keyboard being open here; no changes.
 
@@ -65,10 +73,9 @@ The event editor (`PillEditorSheet`) offers only a hardcoded 12-emoji palette
 
 | File | Change |
 | --- | --- |
-| `src/ui/components/PillEditorSheet.tsx` | Remove 12-tile palette; add 6-tile quick row + emoji `TextInput` tile + focused hint |
+| `src/ui/components/PillEditorSheet.tsx` | Remove 12-tile palette; add 6-tile quick row + emoji `TextInput` tile |
 | `src/ui/lastGrapheme.ts` (new) | Grapheme-cluster utility |
 | `src/ui/__tests__/lastGrapheme.test.ts` (new) | Unit tests |
-| `src/i18n/en.ts`, `src/i18n/ko.ts` | One hint key |
 
 ## Testing
 
