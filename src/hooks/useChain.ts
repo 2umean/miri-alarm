@@ -16,8 +16,8 @@ import {
   loadLegacyDraft,
   saveDraftChain,
 } from '../storage/draftChain';
-import { ChainState, chainReducer, initialChainState } from '../state/chainReducer';
-import { migratedChain, reconcileAndRoll, seedPills } from '../state/chainHydrate';
+import { chainReducer, initialChainState } from '../state/chainReducer';
+import { migratedChain, reconcileAndRoll, withDefaultArrival } from '../state/chainHydrate';
 
 const NOW_TICK_MS = 60_000;
 
@@ -30,36 +30,55 @@ const resolveName = (key: string): string => t(key);
 export type PillInput = { icon: string; name: string; dur: number; type: PillType };
 
 /**
- * v2 twin of useSchedule: restores the chain (v2 draft → migrate v1 → empty),
- * persists every change, ticks `now`, and always shows the chain rolled to its
- * next future occurrence. Exposes id-minting action helpers so the UI never
- * touches the reducer's raw shape.
+ * v2 twin of useSchedule: restores the chain (v2 draft → migrate v1 → seeded
+ * default), persists every change, ticks `now`, and always shows the chain
+ * rolled to its next future occurrence. Exposes id-minting action helpers so
+ * the UI never touches the reducer's raw shape. Every path runs through
+ * withDefaultArrival, so a chain ALWAYS has an arrival anchor (next 09:00 by
+ * default) — there is no "set your arrival first" state.
  */
 export function useChain() {
   const zone = useMemo(() => DateTime.local().zoneName ?? 'UTC', []);
-  const [state, dispatch] = useReducer(chainReducer, undefined, () => initialChainState(zone));
+  const [state, dispatch] = useReducer(chainReducer, undefined, () =>
+    withDefaultArrival(initialChainState(zone), zone, Date.now(), resolveName, makeId),
+  );
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [hydrated, setHydrated] = useState(false);
 
-  // Restore on launch: saved v2 draft → migrate a legacy v1 draft → empty.
+  // Restore on launch: saved v2 draft → migrate a legacy v1 draft → seeded default.
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const draft = await loadDraftChain();
-      if (cancelled) return;
-      if (draft) {
-        dispatch({ type: 'hydrate', chain: reconcileAndRoll(draft, zone, Date.now()) });
-      } else {
-        const legacy = await loadLegacyDraft();
+      try {
+        const draft = await loadDraftChain();
         if (cancelled) return;
-        if (legacy && legacy.arrival != null) {
-          const migrated = migratedChain(legacy, zone, resolveName, makeId);
-          dispatch({ type: 'hydrate', chain: reconcileAndRoll(migrated, zone, Date.now()) });
-          await clearLegacyDraft();
+        if (draft) {
+          // withDefaultArrival covers drafts saved before an arrival was ever set.
+          const now = Date.now();
+          const restored = withDefaultArrival(
+            reconcileAndRoll(draft, zone, now),
+            zone,
+            now,
+            resolveName,
+            makeId,
+          );
+          dispatch({ type: 'hydrate', chain: restored });
+        } else {
+          const legacy = await loadLegacyDraft();
+          if (cancelled) return;
+          if (legacy && legacy.arrival != null) {
+            const migrated = migratedChain(legacy, zone, resolveName, makeId);
+            dispatch({ type: 'hydrate', chain: reconcileAndRoll(migrated, zone, Date.now()) });
+            await clearLegacyDraft();
+          }
+          // else: keep the seeded default initial state.
         }
-        // else: keep the empty initial state (no arrival yet).
+      } catch {
+        // Storage failure — proceed with the seeded default initial state; the
+        // UI gates first paint on `hydrated`, so it must flip even on error.
+      } finally {
+        if (!cancelled) setHydrated(true);
       }
-      setHydrated(true);
     })();
     return () => {
       cancelled = true;
@@ -95,17 +114,8 @@ export function useChain() {
 
   // ----- id-minting action helpers (the UI's only entry points) -----
 
-  /** Set the arrival. First entry captures the zone and seeds the default pills. */
-  const setArrival = (instant: number) => {
-    if (state.arrival == null) {
-      dispatch({ type: 'set-arrival', instant, zone });
-      if (state.pills.length === 0) {
-        seedPills(resolveName, makeId).forEach((pill) => dispatch({ type: 'add-pill', pill }));
-      }
-    } else {
-      dispatch({ type: 'edit-arrival', instant });
-    }
-  };
+  /** Move the arrival anchor. (The first arrival + seed pills come from withDefaultArrival.) */
+  const setArrival = (instant: number) => dispatch({ type: 'edit-arrival', instant });
 
   const addPill = (input: PillInput, index?: number): string => {
     const id = makeId();

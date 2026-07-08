@@ -67,9 +67,6 @@ export const en = {
   },
   pillType: { none: 'None', push: '🔔 Notify', alarm: '⏰ Alarm' },
   chainScreen: {
-    emptyTitle: 'When do you need to arrive?',
-    emptySub: 'Set your arrival and we’ll plan everything backwards',
-    setArrival: 'Set arrival ✈',
     arrivalSummary: '🛬 Arrive {{time}}',
     addPill: '＋ Add pill',
     bedtime: 'Bedtime',

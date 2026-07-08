@@ -4,7 +4,6 @@ import {
   formatAlarmDate,
   formatDuration,
   formatClockWithDay,
-  pickedTimeToInstant,
   splitDuration,
 } from '../format';
 
@@ -56,12 +55,6 @@ test('formatClockWithDay shows the clock and a relative-day label', () => {
   expect(formatClockWithDay(at(6, 3, 45), ref, 'UTC')).toEqual({ clock: '03:45', day: 'today' });
   expect(formatClockWithDay(at(5, 19, 45), ref, 'UTC')).toEqual({ clock: '19:45', day: 'last night' });
   expect(formatClockWithDay(at(7, 3, 0), ref, 'UTC')).toEqual({ clock: '03:00', day: 'tomorrow' });
-});
-
-test('pickedTimeToInstant maps an HH:mm onto the same calendar day as a base instant', () => {
-  const base = at(6, 3, 45); // some derived time on day 6
-  const out = pickedTimeToInstant(base, 4, 15, 'UTC');
-  expect(DateTime.fromMillis(out, { zone: 'UTC' }).toFormat('yyyy-MM-dd HH:mm')).toBe('2026-01-06 04:15');
 });
 
 test('formatAlarmDate is null when the alarm rings today (no chip)', () => {

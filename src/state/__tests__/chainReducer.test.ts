@@ -24,15 +24,6 @@ test('hydrate replaces the whole state', () => {
   expect(chainReducer(initialChainState('UTC'), { type: 'hydrate', chain: next })).toBe(next);
 });
 
-test('set-arrival sets the anchor and captures the zone', () => {
-  const s = chainReducer(initialChainState('UTC'), {
-    type: 'set-arrival',
-    instant: 123,
-    zone: 'Asia/Seoul',
-  });
-  expect(s).toEqual({ arrival: 123, zone: 'Asia/Seoul', pills: [] });
-});
-
 test('edit-arrival moves the anchor but keeps zone and pills', () => {
   const start = withPills('a');
   const s = chainReducer(start, { type: 'edit-arrival', instant: 999 });
@@ -46,7 +37,7 @@ test('roll-arrival is a no-op before an arrival exists', () => {
   expect(chainReducer(empty, { type: 'roll-arrival', instant: 555 })).toBe(empty);
 });
 
-test('edit-arrival is a no-op before an arrival exists (first entry must use set-arrival)', () => {
+test('edit-arrival is a no-op before an arrival exists (defensive — hydration always seeds one)', () => {
   const empty = initialChainState('UTC');
   expect(chainReducer(empty, { type: 'edit-arrival', instant: 123 })).toBe(empty);
 });

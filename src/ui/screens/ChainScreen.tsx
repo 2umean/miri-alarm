@@ -18,7 +18,7 @@ import { ArrivalPickerSheet } from '../components/ArrivalPickerSheet';
 import { ChainList } from '../components/ChainList';
 import { PillDraft, PillEditorSheet } from '../components/PillEditorSheet';
 import { ReorderView } from '../components/ReorderView';
-import { formatAlarmDate, pickedTimeToInstant } from '../format';
+import { formatAlarmDate } from '../format';
 import { colors, fonts, radii, shadows, spacing } from '../theme';
 
 const DEFAULT_NEW_PILL: PillDraft = { icon: '🧥', name: '', dur: 15, type: 'push' };
@@ -28,7 +28,7 @@ const issueText = (i: ChainValidationIssue): string => t(`chainIssue.${i.kind}`)
 type EditorState = { mode: 'create' } | { mode: 'edit'; id: string } | null;
 
 export function ChainScreen() {
-  const { chain, computed, issues, armable, zone, nowMs, setArrival, addPill, updatePill, removePill, reorderPill } =
+  const { chain, computed, issues, armable, zone, nowMs, hydrated, setArrival, addPill, updatePill, removePill, reorderPill } =
     useChain();
   const { armed, health, missed, arm, disarm, refreshHealth, clearMissed } = useArmingChain();
 
@@ -66,13 +66,14 @@ export function ChainScreen() {
     }
   };
 
+  // The picker is time-only and no date is shown before arming, so the only
+  // reading a pick can have is "the next HH:mm" — resolve to the soonest future
+  // occurrence. Pinning to the current anchor's day instead would silently keep
+  // a rollover-chosen "tomorrow" (e.g. the seeded default after ~07:45) and arm
+  // a day late. If today's occurrence is infeasible, rollChainToFuture advances it.
   const onConfirmArrival = (hour: number, minute: number) => {
     disarmForEdit();
-    const instant =
-      chain.arrival != null
-        ? pickedTimeToInstant(chain.arrival, hour, minute, zone)
-        : resolveArrivalInstant(hour, minute, zone, nowMs);
-    setArrival(instant);
+    setArrival(resolveArrivalInstant(hour, minute, zone, nowMs));
     setPickerOpen(false);
   };
 
@@ -89,6 +90,12 @@ export function ChainScreen() {
 
   const editingPill =
     editor?.mode === 'edit' ? chain.pills.find((p) => p.id === editor.id) : undefined;
+
+  // Until the stored draft is restored, the state is a freshly seeded default
+  // chain — painting it would flash the wrong times, so show just the backdrop.
+  if (!hydrated) {
+    return <LinearGradient colors={[colors.skyBgTop, colors.skyBgBottom]} style={styles.screen} />;
+  }
 
   return (
     <LinearGradient colors={[colors.skyBgTop, colors.skyBgBottom]} style={styles.screen}>
@@ -183,23 +190,7 @@ export function ChainScreen() {
               ) : null}
             </View>
           </>
-        ) : (
-          <Pressable style={styles.empty} onPress={() => setPickerOpen(true)}>
-            <Text style={styles.emptyIcon}>🛬</Text>
-            <Text style={styles.emptyTitle}>{t('chainScreen.emptyTitle')}</Text>
-            <Text style={styles.emptySub}>{t('chainScreen.emptySub')}</Text>
-            <View style={styles.emptyBtnWrap}>
-              <LinearGradient
-                colors={[colors.sky500, colors.sky700]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.emptyBtn}
-              >
-                <Text style={styles.emptyBtnText}>{t('chainScreen.setArrival')}</Text>
-              </LinearGradient>
-            </View>
-          </Pressable>
-        )}
+        ) : null}
 
         {chain.arrival != null ? (
           <Pressable
@@ -318,22 +309,6 @@ const styles = StyleSheet.create({
     ...shadows.bubble,
   },
   reorderText: { color: colors.ink2, fontSize: 13, fontFamily: fonts.bold },
-
-  empty: {
-    borderWidth: 2,
-    borderColor: '#A9CFF5',
-    borderStyle: 'dashed',
-    borderRadius: radii.bubble,
-    padding: spacing.xxl + 8,
-    alignItems: 'center',
-    backgroundColor: colors.skyBgBottom,
-  },
-  emptyIcon: { fontSize: 34 },
-  emptyTitle: { color: colors.ink, fontSize: 18, fontFamily: fonts.extra, marginTop: spacing.m },
-  emptySub: { color: colors.ink2, fontSize: 12, fontFamily: fonts.semi, marginTop: 6, textAlign: 'center', lineHeight: 18 },
-  emptyBtnWrap: { marginTop: spacing.l, borderRadius: radii.pill, ...shadows.button },
-  emptyBtn: { borderRadius: radii.pill, paddingVertical: spacing.m + 1, paddingHorizontal: spacing.xxl + 6 },
-  emptyBtnText: { color: colors.white, fontSize: 14, fontFamily: fonts.extra },
 
   armWrap: { marginTop: spacing.xxl, ...shadows.button },
   armInner: { borderRadius: radii.pill, paddingVertical: spacing.l + 1, alignItems: 'center' },

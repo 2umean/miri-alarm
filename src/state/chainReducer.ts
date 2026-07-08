@@ -2,10 +2,12 @@ import { Chain, Pill } from '../domain/pill';
 
 /**
  * v2 reducer over the Chain. Deliberately primitive: it mutates structure only.
- * Higher-level orchestration that needs i18n or id generation — seeding default
- * pills when an arrival is first set, migrating a legacy draft — lives in the
- * Phase 2 hook, so this stays pure and trivially testable. Durations are stored
- * as given (even if infeasible); validation is the gate, mirroring v1.
+ * Higher-level orchestration that needs i18n or id generation — seeding the
+ * default arrival + pills, migrating a legacy draft — lives in the hydration
+ * helpers (state/chainHydrate) wired up by useChain, so this stays pure and
+ * trivially testable. Every state fed to this reducer already carries an
+ * arrival anchor (withDefaultArrival). Durations are stored as given (even if
+ * infeasible); validation is the gate, mirroring v1.
  */
 
 export type ChainState = Chain;
@@ -15,10 +17,8 @@ export type PillPatch = Partial<Pick<Pill, 'icon' | 'name' | 'dur' | 'type'>>;
 export type ChainAction =
   // Replace the whole state from a restored draft (storage → reducer).
   | { type: 'hydrate'; chain: ChainState }
-  // First arrival entry — captures the zone alongside the anchor.
-  | { type: 'set-arrival'; instant: number; zone: string }
-  // Move an EXISTING anchor; zone and pills untouched. No-op before an arrival
-  // exists — first entry must go through set-arrival, which captures the zone.
+  // Move the anchor; zone and pills untouched. No-op without an anchor —
+  // defensive only, since hydration always seeds one (withDefaultArrival).
   | { type: 'edit-arrival'; instant: number }
   // Advance the anchor to its next future occurrence (rollChainToFuture); no-op before an arrival exists.
   | { type: 'roll-arrival'; instant: number }
@@ -44,8 +44,6 @@ export function chainReducer(state: ChainState, action: ChainAction): ChainState
   switch (action.type) {
     case 'hydrate':
       return action.chain;
-    case 'set-arrival':
-      return { ...state, arrival: action.instant, zone: action.zone };
     case 'edit-arrival':
       return state.arrival == null ? state : { ...state, arrival: action.instant };
     case 'roll-arrival':

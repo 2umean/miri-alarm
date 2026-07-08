@@ -62,15 +62,3 @@ export function formatAlarmDate(wakeMs: number, nowMs: number, zone: string): st
   const word = t('day.next-day');
   return `${word.charAt(0).toUpperCase()}${word.slice(1)} · ${date}`;
 }
-
-/** Map a picked wall-clock HH:mm onto the same calendar day as `baseInstantMs`. */
-export function pickedTimeToInstant(
-  baseInstantMs: number,
-  hour: number,
-  minute: number,
-  zone: string,
-): number {
-  return DateTime.fromMillis(baseInstantMs, { zone })
-    .set({ hour, minute, second: 0, millisecond: 0 })
-    .toMillis();
-}

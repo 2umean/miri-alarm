@@ -64,9 +64,6 @@ export const ko: typeof en = {
   },
   pillType: { none: '없음', push: '🔔 알림', alarm: '⏰ 알람' },
   chainScreen: {
-    emptyTitle: '언제까지 도착해야 하나요?',
-    emptySub: '도착 시간을 정하면 나머지는 거꾸로 계산해 드려요',
-    setArrival: '도착 시간 설정 ✈',
     arrivalSummary: '🛬 도착 {{time}}',
     addPill: '＋ 이벤트 추가',
     bedtime: '취침',
