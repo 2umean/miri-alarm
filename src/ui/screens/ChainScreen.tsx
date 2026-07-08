@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, ToastAndroid, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AlarmService } from '../../alarm/AlarmService';
@@ -30,7 +30,7 @@ type EditorState = { mode: 'create' } | { mode: 'edit'; id: string } | null;
 export function ChainScreen() {
   const { chain, computed, issues, armable, zone, nowMs, setArrival, addPill, updatePill, removePill, reorderPill } =
     useChain();
-  const { armed, health, arm, disarm, refreshHealth } = useArmingChain();
+  const { armed, health, missed, arm, disarm, refreshHealth, clearMissed } = useArmingChain();
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [editor, setEditor] = useState<EditorState>(null);
@@ -54,7 +54,20 @@ export function ChainScreen() {
     };
   }, [armed, nowMs]);
 
+  // Editing an armed chain disarms it first: the native alarms keep firing at the
+  // OLD times, so leaving the chain armed would show times that will not ring.
+  // The armed chip disappearing + the arm button returning make the state honest;
+  // the user re-arms deliberately once they're done editing.
+  const disarmForEdit = () => {
+    if (!armed) return;
+    void disarm();
+    if (Platform.OS === 'android') {
+      ToastAndroid.show(t('chainScreen.disarmedByEdit'), ToastAndroid.SHORT);
+    }
+  };
+
   const onConfirmArrival = (hour: number, minute: number) => {
+    disarmForEdit();
     const instant =
       chain.arrival != null
         ? pickedTimeToInstant(chain.arrival, hour, minute, zone)
@@ -64,6 +77,7 @@ export function ChainScreen() {
   };
 
   const onSubmitPill = (draft: PillDraft) => {
+    disarmForEdit();
     if (editor?.mode === 'edit') {
       updatePill(editor.id, draft);
       setHighlightId(editor.id);
@@ -92,6 +106,24 @@ export function ChainScreen() {
             </View>
           ) : null}
         </View>
+
+        {missed ? (
+          <Pressable
+            style={styles.risk}
+            onPress={async () => {
+              clearMissed();
+              await AlarmService.requestBattery();
+              refreshHealth();
+            }}
+          >
+            <Text style={styles.riskTitle}>
+              {/* Prefer the zone the alarm was armed under — the device may have
+                  flown zones between the miss and this launch. */}
+              {t('banner.missedTitle', { time: toLocalClock(missed.at, armed?.zone ?? chain.zone) })}
+            </Text>
+            <Text style={styles.riskLine}>{t('banner.missedBody')}</Text>
+          </Pressable>
+        ) : null}
 
         {atRisk ? (
           <Pressable
@@ -214,6 +246,7 @@ export function ChainScreen() {
           onDelete={
             editor.mode === 'edit'
               ? () => {
+                  disarmForEdit();
                   removePill(editor.id);
                   setEditor(null);
                 }
@@ -226,7 +259,10 @@ export function ChainScreen() {
         visible={reorderOpen}
         pills={chain.pills}
         onClose={() => setReorderOpen(false)}
-        onReorder={reorderPill}
+        onReorder={(from, to) => {
+          disarmForEdit();
+          reorderPill(from, to);
+        }}
       />
     </LinearGradient>
   );

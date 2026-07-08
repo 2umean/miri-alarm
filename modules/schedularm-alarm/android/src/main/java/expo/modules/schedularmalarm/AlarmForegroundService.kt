@@ -37,9 +37,23 @@ class AlarmForegroundService : Service() {
     // Which alarm fired — threaded onto the ring Activity + dismiss action so a
     // per-alarm dismiss leaves later alarms armed. Read before building anything.
     firingId = intent?.getStringExtra(AlarmConstants.EXTRA_ALARM_ID)
-    startInForeground()
+    try {
+      startInForeground()
+    } catch (e: Exception) {
+      // API 34+ / OEM builds can reject startForeground itself. Never die
+      // silently: hand off to the insistent fallback notification instead.
+      Log.e(AlarmConstants.TAG, "startForeground failed; posting fallback ring", e)
+      AlarmNotifications.notifyFallbackRing(this, firingId)
+      stopSelf()
+      return START_NOT_STICKY
+    }
     launchFullScreenIfPermitted()
     acquireWakeLock()
+    // A second alarm can fire while one is still ringing: onStartCommand re-enters
+    // on the live instance, so stop the previous audio/vibration first — an
+    // overwritten MediaPlayer would keep looping with no way to ever stop it.
+    stopAudio()
+    stopVibration()
     startAudio()
     startVibration()
     // REDELIVER_INTENT (not STICKY): if the OS kills us under memory pressure, come
@@ -69,7 +83,7 @@ class AlarmForegroundService : Service() {
 
   override fun onDestroy() {
     stopAudio()
-    vibrator?.cancel()
+    stopVibration()
     releaseWakeLock()
     stopForegroundCompat()
     getSystemService(NotificationManager::class.java)?.cancel(AlarmConstants.NOTIFICATION_ID)
@@ -148,35 +162,74 @@ class AlarmForegroundService : Service() {
 
   // --- Audio ------------------------------------------------------------------
 
-  private fun startAudio() {
+  /**
+   * Ringtone sources in preference order. The user's pick can be unreadable here
+   * (a custom media-store song needs READ_MEDIA_AUDIO; credential-encrypted files
+   * are unreadable in direct boot before first unlock) — so the chain must end in
+   * a bundled tone that can NEVER fail. A silent "ring" is an oversleep.
+   */
+  private fun audioCandidates(): List<Uri> = listOfNotNull(
+    RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM),
+    RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_RINGTONE),
+    Settings.System.DEFAULT_ALARM_ALERT_URI,
+    Uri.parse("android.resource://$packageName/${R.raw.miri_fallback_alarm}"),
+  ).distinct()
+
+  /** Try each candidate in order, advancing on both sync and async failures. */
+  private fun startAudio(candidates: List<Uri> = audioCandidates(), index: Int = 0) {
+    if (index >= candidates.size) {
+      Log.e(AlarmConstants.TAG, "Every alarm audio source failed — ringing silently")
+      return
+    }
+    val uri = candidates[index]
+    // Build into a local first: the field must only hold successfully-configured
+    // players, and the error listener must ignore players it no longer owns
+    // (a re-entered onStartCommand may have replaced the field meanwhile).
+    val player = MediaPlayer()
     try {
-      val uri: Uri = RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM)
-        ?: RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_RINGTONE)
-        ?: Settings.System.DEFAULT_ALARM_ALERT_URI
-      mediaPlayer = MediaPlayer().apply {
-        setAudioAttributes(
-          AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_ALARM)
-            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-            .build()
-        )
-        setDataSource(applicationContext, uri)
-        isLooping = true
-        setOnPreparedListener { start() }
-        prepareAsync()
+      player.setAudioAttributes(
+        AudioAttributes.Builder()
+          .setUsage(AudioAttributes.USAGE_ALARM)
+          .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+          .build()
+      )
+      player.setDataSource(applicationContext, uri)
+      player.isLooping = true
+      player.setOnPreparedListener { it.start() }
+      player.setOnErrorListener { _, what, extra ->
+        if (mediaPlayer === player) {
+          Log.e(AlarmConstants.TAG, "Alarm audio error ($what/$extra) on $uri — trying next")
+          stopAudio()
+          startAudio(candidates, index + 1)
+        }
+        true
       }
+      player.prepareAsync()
+      mediaPlayer = player
     } catch (e: Exception) {
-      Log.e(AlarmConstants.TAG, "Failed to start alarm audio", e)
+      Log.e(AlarmConstants.TAG, "Alarm audio source $uri failed — trying next", e)
+      try {
+        player.release()
+      } catch (releaseError: Exception) {
+        Log.e(AlarmConstants.TAG, "Failed to release broken player", releaseError)
+      }
+      startAudio(candidates, index + 1)
     }
   }
 
   private fun stopAudio() {
     mediaPlayer?.let {
+      // Separate guards: isPlaying throws in the Error state, and release()
+      // (valid in every state) must still run or the player leaks.
       try {
         if (it.isPlaying) it.stop()
-        it.release()
       } catch (e: Exception) {
         Log.e(AlarmConstants.TAG, "Failed to stop alarm audio", e)
+      }
+      try {
+        it.release()
+      } catch (e: Exception) {
+        Log.e(AlarmConstants.TAG, "Failed to release alarm audio", e)
       }
     }
     mediaPlayer = null
@@ -200,9 +253,15 @@ class AlarmForegroundService : Service() {
     }
   }
 
+  private fun stopVibration() {
+    vibrator?.cancel()
+    vibrator = null
+  }
+
   // --- Wake lock --------------------------------------------------------------
 
   private fun acquireWakeLock() {
+    releaseWakeLock() // re-entry (second alarm) must not orphan the held lock
     val powerManager = getSystemService(POWER_SERVICE) as PowerManager
     wakeLock = powerManager.newWakeLock(
       PowerManager.PARTIAL_WAKE_LOCK, "schedularm:alarm"

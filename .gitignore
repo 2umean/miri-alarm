@@ -23,6 +23,8 @@ web-build/
 build-*.apk
 build-*.aab
 build-*.ipa
+# Gradle output from compiling the local Expo module
+modules/schedularm-alarm/android/build/
 
 # Env / secrets
 .env

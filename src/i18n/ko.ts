@@ -19,6 +19,8 @@ export const ko: typeof en = {
     armed: '✓ 알람 설정됨 · 기상 {{wake}} · 출발 {{leave}}',
     ready: '🛏 도착 시간을 설정해 주세요',
     atRisk: '⚠ 알람이 울리지 않을 수 있어요 — 눌러서 해결',
+    missedTitle: '⚠ {{time}} 알람이 울리지 못했을 수 있어요',
+    missedBody: '휴대폰이 백그라운드에서 MIRI를 중지한 것 같아요. 눌러서 백그라운드 사용을 허용하면 재발을 막을 수 있어요.',
   },
   reason: {
     'notifications-denied': '알림이 꺼져 있어요 — 알람이 알려드릴 수 없어요',
@@ -76,6 +78,7 @@ export const ko: typeof en = {
     reorder: '순서 변경',
     reorderTitle: '이벤트 순서 편집',
     reorderHint: '⋮⋮ 를 길게 눌러 위아래로 끌어요',
+    disarmedByEdit: '알람이 해제됐어요 — 수정 후 다시 설정해 주세요',
   },
   arrivalPicker: {
     title: '언제까지 도착해야 하나요?',

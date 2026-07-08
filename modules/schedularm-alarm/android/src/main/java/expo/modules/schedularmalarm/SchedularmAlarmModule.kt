@@ -46,6 +46,14 @@ class SchedularmAlarmModule : Module() {
       AlarmController.dismissAll(context)
     }
 
+    // Entries whose time passed with no ring/dismiss (e.g. force-stop wiped
+    // AlarmManager). Consuming clears them so each miss is reported once.
+    Function("consumeMissedAlarms") {
+      AlarmController.consumeMissedAlarms(context).map {
+        mapOf("id" to it.id, "at" to it.at.toDouble(), "label" to it.label)
+      }
+    }
+
     Function("canScheduleExactAlarms") { canScheduleExactAlarms() }
 
     Function("canUseFullScreenIntent") { canUseFullScreenIntent() }
@@ -91,8 +99,20 @@ class SchedularmAlarmModule : Module() {
     return notificationManager.canUseFullScreenIntent()
   }
 
-  private fun canPostNotifications(): Boolean =
-    NotificationManagerCompat.from(context).areNotificationsEnabled()
+  private fun canPostNotifications(): Boolean {
+    val compat = NotificationManagerCompat.from(context)
+    if (!compat.areNotificationsEnabled()) return false
+    // A blocked channel silences its ring surface even when the app-level toggle
+    // is on — check the ring channel AND the last-resort alert channel. Channels
+    // may not exist before their first use (and never pre-O); null is fine.
+    return !isChannelBlocked(compat, AlarmConstants.CHANNEL_ID) &&
+      !isChannelBlocked(compat, AlarmConstants.ALERT_CHANNEL_ID)
+  }
+
+  private fun isChannelBlocked(compat: NotificationManagerCompat, id: String): Boolean {
+    val channel = compat.getNotificationChannelCompat(id) ?: return false
+    return channel.importance == NotificationManagerCompat.IMPORTANCE_NONE
+  }
 
   private fun canDrawOverlays(): Boolean =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) Settings.canDrawOverlays(context) else true

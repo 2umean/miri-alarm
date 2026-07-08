@@ -18,6 +18,15 @@ export type NativeAlarm = {
   leaveAt: number;
 };
 
+/** An armed alarm whose time passed with no ring/dismiss — evidence the OS
+ * killed it (force-stop / "put app to sleep"). Returned once, then cleared. */
+export type MissedAlarm = {
+  id: string;
+  /** The instant it should have rung, epoch ms. */
+  at: number;
+  label: string;
+};
+
 export type PermissionStatus = {
   /** AlarmManager.canScheduleExactAlarms() (API 31+); true on older OS. */
   canScheduleExactAlarms: boolean;

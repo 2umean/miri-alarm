@@ -50,12 +50,18 @@ function addComponents(application) {
   const activities = (application.activity ??= []);
   const receivers = (application.receiver ??= []);
 
+  // The whole fire path (receiver → FGS → activity) is directBootAware: after a
+  // reboot the boot re-arm runs at LOCKED_BOOT_COMPLETED, so the alarm must also
+  // be able to RING before first unlock — non-aware components would silently
+  // drop the AlarmManager broadcast until the user enters their PIN.
+
   // Looping-audio foreground service (systemExempted: alarm-app FGS exemption).
   upsert(services, `${PACKAGE}.AlarmForegroundService`, {
     'android:name': `${PACKAGE}.AlarmForegroundService`,
     'android:enabled': 'true',
     'android:exported': 'false',
     'android:foregroundServiceType': 'systemExempted',
+    'android:directBootAware': 'true',
   });
 
   // Full-screen, must-dismiss activity over the lock screen.
@@ -68,6 +74,7 @@ function addComponents(application) {
     'android:launchMode': 'singleInstance',
     'android:taskAffinity': '',
     'android:theme': '@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen',
+    'android:directBootAware': 'true',
   });
 
   // Internal alarm-fire + dismiss-action receiver (explicit intents only).
@@ -75,6 +82,7 @@ function addComponents(application) {
     'android:name': `${PACKAGE}.AlarmReceiver`,
     'android:enabled': 'true',
     'android:exported': 'false',
+    'android:directBootAware': 'true',
   });
 
   // Boot re-arm receiver — exported with intent-filter for system broadcasts.
@@ -95,6 +103,9 @@ function addComponents(application) {
             { $: { 'android:name': 'android.intent.action.LOCKED_BOOT_COMPLETED' } },
             { $: { 'android:name': 'android.intent.action.QUICKBOOT_POWERON' } },
             { $: { 'android:name': 'com.htc.intent.action.QUICKBOOT_POWERON' } },
+            // Sideloaded APK updates cancel AlarmManager alarms on some OEMs —
+            // re-arm as soon as the new package is installed, not on next open.
+            { $: { 'android:name': 'android.intent.action.MY_PACKAGE_REPLACED' } },
           ],
         },
       ],

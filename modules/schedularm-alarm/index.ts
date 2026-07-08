@@ -1,8 +1,8 @@
 import { requireNativeModule } from 'expo';
 
-import type { NativeAlarm, PermissionStatus } from './SchedularmAlarm.types';
+import type { MissedAlarm, NativeAlarm, PermissionStatus } from './SchedularmAlarm.types';
 
-export type { NativeAlarm, PermissionStatus } from './SchedularmAlarm.types';
+export type { MissedAlarm, NativeAlarm, PermissionStatus } from './SchedularmAlarm.types';
 
 // Backed by the native SchedularmAlarmModule (Android: bespoke Kotlin; iOS: AlarmKit).
 const SchedularmAlarm = requireNativeModule('SchedularmAlarm');
@@ -22,6 +22,16 @@ export function scheduleAlarms(alarms: NativeAlarm[]): Promise<void> {
 /** Stop any ringing alarm AND cancel every scheduled one (clears boot re-arm). */
 export function dismissAll(): void {
   SchedularmAlarm.dismissAll();
+}
+
+/**
+ * Android only: armed alarms whose time passed with no ring — evidence the OS
+ * killed the app (force-stop / "put app to sleep" wipes AlarmManager but not the
+ * native store). Read-and-clear: each miss is reported exactly once. Call BEFORE
+ * re-arming, which replaces the persisted set and would erase the evidence.
+ */
+export function consumeMissedAlarms(): MissedAlarm[] {
+  return SchedularmAlarm.consumeMissedAlarms();
 }
 
 /** Whether exact alarms can be scheduled right now (else the alarm silently drops). */

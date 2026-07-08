@@ -20,6 +20,8 @@ export const en = {
     armed: '✓ Armed · Wake {{wake}} · Leave {{leave}}',
     ready: '🛏 Ready — set your arrival time',
     atRisk: '⚠ Your alarm may NOT ring — tap to fix',
+    missedTitle: '⚠ The {{time}} alarm may not have rung',
+    missedBody: 'Your phone likely stopped MIRI in the background. Tap to allow background use so this can’t happen again.',
   },
   reason: {
     'notifications-denied': 'Notifications are off — the alarm can’t alert you',
@@ -79,6 +81,7 @@ export const en = {
     reorder: 'Reorder',
     reorderTitle: 'Reorder pills',
     reorderHint: 'Press and hold ⋮⋮ to drag up or down',
+    disarmedByEdit: 'Alarm disarmed — arm it again after editing',
   },
   arrivalPicker: {
     title: 'When do you need to arrive?',

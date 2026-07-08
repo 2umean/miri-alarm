@@ -3,4 +3,10 @@
     <string name="ring_subtitle">Time to wake up</string>
     <string name="ring_leave_chip">🚪 %2$d min until %1$s departure</string>
     <string name="ring_dismiss">Dismiss alarm</string>
+    <string name="missed_alarm_title">⚠️ Your alarm may not have rung</string>
+    <string name="missed_alarm_body">The %1$s alarm passed while the phone was off or restarting.</string>
+    <string name="fallback_ring_title">⏰ Alarm</string>
+    <string name="fallback_ring_text">Time to wake up — tap to dismiss</string>
+    <string name="alert_channel_name">Alarm alerts</string>
+    <string name="alert_channel_desc">Missed-alarm notices and fallback rings</string>
 </resources>

@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.util.Log
 
 /**
  * Receives the exact alarm broadcast and starts the ringing foreground service
@@ -19,13 +20,24 @@ class AlarmReceiver : BroadcastReceiver() {
   }
 
   private fun startRinging(context: Context, id: String?) {
+    // Delivered ≠ dismissed: the fired flag is what separates "rang but not yet
+    // dismissed" from "provably never rang" in the missed-alarm detection.
+    AlarmController.markFired(context, id)
     val serviceIntent = Intent(context, AlarmForegroundService::class.java)
       .putExtra(AlarmConstants.EXTRA_ALARM_ID, id)
-    // An exact-alarm receiver is temporarily allowlisted to start a FGS.
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      context.startForegroundService(serviceIntent)
-    } else {
-      context.startService(serviceIntent)
+    try {
+      // An exact-alarm receiver is temporarily allowlisted to start a FGS.
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        context.startForegroundService(serviceIntent)
+      } else {
+        context.startService(serviceIntent)
+      }
+    } catch (e: Exception) {
+      // Some OEM power managers reject the FGS start despite the exact-alarm
+      // exemption. Never swallow the fire: fall back to an insistent
+      // alarm-sound notification with the same full-screen intent.
+      Log.e(AlarmConstants.TAG, "FGS start failed; posting fallback ring", e)
+      AlarmNotifications.notifyFallbackRing(context, id)
     }
   }
 }

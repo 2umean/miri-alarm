@@ -5,20 +5,30 @@ import { AlarmHealth } from '../alarm/alarmHealth';
 import { Chain, latestAlarmInstant } from '../domain';
 import { clearArmedChain, loadArmedChain, saveArmedChain } from '../storage/armedChain';
 
+import type { MissedAlarm } from '../../modules/schedularm-alarm';
+
 /**
  * v2 twin of useArming: owns the armed-chain snapshot + native arming. An armed
  * chain stays live until its LAST alarm has fired (latestAlarmInstant), not the
  * first — so dismissing the wake alarm doesn't hide a still-scheduled backup.
+ * Also surfaces alarms that provably never rang (`missed`) so the user learns
+ * their phone killed the alarm instead of silently trusting it again.
  */
 export function useArmingChain() {
   const [armed, setArmed] = useState<Chain | null>(null);
   const [health, setHealth] = useState<AlarmHealth>(() => AlarmService.getHealth());
+  const [missed, setMissed] = useState<MissedAlarm | null>(null);
 
   const refreshHealth = useCallback(() => setHealth(AlarmService.getHealth()), []);
+  const clearMissed = useCallback(() => setMissed(null), []);
 
   useEffect(() => {
     let cancelled = false;
     refreshHealth();
+    // BEFORE the re-arm below: re-arming replaces the native store, which would
+    // erase the "this alarm never rang" evidence.
+    const misses = AlarmService.consumeMissed();
+    if (misses.length) setMissed(misses[misses.length - 1]);
     loadArmedChain().then((c) => {
       if (cancelled) return;
       const last = c ? latestAlarmInstant(c) : null;
@@ -61,5 +71,5 @@ export function useArmingChain() {
     setArmed(null);
   }, []);
 
-  return { armed, health, arm, disarm, refreshHealth };
+  return { armed, health, missed, arm, disarm, refreshHealth, clearMissed };
 }
