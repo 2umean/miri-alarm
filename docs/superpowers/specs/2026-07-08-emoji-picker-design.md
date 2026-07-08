@@ -3,6 +3,9 @@
 Date: 2026-07-08
 Status: approved
 
+Visual mockup: [MIRI - Emoji Picker (Claude design)](https://claude.ai/design/p/11546e25-bada-4439-b772-b96f0bef7c9d?file=MIRI+-+Emoji+Picker.dc.html&via=share)
+— the mockup is the source of truth for styling details (tile sizes, spacing, hint placement).
+
 ## Problem
 
 The event editor (`PillEditorSheet`) offers only a hardcoded 12-emoji palette
