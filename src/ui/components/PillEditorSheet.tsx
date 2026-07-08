@@ -1,6 +1,16 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MAX_PILL_MINUTES, PillType, PILL_TYPES } from '../../domain';
@@ -24,6 +34,22 @@ const STEP = 5; // minute nudge; the H:MM fields allow exact minute entry
 const pad2 = (n: number) => String(n).padStart(2, '0');
 const onlyDigits = (s: string) => s.replace(/[^0-9]/g, '');
 
+/** Android's keyboardDidHide payload under-reports the visible frame on
+    edge-to-edge windows (facebook/react-native#52596), which would leave stale
+    avoider padding after dismissal — track visibility to disable it instead. */
+function useIsKeyboardShown() {
+  const [isShown, setIsShown] = useState(false);
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', () => setIsShown(true));
+    const hide = Keyboard.addListener('keyboardDidHide', () => setIsShown(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+  return isShown;
+}
+
 /** Bottom-sheet pill create/edit (v2 design rows 2A & 3B). */
 export function PillEditorSheet({ visible, mode, initial, onCancel, onSubmit, onDelete }: Props) {
   const [icon, setIcon] = useState(initial.icon);
@@ -31,6 +57,7 @@ export function PillEditorSheet({ visible, mode, initial, onCancel, onSubmit, on
   const [type, setType] = useState<PillType>(initial.type);
   const [dur, setDur] = useState(initial.dur);
   const insets = useSafeAreaInsets();
+  const isKeyboardShown = useIsKeyboardShown();
   const seedParts = splitDuration(initial.dur);
   const [hStr, setHStr] = useState(String(seedParts.hours));
   const [mStr, setMStr] = useState(pad2(seedParts.mins));
@@ -57,130 +84,143 @@ export function PillEditorSheet({ visible, mode, initial, onCancel, onSubmit, on
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
-      <Pressable style={styles.backdrop} onPress={onCancel} />
-      <View style={[styles.sheet, { paddingBottom: spacing.xxl + insets.bottom }]}>
-        <View style={styles.handle} />
-        <Text style={styles.title}>
-          {mode === 'create' ? t('pillEditor.createTitle') : t('pillEditor.editTitle')}
-        </Text>
-
-        <View style={styles.palette}>
-          {palette.slice(0, 12).map((e) => (
-            <Pressable
-              key={e}
-              onPress={() => setIcon(e)}
-              style={[styles.emoji, e === icon && styles.emojiActive]}
-            >
-              <Text style={styles.emojiText}>{e}</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <View style={styles.fieldRow}>
-          <TextInput
-            style={styles.nameInput}
-            value={name}
-            onChangeText={setName}
-            placeholder={t('pillEditor.namePlaceholder')}
-            placeholderTextColor={colors.disabledText}
-            returnKeyType="done"
-          />
-          <View style={styles.stepper}>
-            <Pressable onPress={() => setTotal(dur - STEP)} style={[styles.step, styles.minus]}>
-              <Text style={[styles.stepText, styles.minusText]}>−</Text>
-            </Pressable>
-            <View style={styles.durFields}>
-              <TextInput
-                style={styles.durInput}
-                value={hStr}
-                onChangeText={(txt) => {
-                  const v = onlyDigits(txt).slice(0, 2);
-                  setHStr(v);
-                  recompute(v, mStr);
-                }}
-                onBlur={() => syncFields(dur)}
-                keyboardType="number-pad"
-                maxLength={2}
-                selectTextOnFocus
-              />
-              <Text style={styles.durColon}>:</Text>
-              <TextInput
-                style={styles.durInput}
-                value={mStr}
-                onChangeText={(txt) => {
-                  const v = onlyDigits(txt).slice(0, 2);
-                  setMStr(v);
-                  recompute(hStr, v);
-                }}
-                onBlur={() => syncFields(dur)}
-                keyboardType="number-pad"
-                maxLength={2}
-                selectTextOnFocus
-              />
-            </View>
-            <Pressable onPress={() => setTotal(dur + STEP)} style={[styles.step, styles.plus]}>
-              <Text style={[styles.stepText, styles.plusText]}>＋</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        <Text style={styles.sectionLabel}>{t('pillEditor.typeSection')}</Text>
-        <View style={styles.segmented}>
-          {PILL_TYPES.map((pt) => (
-            <Pressable
-              key={pt}
-              onPress={() => setType(pt)}
-              style={[styles.segment, pt === type && styles.segmentActive]}
-            >
-              <Text style={[styles.segmentText, pt === type && styles.segmentTextActive]}>
-                {t(`pillType.${pt}`)}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <View style={[styles.hint, type === 'alarm' && styles.hintAlarm]}>
-          <Text style={styles.hintText}>
-            {type === 'none'
-              ? t('pillEditor.hintNone')
-              : type === 'push'
-                ? t('pillEditor.hintPush', { label })
-                : t('pillEditor.hintAlarm')}
+      {/* Edge-to-edge Android never resizes a Modal window for the keyboard
+          (adjustResize is ignored), so both platforms need behavior="padding",
+          and the avoider must be a full-screen direct child of the Modal for
+          its offset math to line up with screen coordinates. On Android the
+          avoider is enabled only while the keyboard is up (see hook above);
+          iOS's hide path is clean and keeps its willShow/willHide animation. */}
+      <KeyboardAvoidingView
+        style={styles.avoider}
+        behavior="padding"
+        enabled={Platform.OS === 'ios' || isKeyboardShown}
+      >
+        <Pressable style={styles.backdrop} onPress={onCancel} />
+        <View style={[styles.sheet, { paddingBottom: spacing.xxl + insets.bottom }]}>
+          <View style={styles.handle} />
+          <Text style={styles.title}>
+            {mode === 'create' ? t('pillEditor.createTitle') : t('pillEditor.editTitle')}
           </Text>
-        </View>
-        {mode === 'edit' && type === 'none' && initial.type !== 'none' ? (
-          <View style={styles.warn}>
-            <Text style={styles.warnText}>
-              ⚠️ {t('pillEditor.warnRowGone', { label: t('chainScreen.eventEnds', { name: initial.name }) })}
+
+          <View style={styles.palette}>
+            {palette.slice(0, 12).map((e) => (
+              <Pressable
+                key={e}
+                onPress={() => setIcon(e)}
+                style={[styles.emoji, e === icon && styles.emojiActive]}
+              >
+                <Text style={styles.emojiText}>{e}</Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <View style={styles.fieldRow}>
+            <TextInput
+              style={styles.nameInput}
+              value={name}
+              onChangeText={setName}
+              placeholder={t('pillEditor.namePlaceholder')}
+              placeholderTextColor={colors.disabledText}
+              returnKeyType="done"
+            />
+            <View style={styles.stepper}>
+              <Pressable onPress={() => setTotal(dur - STEP)} style={[styles.step, styles.minus]}>
+                <Text style={[styles.stepText, styles.minusText]}>−</Text>
+              </Pressable>
+              <View style={styles.durFields}>
+                <TextInput
+                  style={styles.durInput}
+                  value={hStr}
+                  onChangeText={(txt) => {
+                    const v = onlyDigits(txt).slice(0, 2);
+                    setHStr(v);
+                    recompute(v, mStr);
+                  }}
+                  onBlur={() => syncFields(dur)}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  selectTextOnFocus
+                />
+                <Text style={styles.durColon}>:</Text>
+                <TextInput
+                  style={styles.durInput}
+                  value={mStr}
+                  onChangeText={(txt) => {
+                    const v = onlyDigits(txt).slice(0, 2);
+                    setMStr(v);
+                    recompute(hStr, v);
+                  }}
+                  onBlur={() => syncFields(dur)}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  selectTextOnFocus
+                />
+              </View>
+              <Pressable onPress={() => setTotal(dur + STEP)} style={[styles.step, styles.plus]}>
+                <Text style={[styles.stepText, styles.plusText]}>＋</Text>
+              </Pressable>
+            </View>
+          </View>
+
+          <Text style={styles.sectionLabel}>{t('pillEditor.typeSection')}</Text>
+          <View style={styles.segmented}>
+            {PILL_TYPES.map((pt) => (
+              <Pressable
+                key={pt}
+                onPress={() => setType(pt)}
+                style={[styles.segment, pt === type && styles.segmentActive]}
+              >
+                <Text style={[styles.segmentText, pt === type && styles.segmentTextActive]}>
+                  {t(`pillType.${pt}`)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <View style={[styles.hint, type === 'alarm' && styles.hintAlarm]}>
+            <Text style={styles.hintText}>
+              {type === 'none'
+                ? t('pillEditor.hintNone')
+                : type === 'push'
+                  ? t('pillEditor.hintPush', { label })
+                  : t('pillEditor.hintAlarm')}
             </Text>
           </View>
-        ) : null}
-
-        <View style={styles.actions}>
-          {mode === 'edit' ? (
-            <Pressable style={styles.delete} onPress={onDelete}>
-              <Text style={styles.deleteText}>🗑️ {t('pillEditor.delete')}</Text>
-            </Pressable>
-          ) : null}
-          <Pressable style={[styles.submitWrap, mode === 'edit' && styles.submitWrapEdit]} onPress={submit}>
-            <LinearGradient
-              colors={[colors.sky500, colors.sky700]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.submit}
-            >
-              <Text style={styles.submitText}>
-                {mode === 'create' ? t('pillEditor.add') : t('pillEditor.save')}
+          {mode === 'edit' && type === 'none' && initial.type !== 'none' ? (
+            <View style={styles.warn}>
+              <Text style={styles.warnText}>
+                ⚠️ {t('pillEditor.warnRowGone', { label: t('chainScreen.eventEnds', { name: initial.name }) })}
               </Text>
-            </LinearGradient>
-          </Pressable>
+            </View>
+          ) : null}
+
+          <View style={styles.actions}>
+            {mode === 'edit' ? (
+              <Pressable style={styles.delete} onPress={onDelete}>
+                <Text style={styles.deleteText}>🗑️ {t('pillEditor.delete')}</Text>
+              </Pressable>
+            ) : null}
+            <Pressable style={[styles.submitWrap, mode === 'edit' && styles.submitWrapEdit]} onPress={submit}>
+              <LinearGradient
+                colors={[colors.sky500, colors.sky700]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.submit}
+              >
+                <Text style={styles.submitText}>
+                  {mode === 'create' ? t('pillEditor.add') : t('pillEditor.save')}
+                </Text>
+              </LinearGradient>
+            </Pressable>
+          </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  avoider: { flex: 1 },
   backdrop: { flex: 1, backgroundColor: 'rgba(12,24,48,0.34)' },
   sheet: {
     backgroundColor: colors.skyBgBottom,
