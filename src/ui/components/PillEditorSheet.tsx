@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -17,6 +17,7 @@ import { MAX_PILL_MINUTES, PillType, PILL_TYPES } from '../../domain';
 import { t } from '../../i18n';
 import { composeDuration, formatDuration, splitDuration } from '../format';
 import { colors, fonts, radii, shadows, spacing } from '../theme';
+import { lastGrapheme } from '../lastGrapheme';
 
 export type PillDraft = { icon: string; name: string; dur: number; type: PillType };
 
@@ -29,7 +30,7 @@ type Props = {
   onDelete?: () => void;
 };
 
-const EMOJI_PALETTE = ['🧥', '🚿', '🍳', '😴', '🚇', '🚕', '💊', '🧘', '☕', '📚', '💪', '🧴'];
+const QUICK_PICKS = ['🧥', '😴', '🚿', '🍳', '🚇', '☕'];
 const STEP = 5; // minute nudge; the H:MM fields allow exact minute entry
 const pad2 = (n: number) => String(n).padStart(2, '0');
 const onlyDigits = (s: string) => s.replace(/[^0-9]/g, '');
@@ -53,6 +54,13 @@ function useIsKeyboardShown() {
 /** Bottom-sheet pill create/edit (v2 design rows 2A & 3B). */
 export function PillEditorSheet({ visible, mode, initial, onCancel, onSubmit, onDelete }: Props) {
   const [icon, setIcon] = useState(initial.icon);
+  const [isIconFocused, setIsIconFocused] = useState(false);
+  const lastIconRef = useRef(initial.icon); // last non-empty icon, for revert + submit
+
+  const pickIcon = (next: string) => {
+    setIcon(next);
+    if (next) lastIconRef.current = next;
+  };
   const [name, setName] = useState(initial.name);
   const [type, setType] = useState<PillType>(initial.type);
   const [dur, setDur] = useState(initial.dur);
@@ -78,9 +86,9 @@ export function PillEditorSheet({ visible, mode, initial, onCancel, onSubmit, on
     if (capped || Number(m || '0') >= 60) syncFields(total);
   };
 
-  const palette = EMOJI_PALETTE.includes(icon) ? EMOJI_PALETTE : [icon, ...EMOJI_PALETTE];
   const label = t('chainScreen.eventEnds', { name: name || initial.name });
-  const submit = () => onSubmit({ icon, name: name.trim() || initial.name, dur, type });
+  const submit = () =>
+    onSubmit({ icon: icon || lastIconRef.current, name: name.trim() || initial.name, dur, type });
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
@@ -102,11 +110,14 @@ export function PillEditorSheet({ visible, mode, initial, onCancel, onSubmit, on
             {mode === 'create' ? t('pillEditor.createTitle') : t('pillEditor.editTitle')}
           </Text>
 
-          <View style={styles.palette}>
-            {palette.slice(0, 12).map((e) => (
+          <View style={styles.quickRow}>
+            {QUICK_PICKS.map((e) => (
               <Pressable
                 key={e}
-                onPress={() => setIcon(e)}
+                onPress={() => {
+                  pickIcon(e);
+                  Keyboard.dismiss();
+                }}
                 style={[styles.emoji, e === icon && styles.emojiActive]}
               >
                 <Text style={styles.emojiText}>{e}</Text>
@@ -115,6 +126,18 @@ export function PillEditorSheet({ visible, mode, initial, onCancel, onSubmit, on
           </View>
 
           <View style={styles.fieldRow}>
+            <TextInput
+              style={[styles.iconInput, isIconFocused && styles.iconInputFocused]}
+              value={icon}
+              onChangeText={(txt) => pickIcon(lastGrapheme(txt))}
+              onFocus={() => setIsIconFocused(true)}
+              onBlur={() => {
+                setIsIconFocused(false);
+                if (!icon) setIcon(lastIconRef.current); // empty is never saved
+              }}
+              selectTextOnFocus
+              returnKeyType="done"
+            />
             <TextInput
               style={styles.nameInput}
               value={name}
@@ -233,7 +256,7 @@ const styles = StyleSheet.create({
   handle: { width: 40, height: 5, borderRadius: 3, backgroundColor: colors.line, alignSelf: 'center', marginBottom: spacing.m + 2 },
   title: { color: colors.ink, fontSize: 18, fontFamily: fonts.extra, marginBottom: spacing.m + 2 },
 
-  palette: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.s, marginBottom: spacing.m + 2 },
+  quickRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.m + 2 },
   emoji: {
     width: 42,
     height: 42,
@@ -245,7 +268,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emojiActive: { backgroundColor: colors.sky500, borderColor: colors.sky500, ...shadows.focus },
-  emojiText: { fontSize: 19 },
+  emojiText: { fontSize: 20 },
+  iconInput: {
+    width: 46,
+    height: 46,
+    borderRadius: 13,
+    backgroundColor: colors.bubble,
+    borderWidth: 1.5,
+    borderColor: colors.line,
+    textAlign: 'center',
+    textAlignVertical: 'center', // Android; ignored on iOS
+    fontSize: 22,
+    padding: 0,
+  },
+  iconInputFocused: { borderWidth: 2, borderColor: colors.sky500, ...shadows.focus },
 
   fieldRow: { flexDirection: 'row', gap: spacing.s + 2, marginBottom: spacing.m + 2, alignItems: 'center' },
   nameInput: {
