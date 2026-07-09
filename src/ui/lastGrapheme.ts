@@ -10,6 +10,7 @@ const VARIATION_SELECTORS = new Set([0xfe0e, 0xfe0f]);
 const COMBINING_KEYCAP = 0x20e3;
 const isSkinTone = (cp: number) => cp >= 0x1f3fb && cp <= 0x1f3ff;
 const isRegionalIndicator = (cp: number) => cp >= 0x1f1e6 && cp <= 0x1f1ff;
+const isTag = (cp: number) => cp >= 0xe0020 && cp <= 0xe007f;
 
 type SegmenterLike = new () => { segment(input: string): Iterable<{ segment: string }> };
 
@@ -39,6 +40,14 @@ export function lastGraphemeFallback(text: string): string {
     while (runStart > 0 && isRegionalIndicator(cpAt(runStart - 1))) runStart -= 1;
     const runLength = start - runStart + 1;
     return cps.slice(runLength % 2 === 0 ? start - 1 : start).join('');
+  }
+
+  // Subdivision flags (🏴󠁧󠁢󠁥󠁮󠁧󠁿) are a base flag plus a run of tag characters —
+  // absorb the tag run and its base so the cluster stays visible.
+  if (isTag(cpAt(start))) {
+    while (start > 0 && isTag(cpAt(start - 1))) start -= 1;
+    if (start > 0) start -= 1; // include the base (e.g. 🏴 U+1F3F4)
+    return cps.slice(start).join('');
   }
 
   while (start > 0) {
