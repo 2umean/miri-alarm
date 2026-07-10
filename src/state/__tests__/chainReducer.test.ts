@@ -107,6 +107,24 @@ describe('update-pill', () => {
   });
 });
 
+describe('replace-pills', () => {
+  test('swaps the pill list wholesale', () => {
+    const s = chainReducer(withPills('a', 'b'), {
+      type: 'replace-pills',
+      pills: [pill('x'), pill('y')],
+    });
+    expect(s.pills.map((p) => p.id)).toEqual(['x', 'y']);
+  });
+
+  test('keeps arrival and zone untouched (preset apply never moves the anchor)', () => {
+    const start = withPills('a');
+    const s = chainReducer(start, { type: 'replace-pills', pills: [] });
+    expect(s.arrival).toBe(start.arrival);
+    expect(s.zone).toBe(start.zone);
+    expect(s.pills).toEqual([]);
+  });
+});
+
 test('reducer never mutates the input state', () => {
   const start = withPills('a', 'b');
   const snapshot = JSON.parse(JSON.stringify(start));

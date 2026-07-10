@@ -28,7 +28,9 @@ export type ChainAction =
   // Move the pill at `from` to `to` (drag-reorder). Out-of-range or no-op indices are ignored.
   | { type: 'reorder-pill'; from: number; to: number }
   // Patch any of a pill's editable fields (rename / re-icon / re-type / change duration).
-  | { type: 'update-pill'; id: string; patch: PillPatch };
+  | { type: 'update-pill'; id: string; patch: PillPatch }
+  // Wholesale pill-list swap (preset apply); arrival & zone untouched.
+  | { type: 'replace-pills'; pills: Pill[] };
 
 export function initialChainState(zone: string): ChainState {
   return { arrival: null, zone, pills: [] };
@@ -71,6 +73,8 @@ export function chainReducer(state: ChainState, action: ChainAction): ChainState
         ...state,
         pills: state.pills.map((p) => (p.id === action.id ? { ...p, ...action.patch } : p)),
       };
+    case 'replace-pills':
+      return { ...state, pills: action.pills };
     default:
       return state;
   }

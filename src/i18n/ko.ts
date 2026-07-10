@@ -64,7 +64,6 @@ export const ko: typeof en = {
   },
   pillType: { none: '없음', push: '🔔 알림', alarm: '⏰ 알람' },
   chainScreen: {
-    arrivalSummary: '🛬 도착 {{time}}',
     addPill: '＋ 이벤트 추가',
     bedtime: '취침',
     anchorLabel: '도착',
@@ -93,6 +92,35 @@ export const ko: typeof en = {
     add: '추가하기',
     save: '저장',
     delete: '삭제',
+  },
+  preset: {
+    current: '현재 일정',
+    newBadge: 'NEW',
+    title: '프리셋',
+    manage: '관리',
+    done: '완료',
+    manageHint: '프리셋을 탭해 이름을 바꾸거나 삭제해요',
+    load: '불러오기',
+    addNew: '＋ 새 프리셋',
+    emptyTitle: '아직 저장된 프리셋이 없어요',
+    emptyBody: '지금 이벤트 목록을 프리셋으로 저장하면, 다음에 한 번의 탭으로 불러올 수 있어요.',
+    saveCurrent: '＋ 지금 일정을 프리셋으로 저장',
+    // i18n-js pluralizes via the `count` option; Korean doesn't inflect on count,
+    // so both plural forms carry the same string (shape must mirror en.ts).
+    summary: {
+      one: '이벤트 {{count}}개 · 총 {{total}}',
+      other: '이벤트 {{count}}개 · 총 {{total}}',
+    },
+    editedAtHome: '홈에서 편집',
+    // ‘{{name}}’에: the 에 particle is invariant, unlike 을/를 — safe for any name.
+    autosaveNote: '☁︎ 변경은 ‘{{name}}’에 자동 저장돼요.',
+    createTitle: '새 프리셋',
+    editTitle: '프리셋 편집',
+    nameLabel: '이름',
+    edit: '편집',
+    // "‘{{name}}’ 프리셋을" sidesteps 을/를 particle agreement for arbitrary names.
+    deleteConfirmTitle: '‘{{name}}’ 프리셋을 삭제할까요?',
+    deleteConfirmBody: '이 프리셋의 이벤트 목록이 사라져요. 되돌릴 수 없어요.',
   },
   chainIssue: {
     'no-arrival': '도착 시간을 설정해 주세요.',

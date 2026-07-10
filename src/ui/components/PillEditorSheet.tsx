@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -18,6 +18,7 @@ import { t } from '../../i18n';
 import { composeDuration, formatDuration, splitDuration } from '../format';
 import { colors, fonts, radii, shadows, spacing } from '../theme';
 import { lastGrapheme } from '../lastGrapheme';
+import { useIsKeyboardShown } from '../keyboard';
 
 export type PillDraft = { icon: string; name: string; dur: number; type: PillType };
 
@@ -28,6 +29,8 @@ type Props = {
   onCancel: () => void;
   onSubmit: (pill: PillDraft) => void;
   onDelete?: () => void;
+  /** When set, an active preset mirrors home edits — show the ☁︎ note. */
+  autosaveNote?: string;
 };
 
 const QUICK_PICKS = ['🧥', '😴', '🚿', '🍳', '🚇', '☕'];
@@ -35,24 +38,16 @@ const STEP = 5; // minute nudge; the H:MM fields allow exact minute entry
 const pad2 = (n: number) => String(n).padStart(2, '0');
 const onlyDigits = (s: string) => s.replace(/[^0-9]/g, '');
 
-/** Android's keyboardDidHide payload under-reports the visible frame on
-    edge-to-edge windows (facebook/react-native#52596), which would leave stale
-    avoider padding after dismissal — track visibility to disable it instead. */
-function useIsKeyboardShown() {
-  const [isShown, setIsShown] = useState(false);
-  useEffect(() => {
-    const show = Keyboard.addListener('keyboardDidShow', () => setIsShown(true));
-    const hide = Keyboard.addListener('keyboardDidHide', () => setIsShown(false));
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, []);
-  return isShown;
-}
-
 /** Bottom-sheet pill create/edit (v2 design rows 2A & 3B). */
-export function PillEditorSheet({ visible, mode, initial, onCancel, onSubmit, onDelete }: Props) {
+export function PillEditorSheet({
+  visible,
+  mode,
+  initial,
+  onCancel,
+  onSubmit,
+  onDelete,
+  autosaveNote,
+}: Props) {
   const [icon, setIcon] = useState(initial.icon);
   const [isIconFocused, setIsIconFocused] = useState(false);
   const lastIconRef = useRef(initial.icon); // last non-empty icon, for revert + submit
@@ -97,7 +92,10 @@ export function PillEditorSheet({ visible, mode, initial, onCancel, onSubmit, on
           and the avoider must be a full-screen direct child of the Modal for
           its offset math to line up with screen coordinates. On Android the
           avoider is enabled only while the keyboard is up (see hook above);
-          iOS's hide path is clean and keeps its willShow/willHide animation. */}
+          iOS's hide path is clean and keeps its willShow/willHide animation.
+          The dim lives ON the avoider (not the inner backdrop): the keyboard
+          padding shrinks the content area, and an undimmed strip below the
+          sheet would flash the raw screen behind while the keyboard animates. */}
       <KeyboardAvoidingView
         style={styles.avoider}
         behavior="padding"
@@ -130,12 +128,16 @@ export function PillEditorSheet({ visible, mode, initial, onCancel, onSubmit, on
               style={[styles.iconInput, isIconFocused && styles.iconInputFocused]}
               value={icon}
               onChangeText={(txt) => pickIcon(lastGrapheme(txt))}
-              onFocus={() => setIsIconFocused(true)}
+              onFocus={() => {
+                setIsIconFocused(true);
+                // Blank the field so it clearly invites a new emoji; blur or
+                // submit restores lastIconRef if the user types nothing.
+                setIcon('');
+              }}
               onBlur={() => {
                 setIsIconFocused(false);
                 if (!icon) setIcon(lastIconRef.current); // empty is never saved
               }}
-              selectTextOnFocus
               returnKeyType="done"
             />
             <TextInput
@@ -216,6 +218,11 @@ export function PillEditorSheet({ visible, mode, initial, onCancel, onSubmit, on
               </Text>
             </View>
           ) : null}
+          {autosaveNote ? (
+            <View style={styles.hint}>
+              <Text style={styles.hintText}>{autosaveNote}</Text>
+            </View>
+          ) : null}
 
           <View style={styles.actions}>
             {mode === 'edit' ? (
@@ -243,8 +250,8 @@ export function PillEditorSheet({ visible, mode, initial, onCancel, onSubmit, on
 }
 
 const styles = StyleSheet.create({
-  avoider: { flex: 1 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(12,24,48,0.34)' },
+  avoider: { flex: 1, backgroundColor: colors.backdrop },
+  backdrop: { flex: 1 },
   sheet: {
     backgroundColor: colors.skyBgBottom,
     borderTopLeftRadius: 28,

@@ -26,12 +26,14 @@ export const colors = {
   disabledText: '#8CA0BC',
   coral: '#FF8A7A',
   white: '#FFFFFF',
+  backdrop: 'rgba(12,24,48,0.34)', // modal dim behind bottom sheets
   // v2 pill-chain palette (Schedularm UI v2).
   faint: '#94A8C2', // bedtime cap + drag handles
   pushEventBorder: '#BBD9F7', // push event-row outline
   alarmCardBg: '#FFF8EE', // alarm pill card fill
   alarmCardBorder: '#FFE0A6', // alarm pill card border
   alarmAccentText: '#E8743C', // alarm event time
+  dashed: '#A9CFF5', // dashed "add" affordances (＋ 이벤트 추가, ＋ 새 프리셋)
 } as const;
 
 /**
