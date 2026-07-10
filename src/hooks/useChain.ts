@@ -3,6 +3,7 @@ import { DateTime } from 'luxon';
 
 import {
   Chain,
+  Pill,
   PillType,
   computeChain,
   isChainArmable,
@@ -127,6 +128,8 @@ export function useChain() {
   const removePill = (id: string) => dispatch({ type: 'remove-pill', id });
   const reorderPill = (from: number, to: number) =>
     dispatch({ type: 'reorder-pill', from, to });
+  /** Wholesale pill swap (preset apply); arrival & zone untouched. */
+  const replacePills = (pills: Pill[]) => dispatch({ type: 'replace-pills', pills });
 
   return {
     state,
@@ -142,5 +145,6 @@ export function useChain() {
     updatePill,
     removePill,
     reorderPill,
+    replacePills,
   };
 }
