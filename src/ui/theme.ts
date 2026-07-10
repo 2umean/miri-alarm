@@ -32,6 +32,7 @@ export const colors = {
   alarmCardBg: '#FFF8EE', // alarm pill card fill
   alarmCardBorder: '#FFE0A6', // alarm pill card border
   alarmAccentText: '#E8743C', // alarm event time
+  dashed: '#A9CFF5', // dashed "add" affordances (＋ 이벤트 추가, ＋ 새 프리셋)
 } as const;
 
 /**

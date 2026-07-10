@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -18,6 +18,7 @@ import { t } from '../../i18n';
 import { composeDuration, formatDuration, splitDuration } from '../format';
 import { colors, fonts, radii, shadows, spacing } from '../theme';
 import { lastGrapheme } from '../lastGrapheme';
+import { useIsKeyboardShown } from '../keyboard';
 
 export type PillDraft = { icon: string; name: string; dur: number; type: PillType };
 
@@ -28,6 +29,8 @@ type Props = {
   onCancel: () => void;
   onSubmit: (pill: PillDraft) => void;
   onDelete?: () => void;
+  /** When set, an active preset mirrors home edits — show the ☁︎ note. */
+  autosaveNote?: string;
 };
 
 const QUICK_PICKS = ['🧥', '😴', '🚿', '🍳', '🚇', '☕'];
@@ -35,24 +38,16 @@ const STEP = 5; // minute nudge; the H:MM fields allow exact minute entry
 const pad2 = (n: number) => String(n).padStart(2, '0');
 const onlyDigits = (s: string) => s.replace(/[^0-9]/g, '');
 
-/** Android's keyboardDidHide payload under-reports the visible frame on
-    edge-to-edge windows (facebook/react-native#52596), which would leave stale
-    avoider padding after dismissal — track visibility to disable it instead. */
-function useIsKeyboardShown() {
-  const [isShown, setIsShown] = useState(false);
-  useEffect(() => {
-    const show = Keyboard.addListener('keyboardDidShow', () => setIsShown(true));
-    const hide = Keyboard.addListener('keyboardDidHide', () => setIsShown(false));
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, []);
-  return isShown;
-}
-
 /** Bottom-sheet pill create/edit (v2 design rows 2A & 3B). */
-export function PillEditorSheet({ visible, mode, initial, onCancel, onSubmit, onDelete }: Props) {
+export function PillEditorSheet({
+  visible,
+  mode,
+  initial,
+  onCancel,
+  onSubmit,
+  onDelete,
+  autosaveNote,
+}: Props) {
   const [icon, setIcon] = useState(initial.icon);
   const [isIconFocused, setIsIconFocused] = useState(false);
   const lastIconRef = useRef(initial.icon); // last non-empty icon, for revert + submit
@@ -214,6 +209,11 @@ export function PillEditorSheet({ visible, mode, initial, onCancel, onSubmit, on
               <Text style={styles.warnText}>
                 ⚠️ {t('pillEditor.warnRowGone', { label: t('chainScreen.eventEnds', { name: initial.name }) })}
               </Text>
+            </View>
+          ) : null}
+          {autosaveNote ? (
+            <View style={styles.hint}>
+              <Text style={styles.hintText}>{autosaveNote}</Text>
             </View>
           ) : null}
 
