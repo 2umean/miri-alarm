@@ -91,8 +91,13 @@ export function PresetNameSheet({ visible, mode, initialName, summary, onCancel,
               </Pressable>
             ) : null}
             <Pressable
-              style={[styles.submitWrap, mode === 'edit' && styles.submitWrapEdit]}
+              style={[
+                styles.submitWrap,
+                mode === 'edit' && styles.submitWrapEdit,
+                !canSave && styles.submitWrapDisabled,
+              ]}
               disabled={!canSave}
+              accessibilityState={{ disabled: !canSave }}
               onPress={() => canSave && onSave(trimmed)}
             >
               {canSave ? (
@@ -162,6 +167,7 @@ const styles = StyleSheet.create({
   deleteText: { color: colors.red, fontSize: 14, fontFamily: fonts.extra },
   submitWrap: { flex: 1, borderRadius: radii.pill, ...shadows.button },
   submitWrapEdit: { flex: 2 },
+  submitWrapDisabled: { shadowOpacity: 0, elevation: 0 },
   submit: { borderRadius: radii.pill, paddingVertical: spacing.l - 1, alignItems: 'center' },
   submitDisabled: { backgroundColor: colors.disabledBg },
   submitText: { color: colors.white, fontSize: 15, fontFamily: fonts.extra },
