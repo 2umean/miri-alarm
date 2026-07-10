@@ -97,6 +97,8 @@ export function ChainScreen() {
       return;
     }
     syncActive(state.pills);
+    // syncActive is a stable useReducer-dispatch wrapper — deliberately omitted
+    // from the deps (adding the per-render closure would fire this every render).
   }, [state.pills, hydrated, presetsHydrated]);
 
   // Preset apply (불러오기, design row 09): swap the working pills, keep the
@@ -115,6 +117,8 @@ export function ChainScreen() {
   // (on-screen pills are untouched, so no disarm). Closes the list — the
   // user lands back home with the chip showing the new name.
   const onCreatePreset = (name: string) => {
+    // chain.pills === state.pills by construction (rollChainToFuture only ever
+    // spreads arrival; the pills array reference is preserved).
     createPreset(name, chain.pills);
     setPresetListOpen(false);
   };
