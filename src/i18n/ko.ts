@@ -106,7 +106,12 @@ export const ko: typeof en = {
     emptyTitle: '아직 저장된 프리셋이 없어요',
     emptyBody: '지금 이벤트 목록을 프리셋으로 저장하면, 다음에 한 번의 탭으로 불러올 수 있어요.',
     saveCurrent: '＋ 지금 일정을 프리셋으로 저장',
-    summary: '이벤트 {{count}}개 · 총 {{total}}',
+    // i18n-js pluralizes via the `count` option; Korean doesn't inflect on count,
+    // so both plural forms carry the same string (shape must mirror en.ts).
+    summary: {
+      one: '이벤트 {{count}}개 · 총 {{total}}',
+      other: '이벤트 {{count}}개 · 총 {{total}}',
+    },
     editedAtHome: '홈에서 편집',
     // ‘{{name}}’에: the 에 particle is invariant, unlike 을/를 — safe for any name.
     autosaveNote: '☁︎ 변경은 ‘{{name}}’에 자동 저장돼요.',
