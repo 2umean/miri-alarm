@@ -50,7 +50,6 @@ export function ChainScreen() {
   const [editor, setEditor] = useState<EditorState>(null);
   const [reorderOpen, setReorderOpen] = useState(false);
   const [presetListOpen, setPresetListOpen] = useState(false);
-  const [highlightId, setHighlightId] = useState<string | undefined>(undefined);
   const insets = useSafeAreaInsets();
 
   const atRisk = !health.isArmReliable || health.reasons.length > 0;
@@ -150,9 +149,8 @@ export function ChainScreen() {
     disarmForEdit();
     if (editor?.mode === 'edit') {
       updatePill(editor.id, draft);
-      setHighlightId(editor.id);
     } else {
-      setHighlightId(addPill(draft));
+      addPill(draft);
     }
     setEditor(null);
   };
@@ -253,7 +251,6 @@ export function ChainScreen() {
             <ChainList
               computed={computed}
               zone={zone}
-              highlightId={highlightId}
               onPressPill={(id) => setEditor({ mode: 'edit', id })}
               onPressAnchor={() => setPickerOpen(true)}
             />

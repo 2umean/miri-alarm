@@ -8,8 +8,6 @@ import { colors, fonts, pillStyle, radii, shadows, spacing } from '../theme';
 type Props = {
   computed: ChainComputed;
   zone: string;
-  /** Pill id to outline (e.g. a just-added or just-tapped pill). */
-  highlightId?: string;
   onPressPill: (id: string) => void;
   onPressAnchor: () => void;
 };
@@ -19,7 +17,7 @@ type Props = {
  * by type, with a trailing event row for push/alarm), and the arrival anchor.
  * Purely presentational — all times come pre-computed from the engine.
  */
-export function ChainList({ computed, zone, highlightId, onPressPill, onPressAnchor }: Props) {
+export function ChainList({ computed, zone, onPressPill, onPressAnchor }: Props) {
   const clock = (ms: number) => toLocalClock(ms, zone);
 
   return (
@@ -33,13 +31,7 @@ export function ChainList({ computed, zone, highlightId, onPressPill, onPressAnc
       ) : null}
 
       {computed.items.map((item) => (
-        <PillRow
-          key={item.pill.id}
-          item={item}
-          clock={clock}
-          highlighted={item.pill.id === highlightId}
-          onPress={() => onPressPill(item.pill.id)}
-        />
+        <PillRow key={item.pill.id} item={item} clock={clock} onPress={() => onPressPill(item.pill.id)} />
       ))}
 
       <Pressable style={styles.anchor} onPress={onPressAnchor}>
@@ -54,12 +46,10 @@ export function ChainList({ computed, zone, highlightId, onPressPill, onPressAnc
 function PillRow({
   item,
   clock,
-  highlighted,
   onPress,
 }: {
   item: ComputedItem;
   clock: (ms: number) => string;
-  highlighted: boolean;
   onPress: () => void;
 }) {
   const { pill } = item;
@@ -67,50 +57,46 @@ function PillRow({
   const sx = pill.type === 'none' ? null : pillStyle[pill.type];
 
   return (
-    <View style={styles.rowWrap}>
-      <Pressable onPress={onPress}>
-        <View
-          style={[
-            styles.card,
-            sx
-              ? { backgroundColor: sx.cardBg, borderWidth: 1.5, borderColor: sx.cardBorder, borderLeftWidth: 4, borderLeftColor: sx.accent }
-              : styles.cardNone,
-          ]}
-        >
-          <Text style={styles.cardIcon}>{pill.icon}</Text>
-          <Text style={styles.cardName}>{pill.name}</Text>
-          <Text style={[styles.cardDur, { color: sx ? sx.durText : colors.ink2 }]}>
-            {formatDuration(pill.dur)}
-          </Text>
-        </View>
+    <Pressable onPress={onPress}>
+      <View
+        style={[
+          styles.card,
+          sx
+            ? { backgroundColor: sx.cardBg, borderWidth: 1.5, borderColor: sx.cardBorder, borderLeftWidth: 4, borderLeftColor: sx.accent }
+            : styles.cardNone,
+        ]}
+      >
+        <Text style={styles.cardIcon}>{pill.icon}</Text>
+        <Text style={styles.cardName}>{pill.name}</Text>
+        <Text style={[styles.cardDur, { color: sx ? sx.durText : colors.ink2 }]}>
+          {formatDuration(pill.dur)}
+        </Text>
+      </View>
 
-        {isEvent && sx ? (
-          <>
-            <View style={[styles.connector, { backgroundColor: sx.accent }]} />
-            <View
-              style={[
-                styles.eventRow,
-                pill.type === 'alarm'
-                  ? { borderWidth: 2, borderColor: sx.eventBorder, ...shadows.focus }
-                  : { borderWidth: 1.5, borderColor: sx.eventBorder, ...shadows.bubble },
-              ]}
-            >
-              <Text style={styles.eventIcon}>{sx.eventIcon}</Text>
-              <Text style={styles.eventLabel}>
-                {t('chainScreen.eventEnds', { name: pill.name })}
-              </Text>
-              <View style={[styles.badge, { backgroundColor: sx.badgeBg }]}>
-                <Text style={styles.badgeText}>{t(`chainScreen.badge.${pill.type}`)}</Text>
-              </View>
-              <View style={styles.eventSpacer} />
-              <Text style={[styles.eventTime, { color: sx.eventTime }]}>{clock(item.endAt)}</Text>
+      {isEvent && sx ? (
+        <>
+          <View style={[styles.connector, { backgroundColor: sx.accent }]} />
+          <View
+            style={[
+              styles.eventRow,
+              pill.type === 'alarm'
+                ? { borderWidth: 2, borderColor: sx.eventBorder, ...shadows.focus }
+                : { borderWidth: 1.5, borderColor: sx.eventBorder, ...shadows.bubble },
+            ]}
+          >
+            <Text style={styles.eventIcon}>{sx.eventIcon}</Text>
+            <Text style={styles.eventLabel}>
+              {t('chainScreen.eventEnds', { name: pill.name })}
+            </Text>
+            <View style={[styles.badge, { backgroundColor: sx.badgeBg }]}>
+              <Text style={styles.badgeText}>{t(`chainScreen.badge.${pill.type}`)}</Text>
             </View>
-          </>
-        ) : null}
-      </Pressable>
-
-      {highlighted ? <View style={styles.highlight} pointerEvents="none" /> : null}
-    </View>
+            <View style={styles.eventSpacer} />
+            <Text style={[styles.eventTime, { color: sx.eventTime }]}>{clock(item.endAt)}</Text>
+          </View>
+        </>
+      ) : null}
+    </Pressable>
   );
 }
 
@@ -123,7 +109,6 @@ const styles = StyleSheet.create({
   capLabel: { color: colors.faint, fontSize: 11, fontFamily: fonts.bold },
   capTime: { color: colors.faint, fontSize: 12, fontFamily: fonts.clock },
 
-  rowWrap: { position: 'relative' },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -168,15 +153,4 @@ const styles = StyleSheet.create({
   anchorIcon: { fontSize: 18, width: ICON_W, textAlign: 'center' },
   anchorLabel: { flex: 1, color: colors.ink, fontFamily: fonts.extra, fontSize: 14 },
   anchorTime: { color: colors.ink, fontSize: 19, fontFamily: fonts.clock },
-
-  highlight: {
-    position: 'absolute',
-    top: -3,
-    left: -3,
-    right: -3,
-    bottom: -3,
-    borderWidth: 2.5,
-    borderColor: colors.sky500,
-    borderRadius: radii.bubble - 1,
-  },
 });
