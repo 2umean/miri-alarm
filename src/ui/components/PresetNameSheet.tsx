@@ -125,8 +125,8 @@ export function PresetNameSheet({ visible, mode, initialName, summary, onCancel,
 }
 
 const styles = StyleSheet.create({
-  avoider: { flex: 1 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(12,24,48,0.34)' },
+  avoider: { flex: 1, backgroundColor: colors.backdrop },
+  backdrop: { flex: 1 },
   sheet: {
     backgroundColor: colors.skyBgBottom,
     borderTopLeftRadius: 28,

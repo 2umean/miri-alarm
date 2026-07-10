@@ -92,7 +92,10 @@ export function PillEditorSheet({
           and the avoider must be a full-screen direct child of the Modal for
           its offset math to line up with screen coordinates. On Android the
           avoider is enabled only while the keyboard is up (see hook above);
-          iOS's hide path is clean and keeps its willShow/willHide animation. */}
+          iOS's hide path is clean and keeps its willShow/willHide animation.
+          The dim lives ON the avoider (not the inner backdrop): the keyboard
+          padding shrinks the content area, and an undimmed strip below the
+          sheet would flash the raw screen behind while the keyboard animates. */}
       <KeyboardAvoidingView
         style={styles.avoider}
         behavior="padding"
@@ -125,12 +128,16 @@ export function PillEditorSheet({
               style={[styles.iconInput, isIconFocused && styles.iconInputFocused]}
               value={icon}
               onChangeText={(txt) => pickIcon(lastGrapheme(txt))}
-              onFocus={() => setIsIconFocused(true)}
+              onFocus={() => {
+                setIsIconFocused(true);
+                // Blank the field so it clearly invites a new emoji; blur or
+                // submit restores lastIconRef if the user types nothing.
+                setIcon('');
+              }}
               onBlur={() => {
                 setIsIconFocused(false);
                 if (!icon) setIcon(lastIconRef.current); // empty is never saved
               }}
-              selectTextOnFocus
               returnKeyType="done"
             />
             <TextInput
@@ -243,8 +250,8 @@ export function PillEditorSheet({
 }
 
 const styles = StyleSheet.create({
-  avoider: { flex: 1 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(12,24,48,0.34)' },
+  avoider: { flex: 1, backgroundColor: colors.backdrop },
+  backdrop: { flex: 1 },
   sheet: {
     backgroundColor: colors.skyBgBottom,
     borderTopLeftRadius: 28,

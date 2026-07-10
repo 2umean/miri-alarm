@@ -88,7 +88,7 @@ export function ArrivalPickerSheet({ visible, initial, onCancel, onConfirm }: Pr
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(12,24,48,0.34)' },
+  backdrop: { flex: 1, backgroundColor: colors.backdrop },
   sheet: {
     backgroundColor: colors.skyBgBottom,
     borderTopLeftRadius: 28,
