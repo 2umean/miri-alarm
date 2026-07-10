@@ -248,14 +248,14 @@ create and edit modes (new events also mirror into the active preset).
 | `preset.emptyTitle` | 아직 저장된 프리셋이 없어요 | No saved presets yet |
 | `preset.emptyBody` | 지금 이벤트 목록을 프리셋으로 저장하면, 다음에 한 번의 탭으로 불러올 수 있어요. | Save your current events as a preset and bring them back with one tap. |
 | `preset.saveCurrent` | ＋ 지금 일정을 프리셋으로 저장 | ＋ Save current schedule as a preset |
-| `preset.summary` | 이벤트 {{count}}개 · 총 {{total}} | {{count}} events · {{total}} total |
+| `preset.summary` | 이벤트 {{count}}개 · 총 {{total}} | one: {{count}} event · {{total}} total / other: {{count}} events · {{total}} total |
 | `preset.editedAtHome` | 홈에서 편집 | edited on Home |
-| `preset.autosaveNote` | ☁︎ 변경은 ‘{{name}}’에 자동 저장돼요. | ☁︎ Changes auto-save to ‘{{name}}’. |
+| `preset.autosaveNote` | ☁︎ 변경은 ‘{{name}}’에 자동 저장돼요. | ☁︎ Changes auto-save to "{{name}}". |
 | `preset.createTitle` | 새 프리셋 | New preset |
 | `preset.editTitle` | 프리셋 편집 | Edit preset |
 | `preset.nameLabel` | 이름 | Name |
 | `preset.edit` | 편집 | Edit |
-| `preset.deleteConfirmTitle` | ‘{{name}}’ 프리셋을 삭제할까요? | Delete the preset ‘{{name}}’? |
+| `preset.deleteConfirmTitle` | ‘{{name}}’ 프리셋을 삭제할까요? | Delete the preset "{{name}}"? |
 | `preset.deleteConfirmBody` | 이 프리셋의 이벤트 목록이 사라져요. 되돌릴 수 없어요. | This preset's event list will be gone. This can't be undone. |
 
 Reused existing keys: `editor.cancel` (취소), `pillEditor.save` (저장),
@@ -264,6 +264,13 @@ mockup ("'헬스장 새벽'**을**") because the 을/를 particle depends on the
 name's final consonant; "‘{{name}}’ 프리셋을" sidesteps particle agreement for
 arbitrary names. `chainScreen.arrivalSummary` becomes unused and is removed
 from both catalogs.
+
+Amended during implementation review (2026-07-10): `preset.summary` is an
+i18n-js plural object `{ one, other }` selected by the `count` option — a flat
+string rendered "1 events" in EN. KO carries one identical string in both
+forms (no count inflection); the object shape must mirror en.ts for the
+`ko: typeof en` typing. EN quotes interpolated names with double curly quotes
+("{{name}}") per the EN catalog convention; KO keeps ‘…’.
 
 ## Edge cases & rules
 
