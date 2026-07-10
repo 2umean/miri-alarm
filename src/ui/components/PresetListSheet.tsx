@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Preset, presetSummary } from '../../domain';
+import { Preset, PresetSummary, presetSummary } from '../../domain';
 import { t } from '../../i18n';
 import { formatDuration } from '../format';
 import { colors, fonts, radii, shadows, spacing } from '../theme';
@@ -61,11 +61,10 @@ export function PresetListSheet({ visible, presets, activeId, onClose, onApply, 
 
   const editingPreset =
     nameEditor?.mode === 'edit' ? presets.find((p) => p.id === nameEditor.id) : undefined;
+  const editingSummary = editingPreset ? presetSummary(editingPreset.pills) : undefined;
 
-  const summaryText = (preset: Preset): string => {
-    const s = presetSummary(preset.pills);
-    return t('preset.summary', { count: s.count, total: formatDuration(s.totalMinutes) });
-  };
+  const summaryText = (s: PresetSummary): string =>
+    t('preset.summary', { count: s.count, total: formatDuration(s.totalMinutes) });
 
   const confirmDelete = (preset: Preset) => {
     Alert.alert(t('preset.deleteConfirmTitle', { name: preset.name }), t('preset.deleteConfirmBody'), [
@@ -123,6 +122,7 @@ export function PresetListSheet({ visible, presets, activeId, onClose, onApply, 
               {presets.map((preset) => {
                 const isActive = preset.id === activeId;
                 const isSelected = !managing && preset.id === selectedId;
+                const summary = presetSummary(preset.pills);
                 return (
                   <Pressable
                     key={preset.id}
@@ -138,10 +138,10 @@ export function PresetListSheet({ visible, presets, activeId, onClose, onApply, 
                       </Text>
                       <View style={styles.rowMeta}>
                         <Text style={styles.rowIcons} numberOfLines={1}>
-                          {presetSummary(preset.pills).icons}
+                          {summary.icons}
                         </Text>
                         <Text style={styles.rowSummary} numberOfLines={1}>
-                          {summaryText(preset)}
+                          {summaryText(summary)}
                         </Text>
                       </View>
                     </View>
@@ -174,10 +174,10 @@ export function PresetListSheet({ visible, presets, activeId, onClose, onApply, 
             mode={nameEditor.mode}
             initialName={editingPreset?.name ?? ''}
             summary={
-              editingPreset
+              editingSummary
                 ? {
-                    icons: presetSummary(editingPreset.pills).icons,
-                    text: `${summaryText(editingPreset)} · ${t('preset.editedAtHome')}`,
+                    icons: editingSummary.icons,
+                    text: `${summaryText(editingSummary)} · ${t('preset.editedAtHome')}`,
                   }
                 : undefined
             }
