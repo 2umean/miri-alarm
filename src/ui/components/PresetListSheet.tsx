@@ -46,6 +46,12 @@ export function PresetListSheet({ visible, presets, activeId, onClose, onApply, 
     }
   }, [visible]);
 
+  // Deleting the last preset while managing leaves manage mode armed behind the
+  // empty state — hardware back would eat a press exiting an invisible mode.
+  useEffect(() => {
+    if (presets.length === 0) setManaging(false);
+  }, [presets.length]);
+
   // Selection never survives a mode switch (spec).
   const toggleManaging = () => {
     setManaging((m) => !m);

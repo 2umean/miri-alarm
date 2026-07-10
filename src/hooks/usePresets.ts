@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useReducer, useState } from 'react';
 
-import { Pill } from '../domain/pill';
+import { Pill } from '../domain';
 import { loadPresets, savePresets } from '../storage/presets';
 import { INITIAL_PRESETS, presetsReducer } from '../state/presetsReducer';
 
