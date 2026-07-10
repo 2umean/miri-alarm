@@ -67,7 +67,6 @@ export const en = {
   },
   pillType: { none: 'None', push: '🔔 Notify', alarm: '⏰ Alarm' },
   chainScreen: {
-    arrivalSummary: '🛬 Arrive {{time}}',
     addPill: '＋ Add pill',
     bedtime: 'Bedtime',
     anchorLabel: 'Arrive',
