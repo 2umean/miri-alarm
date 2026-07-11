@@ -1,6 +1,6 @@
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -25,6 +25,12 @@ const toArrivalDate = (d: Date): ArrivalDate => ({
   day: d.getDate(),
 });
 
+const startOfToday = (): Date => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
 /**
  * Arrival date+time picker (v0.3 arrival-date spec D1). Android chains the two
  * SYSTEM dialogs — date calendar, then time spinner — with no custom UI;
@@ -37,17 +43,20 @@ export function ArrivalPickerSheet({ visible, initial, onCancel, onConfirm }: Pr
   const [pickedDate, setPickedDate] = useState<Date | null>(null);
   const insets = useSafeAreaInsets();
 
-  // The sheet stays mounted (visible toggles), so re-seed the wheel and reset
-  // the Android two-step state machine on each open. Keyed on `visible` only —
-  // not `initial` — so scrolling while open isn't reset out from under the user.
-  useEffect(() => {
+  // Re-seed and rewind the two-step machine the moment `visible` flips — during
+  // RENDER, not in an effect: the Android picker opens its native dialog as a
+  // child mount effect, which fires BEFORE a parent effect could reset a stale
+  // step, flashing (or dead-tapping) the wrong dialog. Resetting during render
+  // discards the stale child before anything mounts.
+  const [wasVisible, setWasVisible] = useState(visible);
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
     if (visible) {
       setValue(initial);
       setStep('date');
       setPickedDate(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible]);
+  }
 
   if (Platform.OS === 'android') {
     if (!visible) return null;
@@ -56,7 +65,7 @@ export function ArrivalPickerSheet({ visible, initial, onCancel, onConfirm }: Pr
         <DateTimePicker
           value={initial}
           mode="date"
-          minimumDate={new Date()}
+          minimumDate={startOfToday()}
           onChange={(e: DateTimePickerEvent, d?: Date) => {
             if (e.type === 'set' && d) {
               setPickedDate(d);
@@ -92,7 +101,7 @@ export function ArrivalPickerSheet({ visible, initial, onCancel, onConfirm }: Pr
           <DateTimePicker
             value={value}
             mode="datetime"
-            minimumDate={new Date()}
+            minimumDate={startOfToday()}
             display="spinner"
             onChange={(_e, d?: Date) => d && setValue(d)}
           />

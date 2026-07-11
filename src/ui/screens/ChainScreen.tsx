@@ -16,7 +16,7 @@ import { useChain } from '../../hooks/useChain';
 import { usePresets } from '../../hooks/usePresets';
 import { t } from '../../i18n';
 import { firstRemaining } from '../../state/presetsReducer';
-import { ArrivalPickerSheet } from '../components/ArrivalPickerSheet';
+import { ArrivalDate, ArrivalPickerSheet } from '../components/ArrivalPickerSheet';
 import { ChainList } from '../components/ChainList';
 import { PillDraft, PillEditorSheet } from '../components/PillEditorSheet';
 import { PresetListSheet } from '../components/PresetListSheet';
@@ -141,7 +141,7 @@ export function ChainScreen() {
   // an already-passed time resolves to a past instant on purpose — the chain
   // then rolls to tomorrow visibly via the date labels (spec §5), matching the
   // old time-only behavior without a special warning state.
-  const onConfirmArrival = (date: { year: number; month: number; day: number }, hour: number, minute: number) => {
+  const onConfirmArrival = (date: ArrivalDate, hour: number, minute: number) => {
     disarmForEdit();
     setArrival(resolveArrivalInstant(hour, minute, zone, nowMs, date));
     setPickerOpen(false);
