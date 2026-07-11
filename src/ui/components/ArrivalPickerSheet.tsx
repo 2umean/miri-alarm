@@ -1,6 +1,6 @@
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -62,6 +62,27 @@ export function ArrivalPickerSheet({ visible, initial, onCancel, onConfirm }: Pr
     }
   }
 
+  // The Android module's show/update effect re-runs on `onChange` identity
+  // change and calls open() again — RE-SEEDING an already-open dialog (and
+  // leaking an unresolved promise). ChainScreen re-renders every 60s tick, so
+  // inline arrows would snap the user's in-progress selection back to the seed.
+  // Hence: identity-stable handlers reading the latest props/state via a ref.
+  const latest = useRef({ onCancel, onConfirm, pickedDate });
+  latest.current = { onCancel, onConfirm, pickedDate };
+
+  const onDateChange = useCallback((e: DateTimePickerEvent, d?: Date) => {
+    if (e.type === 'set' && d) setPickedDate(d);
+    else latest.current.onCancel(); // cancel at either step aborts the whole edit
+  }, []);
+
+  const onTimeChange = useCallback((e: DateTimePickerEvent, d?: Date) => {
+    const { onConfirm: confirm, onCancel: cancel, pickedDate: picked } = latest.current;
+    if (e.type === 'set' && d && picked) confirm(toArrivalDate(picked), d.getHours(), d.getMinutes());
+    // A null pickedDate can't occur (the time dialog renders only after the date
+    // step set it) — cancelling is the safe collapse if it ever did.
+    else cancel();
+  }, []);
+
   if (Platform.OS === 'android') {
     if (!visible) return null;
     if (pickedDate === null) {
@@ -70,10 +91,7 @@ export function ArrivalPickerSheet({ visible, initial, onCancel, onConfirm }: Pr
           value={initial}
           mode="date"
           minimumDate={startOfToday()}
-          onChange={(e: DateTimePickerEvent, d?: Date) => {
-            if (e.type === 'set' && d) setPickedDate(d);
-            else onCancel(); // cancel at either step aborts the whole edit
-          }}
+          onChange={onDateChange}
         />
       );
     }
@@ -83,11 +101,7 @@ export function ArrivalPickerSheet({ visible, initial, onCancel, onConfirm }: Pr
         mode="time"
         is24Hour
         display="spinner"
-        onChange={(e: DateTimePickerEvent, d?: Date) => {
-          if (e.type === 'set' && d) {
-            onConfirm(toArrivalDate(pickedDate), d.getHours(), d.getMinutes());
-          } else onCancel();
-        }}
+        onChange={onTimeChange}
       />
     );
   }
