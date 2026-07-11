@@ -128,7 +128,7 @@ export const ko: typeof en = {
     infeasible: '불가능한 일정이에요 — 음수 시간이 생겨요.',
     'chain-too-long': '전체 일정이 비현실적으로 길어요.',
     'no-alarm': '⏰ 알람 이벤트를 추가해 주세요 — 알림만으로는 확실히 깨우지 못해요.',
-    'past-event': '이미 지난 일정이에요.',
+    'past-event': '울릴 알람 시각이 모두 지났어요.',
     'bedtime-passed': '주의: 시작 시간이 이미 지났어요.',
   },
 };

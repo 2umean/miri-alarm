@@ -52,45 +52,40 @@ export function computeChain(chain: Chain): ChainComputed | null {
   return { start, items, arrival };
 }
 
+// Alarm selectors. Input-shape convention: `latestAlarmInstant` takes a raw
+// Chain (it computes internally); the rest take an already-built ChainComputed,
+// so a caller that already has one never triggers a second computeChain pass.
+
 /**
- * The instant the chain "goes live" — the v2 generalization of v1's wake. It
- * anchors on the STRONG alarm and treats earlier pushes as best-effort:
- *   earliest 'alarm' end  →  else earliest 'push' end  →  else the arrival.
- *
- * Anchoring on the alarm (not the chronologically-earliest event) is deliberate
- * and mirrors v1, which rolled on the wake alarm while letting the earlier
- * bedtime nudge sit in the past. If rollover keyed off the earliest push, a
- * trivial already-passed push (e.g. a "melatonin" reminder) would roll the whole
- * day forward and defer the wake alarm by 24h — the opposite of what the user
- * wants. A push that has already elapsed at arm time is simply skipped (Phase 3
- * chainAlerts), exactly as v1 skipped a past fall-asleep nudge.
+ * The LATEST alarm end instant in an already-computed chain, or null with no
+ * alarm pills. Shared by the arm gate (chainValidation: past-event fires when
+ * this has passed) and armed liveness (below) so the two can never drift.
  */
-export function primaryInstantFromComputed(computed: ChainComputed): number {
-  // items are chronological, so the first match of a type is its earliest end.
-  const firstAlarm = computed.items.find((it) => it.pill.type === 'alarm');
-  if (firstAlarm) return firstAlarm.endAt;
-
-  const firstPush = computed.items.find((it) => it.pill.type === 'push');
-  if (firstPush) return firstPush.endAt;
-
-  return computed.arrival;
-}
-
-/** Convenience wrapper: the primary instant for a chain, or null without a usable anchor. */
-export function primaryEventInstant(chain: Chain): number | null {
-  const computed = computeChain(chain);
-  return computed ? primaryInstantFromComputed(computed) : null;
+export function latestAlarmFromComputed(computed: ChainComputed): number | null {
+  const alarmEnds = computed.items.filter((it) => it.pill.type === 'alarm').map((it) => it.endAt);
+  return alarmEnds.length ? Math.max(...alarmEnds) : null;
 }
 
 /**
  * The LATEST alarm-pill end instant (the last alarm to ring), or null if there's
  * no alarm pill / no arrival. Used to decide whether an armed chain is still
  * live: with several alarm pills it stays armed until the LAST one has passed,
- * not the first (primaryEventInstant).
+ * not the first.
  */
 export function latestAlarmInstant(chain: Chain): number | null {
   const computed = computeChain(chain);
-  if (!computed) return null;
-  const alarmEnds = computed.items.filter((it) => it.pill.type === 'alarm').map((it) => it.endAt);
-  return alarmEnds.length ? Math.max(...alarmEnds) : null;
+  return computed ? latestAlarmFromComputed(computed) : null;
+}
+
+/**
+ * The alarm item the user should be watching: the FIRST alarm still in the
+ * future — else the LAST alarm (a fully-elapsed chain, e.g. an armed snapshot
+ * about to expire) — else null when the chain has no alarm pills. The armed
+ * summary uses this instead of the earliest alarm, which may already have
+ * passed and been skipped at arm time (v0.3 arrival-date spec).
+ */
+export function upcomingAlarmItem(computed: ChainComputed, nowMs: number): ComputedItem | null {
+  const alarms = computed.items.filter((it) => it.pill.type === 'alarm');
+  if (alarms.length === 0) return null;
+  return alarms.find((it) => it.endAt > nowMs) ?? alarms[alarms.length - 1];
 }

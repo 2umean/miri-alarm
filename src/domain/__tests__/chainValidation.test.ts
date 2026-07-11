@@ -38,9 +38,49 @@ test('bedtime-passed is a non-blocking nudge while the alarm is still in the fut
   expect(isChainArmable(issues)).toBe(true);
 });
 
-test('a passed primary event blocks arming', () => {
-  const now = at(ZONE, 2026, 6, 30, 8, 0); // after wake 07:30
+test('a passed FIRST alarm does not block arming while a later alarm remains (past alerts are skipped)', () => {
+  const c: Chain = {
+    arrival: at(ZONE, 2026, 6, 30, 9, 0),
+    zone: ZONE,
+    pills: [pill('wake', 420, 'alarm'), pill('gap', 30), pill('backup', 15, 'alarm')],
+  };
+  // wake ends 08:15; backup (last pill) ends at the arrival 09:00.
+  const now = at(ZONE, 2026, 6, 30, 8, 30); // wake passed, backup ahead
+  const issues = validateChain(c, now);
+  expect(kinds(issues)).not.toContain('past-event');
+  expect(isChainArmable(issues)).toBe(true);
+  expect(kinds(issues)).toContain('bedtime-passed'); // start long past — the nudge survives
+});
+
+test('past-event blocks arming once ALL alarms have passed, even with the arrival ahead', () => {
+  const now = at(ZONE, 2026, 6, 30, 8, 0); // hero's only alarm ended 07:50; arrival 09:00 ahead
   const issues = validateChain(hero(), now);
+  expect(kinds(issues)).toContain('past-event');
+  expect(kinds(issues)).not.toContain('bedtime-passed'); // past-event supersedes the nudge
+  expect(isChainArmable(issues)).toBe(false);
+});
+
+test('an alarm-less chain past its arrival reports no-alarm but never past-event', () => {
+  const c: Chain = {
+    arrival: at(ZONE, 2026, 6, 30, 9, 0),
+    zone: ZONE,
+    pills: [pill('p', 30, 'push'), pill('x', 60)],
+  };
+  const now = at(ZONE, 2026, 6, 30, 10, 0); // arrival passed
+  const issues = validateChain(c, now);
+  expect(kinds(issues)).toContain('no-alarm');
+  expect(kinds(issues)).not.toContain('past-event');
+  expect(isChainArmable(issues)).toBe(false);
+});
+
+test('past-event blocks once ALL alarms in a multi-alarm chain have passed (arrival still ahead)', () => {
+  const c: Chain = {
+    arrival: at(ZONE, 2026, 6, 30, 9, 0),
+    zone: ZONE,
+    pills: [pill('wake', 420, 'alarm'), pill('gap', 30), pill('backup', 15, 'alarm'), pill('commute', 30)],
+  };
+  // wake ends 07:45; backup ends 08:30; arrival 09:00 still ahead.
+  const issues = validateChain(c, at(ZONE, 2026, 6, 30, 8, 45));
   expect(kinds(issues)).toContain('past-event');
   expect(isChainArmable(issues)).toBe(false);
 });

@@ -1,49 +1,107 @@
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { YMD } from '../../domain';
 import { t } from '../../i18n';
 import { colors, fonts, radii, shadows, spacing } from '../theme';
 
+export type ArrivalDate = YMD;
+
 type Props = {
   visible: boolean;
-  /** Seed clock shown when the picker opens. */
+  /** Seed date+time shown when the picker opens. */
   initial: Date;
   onCancel: () => void;
-  onConfirm: (hour: number, minute: number) => void;
+  onConfirm: (date: ArrivalDate, hour: number, minute: number) => void;
+};
+
+const toArrivalDate = (d: Date): ArrivalDate => ({
+  // Device-zone getters are correct here: the app is single-zone by design
+  // (reconcileAndRoll pins chain.zone to the device zone on every hydration).
+  year: d.getFullYear(),
+  month: d.getMonth() + 1,
+  day: d.getDate(),
+});
+
+// Floored to start of day, NOT to now: today + an already-passed time must
+// stay pickable — it resolves to a past instant and rolls to tomorrow visibly
+// (spec §5).
+const startOfToday = (): Date => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
 };
 
 /**
- * Bottom-sheet arrival picker (v2 design row 1B). On Android the picker is a
- * system dialog with its own buttons, so it renders bare (wrapping it in our
- * sheet would stack two dialogs) — same split as the v1 TimeEditorModal.
+ * Arrival date+time picker (v0.3 arrival-date spec D1). Android chains the two
+ * SYSTEM dialogs — date calendar, then time spinner — with no custom UI;
+ * cancelling either step aborts the whole edit. iOS keeps the bottom sheet with
+ * the wheel in `datetime` mode. Both constrain to today-or-later.
  */
 export function ArrivalPickerSheet({ visible, initial, onCancel, onConfirm }: Props) {
   const [value, setValue] = useState<Date>(initial);
+  const [pickedDate, setPickedDate] = useState<Date | null>(null);
   const insets = useSafeAreaInsets();
 
-  // The sheet stays mounted (visible toggles), so re-seed the spinner on each
-  // open. Keyed on `visible` only — not `initial` — so scrolling while open
-  // isn't reset out from under the user.
-  useEffect(() => {
-    if (visible) setValue(initial);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible]);
+  // Re-seed and rewind the two-step machine the moment `visible` flips — during
+  // RENDER, not in an effect: the Android picker opens its native dialog as a
+  // child mount effect, which fires BEFORE a parent effect could reset a stale
+  // step, flashing (or dead-tapping) the wrong dialog. Resetting during render
+  // discards the stale child before anything mounts. Keyed on visible only —
+  // never on initial — so a mid-scroll re-render can't reset the wheel under
+  // the user.
+  const [wasVisible, setWasVisible] = useState(visible);
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
+    if (visible) {
+      setValue(initial);
+      setPickedDate(null);
+    }
+  }
+
+  // The Android module's show/update effect re-runs on `onChange` identity
+  // change and calls open() again — RE-SEEDING an already-open dialog (and
+  // leaking an unresolved promise). ChainScreen re-renders every 60s tick, so
+  // inline arrows would snap the user's in-progress selection back to the seed.
+  // Hence: identity-stable handlers reading the latest props/state via a ref.
+  const latest = useRef({ onCancel, onConfirm, pickedDate });
+  latest.current = { onCancel, onConfirm, pickedDate };
+
+  const onDateChange = useCallback((e: DateTimePickerEvent, d?: Date) => {
+    if (e.type === 'set' && d) setPickedDate(d);
+    else latest.current.onCancel(); // cancel at either step aborts the whole edit
+  }, []);
+
+  const onTimeChange = useCallback((e: DateTimePickerEvent, d?: Date) => {
+    const { onConfirm: confirm, onCancel: cancel, pickedDate: picked } = latest.current;
+    if (e.type === 'set' && d && picked) confirm(toArrivalDate(picked), d.getHours(), d.getMinutes());
+    // A null pickedDate can't occur (the time dialog renders only after the date
+    // step set it) — cancelling is the safe collapse if it ever did.
+    else cancel();
+  }, []);
 
   if (Platform.OS === 'android') {
     if (!visible) return null;
+    if (pickedDate === null) {
+      return (
+        <DateTimePicker
+          value={initial}
+          mode="date"
+          minimumDate={startOfToday()}
+          onChange={onDateChange}
+        />
+      );
+    }
     return (
       <DateTimePicker
         value={initial}
         mode="time"
         is24Hour
         display="spinner"
-        onChange={(e: DateTimePickerEvent, d?: Date) => {
-          if (e.type === 'set' && d) onConfirm(d.getHours(), d.getMinutes());
-          else onCancel();
-        }}
+        onChange={onTimeChange}
       />
     );
   }
@@ -58,8 +116,8 @@ export function ArrivalPickerSheet({ visible, initial, onCancel, onConfirm }: Pr
         <View style={styles.pickerWrap}>
           <DateTimePicker
             value={value}
-            mode="time"
-            is24Hour
+            mode="datetime"
+            minimumDate={startOfToday()}
             display="spinner"
             onChange={(_e, d?: Date) => d && setValue(d)}
           />
@@ -70,7 +128,7 @@ export function ArrivalPickerSheet({ visible, initial, onCancel, onConfirm }: Pr
           </Pressable>
           <Pressable
             style={styles.confirmWrap}
-            onPress={() => onConfirm(value.getHours(), value.getMinutes())}
+            onPress={() => onConfirm(toArrivalDate(value), value.getHours(), value.getMinutes())}
           >
             <LinearGradient
               colors={[colors.sky500, colors.sky700]}

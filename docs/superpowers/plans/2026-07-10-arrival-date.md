@@ -895,7 +895,7 @@ Pass it to each row: `<PillRow key={item.pill.id} item={item} clock={clock} mont
 and next to the anchor styles:
 
 ```ts
-  anchorDate: { color: colors.ink2, fontSize: 12, fontFamily: fonts.clock },
+  anchorDate: { color: colors.ink, fontSize: 12, fontFamily: fonts.clock }, // ink, not ink2 — ink2 on amber is 2.2:1 (review fix)
 ```
 
 - [ ] **Step 5: Type-check and full suite**

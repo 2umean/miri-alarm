@@ -60,8 +60,9 @@ export function migratedChain(
 
 /**
  * Reconcile a restored chain to the current device zone (the app is single-zone)
- * and roll it to its next future occurrence, so a relaunch never lands on an
- * un-armable past schedule and the displayed zone always matches the format zone.
+ * and roll it forward if its ARRIVAL has passed, so a relaunch never lands on a
+ * chain anchored in the past. Alerts that already fired are skipped at arm time
+ * (D4), not rolled away.
  */
 export function reconcileAndRoll(chain: Chain, deviceZone: string, nowMs: number): Chain {
   const reconciled = chain.zone === deviceZone ? chain : { ...chain, zone: deviceZone };

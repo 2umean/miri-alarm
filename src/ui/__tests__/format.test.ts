@@ -4,6 +4,7 @@ import {
   formatAlarmDate,
   formatDuration,
   formatClockWithDay,
+  formatMonthDay,
   splitDuration,
 } from '../format';
 
@@ -59,12 +60,12 @@ test('formatClockWithDay shows the clock and a relative-day label', () => {
 
 test('formatAlarmDate is null when the alarm rings today (no chip)', () => {
   const now = at(6, 6, 0); // day 6, 06:00
-  expect(formatAlarmDate(at(6, 23, 0), now, 'UTC')).toBeNull(); // wake later same day
+  expect(formatAlarmDate(at(6, 23, 0), now, 'UTC')).toBeNull(); // alarm later same day
 });
 
 test('formatAlarmDate shows "Tomorrow" + the date for a next-day alarm', () => {
   const now = at(6, 20, 0); // day 6, 20:00
-  const chip = formatAlarmDate(at(7, 3, 45), now, 'UTC'); // wake day 7 03:45
+  const chip = formatAlarmDate(at(7, 3, 45), now, 'UTC'); // alarm day 7 03:45
   expect(chip).not.toBeNull();
   expect(chip).toContain('Tomorrow');
   expect(chip).toContain('7'); // the day-of-month
@@ -72,7 +73,7 @@ test('formatAlarmDate shows "Tomorrow" + the date for a next-day alarm', () => {
 
 test('formatAlarmDate shows the date alone (no relative word) for 2+ days out', () => {
   const now = at(6, 20, 0);
-  const chip = formatAlarmDate(at(9, 3, 45), now, 'UTC'); // wake day 9
+  const chip = formatAlarmDate(at(9, 3, 45), now, 'UTC'); // alarm day 9
   expect(chip).not.toBeNull();
   expect(chip).not.toContain('Tomorrow');
   expect(chip).toContain('9');
@@ -102,4 +103,16 @@ test('day labels localize to Korean when the locale is ko', () => {
   } finally {
     i18n.locale = prev;
   }
+});
+
+test('formatMonthDay renders numeric M/d (no zero padding) in the given zone', () => {
+  expect(formatMonthDay(at(6, 9, 0), 'UTC')).toBe('1/6');
+  // 2026-01-06 23:30 UTC is already the next day in Seoul — the zone decides the day.
+  expect(formatMonthDay(at(6, 23, 30), 'Asia/Seoul')).toBe('1/7');
+  expect(
+    formatMonthDay(
+      DateTime.fromObject({ year: 2026, month: 12, day: 31, hour: 8 }, { zone: 'UTC' }).toMillis(),
+      'UTC',
+    ),
+  ).toBe('12/31');
 });

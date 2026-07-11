@@ -1,5 +1,5 @@
 import { Chain, MAX_PILL_MINUTES } from './pill';
-import { computeChain, primaryInstantFromComputed, totalSpanMinutes } from './chainEngine';
+import { computeChain, latestAlarmFromComputed, totalSpanMinutes } from './chainEngine';
 
 /** Max total chain span (sum of all pill durations), in minutes. ~26h — covers a long sleep + commute + buffers.
  *  Module-local (not exported) to avoid a barrel name-clash with v1 validation.ts during the migration. */
@@ -16,7 +16,7 @@ export type ChainValidationIssue =
   | { kind: 'infeasible' } // a negative pill duration (shouldn't occur via the reducer; defensive)
   | { kind: 'chain-too-long' } // total span exceeds MAX_CHAIN_SPAN
   | { kind: 'no-alarm' } // no alarm pill — a safety alarm needs ≥1 OS-guaranteed ring, not just pushes
-  | { kind: 'past-event' } // the primary instant has already passed (rollover should prevent this)
+  | { kind: 'past-event' } // every alarm instant has passed — nothing left that can ring
   | { kind: 'bedtime-passed' }; // the first pill already began (non-blocking nudge; v1's sleep-debt analog)
 
 export function validateChain(chain: Chain, nowMs: number): ChainValidationIssue[] {
@@ -41,14 +41,16 @@ export function validateChain(chain: Chain, nowMs: number): ChainValidationIssue
   // would show "armed" while relying on suppressible best-effort notifications.
   if (!chain.pills.some((p) => p.type === 'alarm')) issues.push({ kind: 'no-alarm' });
 
-  // Compute the chain once; reuse it for both the anchor check and the
-  // primary/bedtime gates (primaryInstantFromComputed avoids a second build).
+  // Compute the chain once; reuse it for the anchor check and both time gates.
   const computed = computeChain(chain);
   if (!computed) {
     issues.push({ kind: 'no-arrival' });
   } else {
-    const primary = primaryInstantFromComputed(computed);
-    if (primary <= nowMs) {
+    // Arming needs at least one OS-guaranteed ring still ahead (spec D5 —
+    // earlier alarms may pass; they're skipped at arm time). Alarm-less chains
+    // are already blocked by no-alarm, so past-event never stacks on top.
+    const lastAlarm = latestAlarmFromComputed(computed);
+    if (lastAlarm != null && lastAlarm <= nowMs) {
       issues.push({ kind: 'past-event' });
     } else if (computed.start <= nowMs) {
       issues.push({ kind: 'bedtime-passed' });

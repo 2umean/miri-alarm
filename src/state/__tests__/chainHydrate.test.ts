@@ -1,7 +1,6 @@
 import { DateTime } from 'luxon';
 
 import { migratedChain, reconcileAndRoll, seedPills, withDefaultArrival } from '../chainHydrate';
-import { primaryEventInstant } from '../../domain/chainEngine';
 import { rollChainToFuture } from '../../domain/chainRollover';
 import { resolveArrivalInstant } from '../../domain/datetime';
 import { Chain } from '../../domain/pill';
@@ -40,7 +39,7 @@ test('migratedChain maps v1 durations to a zoned chain preserving alert semantic
 
 test('reconcileAndRoll re-zones to the device and rolls a passed chain to the future', () => {
   const zone = 'UTC';
-  // arrival 09:00 day 6; alarm pill ends 09:00 − 35 = 08:25 = primary.
+  // arrival 09:00 day 6; alarm pill ends 09:00 − 35 = 08:25 (no longer the roll key — see D4).
   const stored: Chain = {
     arrival: at(zone, 2026, 1, 6, 9, 0),
     zone: 'America/New_York', // stale stored zone, different from the device
@@ -49,10 +48,10 @@ test('reconcileAndRoll re-zones to the device and rolls a passed chain to the fu
       { id: 'b', icon: '🚇', name: 'c', dur: 35, type: 'none' },
     ],
   };
-  const now = at(zone, 2026, 1, 6, 8, 30); // after the primary on day 6
+  const now = at(zone, 2026, 1, 6, 9, 30); // after the arrival itself on day 6
   const out = reconcileAndRoll(stored, zone, now);
   expect(out.zone).toBe(zone); // reconciled to the device zone
-  expect(primaryEventInstant(out)!).toBeGreaterThan(now); // rolled forward
+  expect(out.arrival!).toBeGreaterThan(now); // rolled forward (rollover keys on arrival — D4)
   expect(DateTime.fromMillis(out.arrival!, { zone }).day).toBe(7);
 });
 
@@ -105,7 +104,7 @@ test('a first arrival pick over the seeded default can still land on today', () 
   const picked = resolveArrivalInstant(18, 0, zone, now); // user picks 18:00 meaning today
   const rolled = rollChainToFuture({ ...seeded, arrival: picked }, now);
   expect(DateTime.fromMillis(rolled.arrival!, { zone }).toFormat('yyyy-MM-dd HH:mm')).toBe(
-    '2026-01-06 18:00', // stays today: the 16:45 wake alarm is still ahead of noon
+    '2026-01-06 18:00', // stays today: the 18:00 arrival itself is still ahead of noon
   );
 });
 

@@ -1,6 +1,6 @@
 import { DateTime } from 'luxon';
 
-type YMD = { year: number; month: number; day: number };
+export type YMD = { year: number; month: number; day: number };
 
 /**
  * Resolve a wall-clock time in `zone` to the soonest future instant strictly after `nowMs`.

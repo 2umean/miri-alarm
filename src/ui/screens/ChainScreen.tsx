@@ -7,16 +7,16 @@ import { AlarmService } from '../../alarm/AlarmService';
 import {
   ChainValidationIssue,
   computeChain,
-  primaryInstantFromComputed,
   resolveArrivalInstant,
   toLocalClock,
+  upcomingAlarmItem,
 } from '../../domain';
 import { useArmingChain } from '../../hooks/useArmingChain';
 import { useChain } from '../../hooks/useChain';
 import { usePresets } from '../../hooks/usePresets';
 import { t } from '../../i18n';
 import { firstRemaining } from '../../state/presetsReducer';
-import { ArrivalPickerSheet } from '../components/ArrivalPickerSheet';
+import { ArrivalDate, ArrivalPickerSheet } from '../components/ArrivalPickerSheet';
 import { ChainList } from '../components/ChainList';
 import { PillDraft, PillEditorSheet } from '../components/PillEditorSheet';
 import { PresetListSheet } from '../components/PresetListSheet';
@@ -54,17 +54,20 @@ export function ChainScreen() {
 
   const atRisk = !health.isArmReliable || health.reasons.length > 0;
 
-  // Armed snapshot summary (primary event label/time + the ring date chip).
+  // Armed snapshot summary: the next alarm still to ring — or, once all have
+  // rung, the last one (the snapshot is about to expire). A passed alarm was
+  // skipped at arm time or has fired — advertising its dead time would repeat
+  // the today-or-tomorrow confusion this feature removes.
   const armedInfo = useMemo(() => {
     if (!armed) return null;
     const c = computeChain(armed);
     if (!c) return null;
-    const primary = primaryInstantFromComputed(c);
-    const item = c.items.find((it) => it.endAt === primary);
+    const item = upcomingAlarmItem(c, nowMs);
+    if (!item) return null; // unreachable for a real armed chain (arm gate requires an alarm)
     return {
-      label: item ? t('chainScreen.eventEnds', { name: item.pill.name }) : '',
-      time: toLocalClock(primary, armed.zone),
-      date: formatAlarmDate(primary, nowMs, armed.zone),
+      label: t('chainScreen.eventEnds', { name: item.pill.name }),
+      time: toLocalClock(item.endAt, armed.zone),
+      date: formatAlarmDate(item.endAt, nowMs, armed.zone),
     };
   }, [armed, nowMs]);
 
@@ -134,14 +137,13 @@ export function ChainScreen() {
     }
   };
 
-  // The picker is time-only and no date is shown before arming, so the only
-  // reading a pick can have is "the next HH:mm" — resolve to the soonest future
-  // occurrence. Pinning to the current anchor's day instead would silently keep
-  // a rollover-chosen "tomorrow" (e.g. the seeded default after ~07:45) and arm
-  // a day late. If today's occurrence is infeasible, rollChainToFuture advances it.
-  const onConfirmArrival = (hour: number, minute: number) => {
+  // The picker returns an explicit date+time (spec D1). A today-date pick with
+  // an already-passed time resolves to a past instant on purpose — the chain
+  // then rolls to tomorrow visibly via the date labels (spec §5), matching the
+  // old time-only behavior without a special warning state.
+  const onConfirmArrival = (date: ArrivalDate, hour: number, minute: number) => {
     disarmForEdit();
-    setArrival(resolveArrivalInstant(hour, minute, zone, nowMs));
+    setArrival(resolveArrivalInstant(hour, minute, zone, nowMs, date));
     setPickerOpen(false);
   };
 
