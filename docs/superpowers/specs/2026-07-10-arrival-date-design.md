@@ -51,8 +51,13 @@ snapshot are untouched — no migration.
 `chain.arrival > nowMs`. Once `arrival <= nowMs`, advance the arrival by whole
 calendar days **in the chain's zone** (wall-clock preserved, DST-safe — same
 mechanism as today) until `arrival > nowMs`. The bulk jump
-(`ceil((nowMs − arrival) / DAY_MS)`) plus the small fine-tune loop stay, but the
+(`floor((nowMs − arrival) / DAY_MS)`) plus the small fine-tune loop stay, but the
 predicate becomes the arrival itself instead of `primaryEventInstant`.
+
+> **Amended (review fix, commit 94477b1):** shipped as `floor`, not the `ceil`
+> this spec first wrote. `floor` can never overshoot past a 25h DST fall-back day
+> (which `ceil` could, skipping a valid arrival); any undershoot is picked up by
+> the additive fine-tune loop that follows.
 
 Consequences:
 
@@ -132,7 +137,9 @@ Numeric and locale-neutral (KO reads 7/10 naturally; EN too) — **no i18n key**
 
 - **Anchor row (📍 도착 시간):** date before the time — `7/12  09:00`. The date
   is smaller and fainter than the time (e.g. `fontSize` ~12, `colors.ink2`,
-  `fonts.clock`), so the clock stays dominant.
+  `fonts.clock`), so the clock stays dominant. (Amended by review: shipped as
+  `colors.ink` — `ink2` on the amber anchor is only 2.2:1. Event-row dates do use
+  `colors.ink2`, ~3.8:1 on the bubble.)
 - **Event rows (⏰/🔔):** same treatment before the end-time clock:
   `수면 종료  [알람]   7/12 07:45`. Rendered unconditionally (D3).
 - Rows need no `nowMs` and no conditional logic — pure function of the computed
