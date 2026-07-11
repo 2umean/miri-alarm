@@ -40,7 +40,7 @@ test('migratedChain maps v1 durations to a zoned chain preserving alert semantic
 
 test('reconcileAndRoll re-zones to the device and rolls a passed chain to the future', () => {
   const zone = 'UTC';
-  // arrival 09:00 day 6; alarm pill ends 09:00 − 35 = 08:25 = primary.
+  // arrival 09:00 day 6; alarm pill ends 09:00 − 35 = 08:25 (no longer the roll key — see D4).
   const stored: Chain = {
     arrival: at(zone, 2026, 1, 6, 9, 0),
     zone: 'America/New_York', // stale stored zone, different from the device
@@ -49,7 +49,7 @@ test('reconcileAndRoll re-zones to the device and rolls a passed chain to the fu
       { id: 'b', icon: '🚇', name: 'c', dur: 35, type: 'none' },
     ],
   };
-  const now = at(zone, 2026, 1, 6, 8, 30); // after the primary on day 6
+  const now = at(zone, 2026, 1, 6, 9, 30); // after the arrival itself on day 6
   const out = reconcileAndRoll(stored, zone, now);
   expect(out.zone).toBe(zone); // reconciled to the device zone
   expect(primaryEventInstant(out)!).toBeGreaterThan(now); // rolled forward
