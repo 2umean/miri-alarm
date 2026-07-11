@@ -137,16 +137,13 @@ export function ChainScreen() {
     }
   };
 
-  // The picker is time-only and no date is shown before arming, so the only
-  // reading a pick can have is "the next HH:mm" — resolve to the soonest future
-  // occurrence. Pinning to the current anchor's day instead would silently keep
-  // a rollover-chosen "tomorrow" (e.g. the seeded default after ~07:45) and arm
-  // a day late. If the picked instant has already passed, later alarms still
-  // arm (past ones are skipped at arm time); the chain itself rolls only once
-  // the ARRIVAL passes.
-  const onConfirmArrival = (hour: number, minute: number) => {
+  // The picker returns an explicit date+time (spec D1). A today-date pick with
+  // an already-passed time resolves to a past instant on purpose — the chain
+  // then rolls to tomorrow visibly via the date labels (spec §5), matching the
+  // old time-only behavior without a special warning state.
+  const onConfirmArrival = (date: { year: number; month: number; day: number }, hour: number, minute: number) => {
     disarmForEdit();
-    setArrival(resolveArrivalInstant(hour, minute, zone, nowMs));
+    setArrival(resolveArrivalInstant(hour, minute, zone, nowMs, date));
     setPickerOpen(false);
   };
 

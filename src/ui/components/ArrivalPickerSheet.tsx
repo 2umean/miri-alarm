@@ -7,33 +7,65 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { t } from '../../i18n';
 import { colors, fonts, radii, shadows, spacing } from '../theme';
 
+export type ArrivalDate = { year: number; month: number; day: number };
+
 type Props = {
   visible: boolean;
-  /** Seed clock shown when the picker opens. */
+  /** Seed date+time shown when the picker opens. */
   initial: Date;
   onCancel: () => void;
-  onConfirm: (hour: number, minute: number) => void;
+  onConfirm: (date: ArrivalDate, hour: number, minute: number) => void;
 };
 
+const toArrivalDate = (d: Date): ArrivalDate => ({
+  // Device-zone getters are correct here: the app is single-zone by design
+  // (reconcileAndRoll pins chain.zone to the device zone on every hydration).
+  year: d.getFullYear(),
+  month: d.getMonth() + 1,
+  day: d.getDate(),
+});
+
 /**
- * Bottom-sheet arrival picker (v2 design row 1B). On Android the picker is a
- * system dialog with its own buttons, so it renders bare (wrapping it in our
- * sheet would stack two dialogs) — same split as the v1 TimeEditorModal.
+ * Arrival date+time picker (v0.3 arrival-date spec D1). Android chains the two
+ * SYSTEM dialogs — date calendar, then time spinner — with no custom UI;
+ * cancelling either step aborts the whole edit. iOS keeps the bottom sheet with
+ * the wheel in `datetime` mode. Both constrain to today-or-later.
  */
 export function ArrivalPickerSheet({ visible, initial, onCancel, onConfirm }: Props) {
   const [value, setValue] = useState<Date>(initial);
+  const [step, setStep] = useState<'date' | 'time'>('date');
+  const [pickedDate, setPickedDate] = useState<Date | null>(null);
   const insets = useSafeAreaInsets();
 
-  // The sheet stays mounted (visible toggles), so re-seed the spinner on each
-  // open. Keyed on `visible` only — not `initial` — so scrolling while open
-  // isn't reset out from under the user.
+  // The sheet stays mounted (visible toggles), so re-seed the wheel and reset
+  // the Android two-step state machine on each open. Keyed on `visible` only —
+  // not `initial` — so scrolling while open isn't reset out from under the user.
   useEffect(() => {
-    if (visible) setValue(initial);
+    if (visible) {
+      setValue(initial);
+      setStep('date');
+      setPickedDate(null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   if (Platform.OS === 'android') {
     if (!visible) return null;
+    if (step === 'date') {
+      return (
+        <DateTimePicker
+          value={initial}
+          mode="date"
+          minimumDate={new Date()}
+          onChange={(e: DateTimePickerEvent, d?: Date) => {
+            if (e.type === 'set' && d) {
+              setPickedDate(d);
+              setStep('time');
+            } else onCancel(); // cancel at either step aborts the whole edit
+          }}
+        />
+      );
+    }
     return (
       <DateTimePicker
         value={initial}
@@ -41,8 +73,9 @@ export function ArrivalPickerSheet({ visible, initial, onCancel, onConfirm }: Pr
         is24Hour
         display="spinner"
         onChange={(e: DateTimePickerEvent, d?: Date) => {
-          if (e.type === 'set' && d) onConfirm(d.getHours(), d.getMinutes());
-          else onCancel();
+          if (e.type === 'set' && d && pickedDate) {
+            onConfirm(toArrivalDate(pickedDate), d.getHours(), d.getMinutes());
+          } else onCancel();
         }}
       />
     );
@@ -58,8 +91,8 @@ export function ArrivalPickerSheet({ visible, initial, onCancel, onConfirm }: Pr
         <View style={styles.pickerWrap}>
           <DateTimePicker
             value={value}
-            mode="time"
-            is24Hour
+            mode="datetime"
+            minimumDate={new Date()}
             display="spinner"
             onChange={(_e, d?: Date) => d && setValue(d)}
           />
@@ -70,7 +103,7 @@ export function ArrivalPickerSheet({ visible, initial, onCancel, onConfirm }: Pr
           </Pressable>
           <Pressable
             style={styles.confirmWrap}
-            onPress={() => onConfirm(value.getHours(), value.getMinutes())}
+            onPress={() => onConfirm(toArrivalDate(value), value.getHours(), value.getMinutes())}
           >
             <LinearGradient
               colors={[colors.sky500, colors.sky700]}

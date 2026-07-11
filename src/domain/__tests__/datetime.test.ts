@@ -61,3 +61,10 @@ test('relativeDayLabel detects same-day and next-day', () => {
   expect(relativeDayLabel(nowAt('UTC', 2026, 1, 6, 22, 0), ref, 'UTC')).toBe('same-day');
   expect(relativeDayLabel(nowAt('UTC', 2026, 1, 7, 3, 0), ref, 'UTC')).toBe('next-day');
 });
+
+test('an explicit date with a passed time returns that past instant (rollover advances it downstream)', () => {
+  const now = nowAt('UTC', 2026, 1, 6, 9, 0);
+  const ms = resolveArrivalInstant(8, 0, 'UTC', now, { year: 2026, month: 1, day: 6 });
+  expect(ms).toBeLessThan(now);
+  expect(DateTime.fromMillis(ms, { zone: 'UTC' }).toFormat('yyyy-MM-dd HH:mm')).toBe('2026-01-06 08:00');
+});
