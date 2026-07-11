@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { YMD } from '../../domain';
 import { t } from '../../i18n';
 import { colors, fonts, radii, shadows, spacing } from '../theme';
 
-export type ArrivalDate = { year: number; month: number; day: number };
+export type ArrivalDate = YMD;
 
 type Props = {
   visible: boolean;
@@ -25,6 +26,9 @@ const toArrivalDate = (d: Date): ArrivalDate => ({
   day: d.getDate(),
 });
 
+// Floored to start of day, NOT to now: today + an already-passed time must
+// stay pickable — it resolves to a past instant and rolls to tomorrow visibly
+// (spec §5).
 const startOfToday = (): Date => {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
@@ -39,7 +43,6 @@ const startOfToday = (): Date => {
  */
 export function ArrivalPickerSheet({ visible, initial, onCancel, onConfirm }: Props) {
   const [value, setValue] = useState<Date>(initial);
-  const [step, setStep] = useState<'date' | 'time'>('date');
   const [pickedDate, setPickedDate] = useState<Date | null>(null);
   const insets = useSafeAreaInsets();
 
@@ -47,30 +50,29 @@ export function ArrivalPickerSheet({ visible, initial, onCancel, onConfirm }: Pr
   // RENDER, not in an effect: the Android picker opens its native dialog as a
   // child mount effect, which fires BEFORE a parent effect could reset a stale
   // step, flashing (or dead-tapping) the wrong dialog. Resetting during render
-  // discards the stale child before anything mounts.
+  // discards the stale child before anything mounts. Keyed on visible only —
+  // never on initial — so a mid-scroll re-render can't reset the wheel under
+  // the user.
   const [wasVisible, setWasVisible] = useState(visible);
   if (visible !== wasVisible) {
     setWasVisible(visible);
     if (visible) {
       setValue(initial);
-      setStep('date');
       setPickedDate(null);
     }
   }
 
   if (Platform.OS === 'android') {
     if (!visible) return null;
-    if (step === 'date') {
+    if (pickedDate === null) {
       return (
         <DateTimePicker
           value={initial}
           mode="date"
           minimumDate={startOfToday()}
           onChange={(e: DateTimePickerEvent, d?: Date) => {
-            if (e.type === 'set' && d) {
-              setPickedDate(d);
-              setStep('time');
-            } else onCancel(); // cancel at either step aborts the whole edit
+            if (e.type === 'set' && d) setPickedDate(d);
+            else onCancel(); // cancel at either step aborts the whole edit
           }}
         />
       );
@@ -82,7 +84,7 @@ export function ArrivalPickerSheet({ visible, initial, onCancel, onConfirm }: Pr
         is24Hour
         display="spinner"
         onChange={(e: DateTimePickerEvent, d?: Date) => {
-          if (e.type === 'set' && d && pickedDate) {
+          if (e.type === 'set' && d) {
             onConfirm(toArrivalDate(pickedDate), d.getHours(), d.getMinutes());
           } else onCancel();
         }}
