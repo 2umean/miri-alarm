@@ -7,9 +7,9 @@ import { AlarmService } from '../../alarm/AlarmService';
 import {
   ChainValidationIssue,
   computeChain,
-  primaryInstantFromComputed,
   resolveArrivalInstant,
   toLocalClock,
+  upcomingAlarmItem,
 } from '../../domain';
 import { useArmingChain } from '../../hooks/useArmingChain';
 import { useChain } from '../../hooks/useChain';
@@ -54,17 +54,19 @@ export function ChainScreen() {
 
   const atRisk = !health.isArmReliable || health.reasons.length > 0;
 
-  // Armed snapshot summary (primary event label/time + the ring date chip).
+  // Armed snapshot summary: the NEXT alarm still to ring (an already-passed
+  // alarm was skipped at arm time or has fired — advertising its dead time
+  // would repeat the today-or-tomorrow confusion this feature removes).
   const armedInfo = useMemo(() => {
     if (!armed) return null;
     const c = computeChain(armed);
     if (!c) return null;
-    const primary = primaryInstantFromComputed(c);
-    const item = c.items.find((it) => it.endAt === primary);
+    const item = upcomingAlarmItem(c, nowMs);
+    if (!item) return null; // unreachable for a real armed chain (arm gate requires an alarm)
     return {
-      label: item ? t('chainScreen.eventEnds', { name: item.pill.name }) : '',
-      time: toLocalClock(primary, armed.zone),
-      date: formatAlarmDate(primary, nowMs, armed.zone),
+      label: t('chainScreen.eventEnds', { name: item.pill.name }),
+      time: toLocalClock(item.endAt, armed.zone),
+      date: formatAlarmDate(item.endAt, nowMs, armed.zone),
     };
   }, [armed, nowMs]);
 
