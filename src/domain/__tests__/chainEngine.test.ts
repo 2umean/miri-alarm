@@ -192,4 +192,9 @@ describe('upcomingAlarmItem', () => {
     })!;
     expect(upcomingAlarmItem(r, at(zone, 2026, 6, 30, 8, 0))).toBeNull();
   });
+
+  test('an alarm ringing exactly now counts as passed → the next one', () => {
+    const r = computeChain(twoAlarms())!;
+    expect(upcomingAlarmItem(r, at(zone, 2026, 6, 30, 8, 15))!.pill.id).toBe('backup');
+  });
 });
