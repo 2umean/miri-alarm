@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ChainComputed, ComputedItem, toLocalClock } from '../../domain';
 import { t } from '../../i18n';
-import { formatDuration } from '../format';
+import { formatDuration, formatMonthDay } from '../format';
 import { colors, fonts, pillStyle, radii, shadows, spacing } from '../theme';
 
 type Props = {
@@ -19,6 +19,7 @@ type Props = {
  */
 export function ChainList({ computed, zone, onPressPill, onPressAnchor }: Props) {
   const clock = (ms: number) => toLocalClock(ms, zone);
+  const monthDay = (ms: number) => formatMonthDay(ms, zone);
 
   return (
     <View style={styles.list}>
@@ -31,12 +32,13 @@ export function ChainList({ computed, zone, onPressPill, onPressAnchor }: Props)
       ) : null}
 
       {computed.items.map((item) => (
-        <PillRow key={item.pill.id} item={item} clock={clock} onPress={() => onPressPill(item.pill.id)} />
+        <PillRow key={item.pill.id} item={item} clock={clock} monthDay={monthDay} onPress={() => onPressPill(item.pill.id)} />
       ))}
 
       <Pressable style={styles.anchor} onPress={onPressAnchor}>
         <Text style={styles.anchorIcon}>📍</Text>
         <Text style={styles.anchorLabel}>{t('chainScreen.anchorLabel')}</Text>
+        <Text style={styles.anchorDate}>{monthDay(computed.arrival)}</Text>
         <Text style={styles.anchorTime}>{clock(computed.arrival)}</Text>
       </Pressable>
     </View>
@@ -46,10 +48,12 @@ export function ChainList({ computed, zone, onPressPill, onPressAnchor }: Props)
 function PillRow({
   item,
   clock,
+  monthDay,
   onPress,
 }: {
   item: ComputedItem;
   clock: (ms: number) => string;
+  monthDay: (ms: number) => string;
   onPress: () => void;
 }) {
   const { pill } = item;
@@ -92,6 +96,7 @@ function PillRow({
               <Text style={styles.badgeText}>{t(`chainScreen.badge.${pill.type}`)}</Text>
             </View>
             <View style={styles.eventSpacer} />
+            <Text style={styles.eventDate}>{monthDay(item.endAt)}</Text>
             <Text style={[styles.eventTime, { color: sx.eventTime }]}>{clock(item.endAt)}</Text>
           </View>
         </>
@@ -137,6 +142,7 @@ const styles = StyleSheet.create({
   badge: { borderRadius: radii.pill, paddingVertical: 2, paddingHorizontal: spacing.s },
   badgeText: { color: colors.white, fontSize: 9, fontFamily: fonts.extra },
   eventSpacer: { flex: 1 },
+  eventDate: { color: colors.faint, fontSize: 11, fontFamily: fonts.clock },
   eventTime: { fontSize: 16, fontFamily: fonts.clock },
 
   anchor: {
@@ -152,5 +158,6 @@ const styles = StyleSheet.create({
   },
   anchorIcon: { fontSize: 18, width: ICON_W, textAlign: 'center' },
   anchorLabel: { flex: 1, color: colors.ink, fontFamily: fonts.extra, fontSize: 14 },
+  anchorDate: { color: colors.ink2, fontSize: 12, fontFamily: fonts.clock },
   anchorTime: { color: colors.ink, fontSize: 19, fontFamily: fonts.clock },
 });
