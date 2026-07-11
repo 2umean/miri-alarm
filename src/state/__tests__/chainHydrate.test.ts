@@ -105,7 +105,7 @@ test('a first arrival pick over the seeded default can still land on today', () 
   const picked = resolveArrivalInstant(18, 0, zone, now); // user picks 18:00 meaning today
   const rolled = rollChainToFuture({ ...seeded, arrival: picked }, now);
   expect(DateTime.fromMillis(rolled.arrival!, { zone }).toFormat('yyyy-MM-dd HH:mm')).toBe(
-    '2026-01-06 18:00', // stays today: the 16:45 wake alarm is still ahead of noon
+    '2026-01-06 18:00', // stays today: the 18:00 arrival itself is still ahead of noon
   );
 });
 

@@ -26,9 +26,9 @@ export function rollChainToFuture(chain: Chain, nowMs: number): Chain {
   if (chain.arrival == null || !Number.isFinite(chain.arrival)) return chain;
   if (chain.arrival > nowMs) return chain;
 
-  // Jump most of the gap at once (ceil → the minimal whole-day advance), then
-  // fine-tune for DST unevenness (a 23h day can under-shoot) or an exact tie.
-  const approxDays = Math.ceil((nowMs - chain.arrival) / DAY_MS);
+  // Jump most of the gap at once (floor → never overshoots, even across a
+  // 25-hour fall-back day), then fine-tune upward for the remainder or a tie.
+  const approxDays = Math.floor((nowMs - chain.arrival) / DAY_MS);
   let arrival = DateTime.fromMillis(chain.arrival, { zone: chain.zone })
     .plus({ days: approxDays })
     .toMillis();

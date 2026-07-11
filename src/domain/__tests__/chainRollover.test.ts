@@ -99,3 +99,19 @@ test('rolling across a spring-forward day preserves the wall-clock arrival time'
   expect(local.toFormat('HH:mm')).toBe('12:00'); // same wall-clock
   expect(rolled.arrival!).toBeGreaterThan(now);
 });
+
+test('rolling across a fall-back day does not overshoot (25h day, next occurrence still ahead)', () => {
+  // US Eastern fall-back 2026-11-01 (02:00 EDT → 01:00 EST): that calendar day
+  // lasts 25 hours. arrival Sat 10-31 09:00 EDT; now Sun 11-01 08:30 EST is
+  // 24.5 real hours later — but the NEXT 09:00 (Sun 11-01) is still 30 minutes
+  // ahead. A fixed-24h ceil bulk jump would skip it and land on 11-02.
+  const zone = 'America/New_York';
+  const c: Chain = { arrival: at(zone, 2026, 10, 31, 9, 0), zone, pills: [pill('sleep', 420, 'alarm')] };
+  const now = at(zone, 2026, 11, 1, 8, 30);
+  const rolled = rollChainToFuture(c, now);
+  const local = arrivalLocal(rolled);
+  expect(local.month).toBe(11);
+  expect(local.day).toBe(1);
+  expect(local.toFormat('HH:mm')).toBe('09:00');
+  expect(rolled.arrival!).toBeGreaterThan(now);
+});
