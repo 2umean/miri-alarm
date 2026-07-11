@@ -1,5 +1,5 @@
 import { Chain, MAX_PILL_MINUTES } from './pill';
-import { computeChain, totalSpanMinutes } from './chainEngine';
+import { computeChain, latestAlarmFromComputed, totalSpanMinutes } from './chainEngine';
 
 /** Max total chain span (sum of all pill durations), in minutes. ~26h — covers a long sleep + commute + buffers.
  *  Module-local (not exported) to avoid a barrel name-clash with v1 validation.ts during the migration. */
@@ -46,17 +46,10 @@ export function validateChain(chain: Chain, nowMs: number): ChainValidationIssue
   if (!computed) {
     issues.push({ kind: 'no-arrival' });
   } else {
-    // Arming needs at least one OS-guaranteed ring still ahead: past-event
-    // fires only when the chain HAS alarm pills and the LAST one has passed
-    // (v0.3 arrival-date spec D5 — earlier alarms may pass and are skipped at
-    // arm time). Alarm-less chains are already blocked by no-alarm; stacking
-    // past-event on top would add noise, not information.
-    let lastAlarm: number | null = null;
-    for (const it of computed.items) {
-      if (it.pill.type === 'alarm' && (lastAlarm == null || it.endAt > lastAlarm)) {
-        lastAlarm = it.endAt;
-      }
-    }
+    // Arming needs at least one OS-guaranteed ring still ahead (spec D5 —
+    // earlier alarms may pass; they're skipped at arm time). Alarm-less chains
+    // are already blocked by no-alarm, so past-event never stacks on top.
+    const lastAlarm = latestAlarmFromComputed(computed);
     if (lastAlarm != null && lastAlarm <= nowMs) {
       issues.push({ kind: 'past-event' });
     } else if (computed.start <= nowMs) {

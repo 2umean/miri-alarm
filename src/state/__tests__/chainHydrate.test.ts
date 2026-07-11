@@ -1,7 +1,6 @@
 import { DateTime } from 'luxon';
 
 import { migratedChain, reconcileAndRoll, seedPills, withDefaultArrival } from '../chainHydrate';
-import { primaryEventInstant } from '../../domain/chainEngine';
 import { rollChainToFuture } from '../../domain/chainRollover';
 import { resolveArrivalInstant } from '../../domain/datetime';
 import { Chain } from '../../domain/pill';
@@ -52,7 +51,7 @@ test('reconcileAndRoll re-zones to the device and rolls a passed chain to the fu
   const now = at(zone, 2026, 1, 6, 9, 30); // after the arrival itself on day 6
   const out = reconcileAndRoll(stored, zone, now);
   expect(out.zone).toBe(zone); // reconciled to the device zone
-  expect(primaryEventInstant(out)!).toBeGreaterThan(now); // rolled forward
+  expect(out.arrival!).toBeGreaterThan(now); // rolled forward (rollover keys on arrival — D4)
   expect(DateTime.fromMillis(out.arrival!, { zone }).day).toBe(7);
 });
 

@@ -54,9 +54,10 @@ export function ChainScreen() {
 
   const atRisk = !health.isArmReliable || health.reasons.length > 0;
 
-  // Armed snapshot summary: the NEXT alarm still to ring (an already-passed
-  // alarm was skipped at arm time or has fired — advertising its dead time
-  // would repeat the today-or-tomorrow confusion this feature removes).
+  // Armed snapshot summary: the next alarm still to ring — or, once all have
+  // rung, the last one (the snapshot is about to expire). A passed alarm was
+  // skipped at arm time or has fired — advertising its dead time would repeat
+  // the today-or-tomorrow confusion this feature removes.
   const armedInfo = useMemo(() => {
     if (!armed) return null;
     const c = computeChain(armed);
