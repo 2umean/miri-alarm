@@ -138,9 +138,9 @@ export function ChainScreen() {
   // reading a pick can have is "the next HH:mm" — resolve to the soonest future
   // occurrence. Pinning to the current anchor's day instead would silently keep
   // a rollover-chosen "tomorrow" (e.g. the seeded default after ~07:45) and arm
-  // a day late. If the picked instant has already passed, the chain stays as
-  // picked until the ARRIVAL passes (alarms in between simply won't be armable —
-  // Task 2 re-keys that gate); rollChainToFuture only advances a passed arrival.
+  // a day late. If the picked instant has already passed, later alarms still
+  // arm (past ones are skipped at arm time); the chain itself rolls only once
+  // the ARRIVAL passes.
   const onConfirmArrival = (hour: number, minute: number) => {
     disarmForEdit();
     setArrival(resolveArrivalInstant(hour, minute, zone, nowMs));

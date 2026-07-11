@@ -127,7 +127,7 @@ export const en = {
     infeasible: 'This timing is impossible — a step would take negative time.',
     'chain-too-long': 'The total span is unrealistically long.',
     'no-alarm': 'Add an ⏰ alarm pill — a notification alone isn’t guaranteed to wake you.',
-    'past-event': 'This schedule has already passed.',
+    'past-event': 'All alarm times have already passed.',
     'bedtime-passed': 'Heads up: your start time has already passed.',
   } satisfies Record<ChainValidationIssue['kind'], string>,
 };
