@@ -33,7 +33,7 @@ export type PillInput = { icon: string; name: string; dur: number; type: PillTyp
 /**
  * v2 twin of useSchedule: restores the chain (v2 draft → migrate v1 → seeded
  * default), persists every change, ticks `now`, and always shows the chain
- * rolled to its next future occurrence. Exposes id-minting action helpers so
+ * rolled forward once its arrival has passed. Exposes id-minting action helpers so
  * the UI never touches the reducer's raw shape. Every path runs through
  * withDefaultArrival, so a chain ALWAYS has an arrival anchor (next 09:00 by
  * default) — there is no "set your arrival first" state.
@@ -98,7 +98,7 @@ export function useChain() {
     return () => clearInterval(id);
   }, []);
 
-  // The chain shown and armed is always rolled to its next future occurrence.
+  // The chain shown and armed is always rolled forward once its arrival has passed.
   const chain = useMemo(() => rollChainToFuture(state, nowMs), [state, nowMs]);
 
   // Sync the stored anchor to the rolled value so edits operate on the instant the

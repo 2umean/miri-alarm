@@ -4,7 +4,12 @@ import { MINUTE_MS } from './schedule';
 import { Chain } from './pill';
 
 const DAY_MS = 24 * 60 * MINUTE_MS;
-/** Cap on the DST fine-tune loop — the bulk jump lands within ~1 day of `now`. */
+/**
+ * Cap on the advance loop. Under the floor bulk jump the arrival lands
+ * at-or-before `now`, so this normally runs 1 step (2 across a spring-forward).
+ * 5 is a runaway backstop, not an expected depth; if it ever exhausted, the
+ * past-anchored result is returned as-is and the next render pass rolls again.
+ */
 const MAX_FINE_TUNE_STEPS = 5;
 
 /**

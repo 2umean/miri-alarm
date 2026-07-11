@@ -115,3 +115,9 @@ test('rolling across a fall-back day does not overshoot (25h day, next occurrenc
   expect(local.toFormat('HH:mm')).toBe('09:00');
   expect(rolled.arrival!).toBeGreaterThan(now);
 });
+
+test('a pill-less chain rolls on the arrival alone (pills are never consulted)', () => {
+  const c: Chain = { arrival: at('UTC', 2026, 1, 6, 9, 0), zone: 'UTC', pills: [] };
+  const rolled = rollChainToFuture(c, at('UTC', 2026, 1, 6, 10, 0));
+  expect(DateTime.fromMillis(rolled.arrival!, { zone: 'UTC' }).day).toBe(7);
+});
