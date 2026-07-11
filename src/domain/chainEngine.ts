@@ -52,9 +52,9 @@ export function computeChain(chain: Chain): ChainComputed | null {
   return { start, items, arrival };
 }
 
-// Alarm selectors. Input-shape convention: `latestAlarmInstant` takes a Chain
-// (it computes internally); the *FromComputed selectors take an already-built
-// ChainComputed so hot paths never trigger a second computeChain pass.
+// Alarm selectors. Input-shape convention: `latestAlarmInstant` takes a raw
+// Chain (it computes internally); the rest take an already-built ChainComputed,
+// so a caller that already has one never triggers a second computeChain pass.
 
 /**
  * The LATEST alarm end instant in an already-computed chain, or null with no

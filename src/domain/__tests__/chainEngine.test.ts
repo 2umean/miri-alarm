@@ -89,21 +89,23 @@ test('totalSpanMinutes sums all durations', () => {
   expect(totalSpanMinutes(hero())).toBe(420 + 20 + 20 + 15 + 35);
 });
 
+// wake ends 09:00 − (30+15) = 08:15; backup is the last pill → ends at 09:00.
+const twoAlarms = (): Chain => ({
+  arrival: at('UTC', 2026, 6, 30, 9, 0),
+  zone: 'UTC',
+  pills: [pill('wake', 420, 'alarm'), pill('gap', 30), pill('backup', 15, 'alarm')],
+});
+
 describe('latestAlarm selectors', () => {
   const zone = 'UTC';
-  const twoAlarmChain = (): Chain => ({
-    arrival: at(zone, 2026, 6, 30, 9, 0),
-    zone,
-    pills: [pill('wake', 420, 'alarm'), pill('gap', 30), pill('backup', 15, 'alarm')],
-  });
 
   test('latestAlarmInstant returns the last alarm end (a multi-alarm chain stays armed until the last fires)', () => {
     // wake ends 09:00 − (30+15) = 08:15; backup is the last pill so it ends AT arrival 09:00.
-    expect(clock(latestAlarmInstant(twoAlarmChain())!, zone)).toBe('09:00');
+    expect(clock(latestAlarmInstant(twoAlarms())!, zone)).toBe('09:00');
   });
 
   test('latestAlarmFromComputed agrees with latestAlarmInstant on the same chain', () => {
-    const c = twoAlarmChain();
+    const c = twoAlarms();
     expect(latestAlarmFromComputed(computeChain(c)!)).toBe(latestAlarmInstant(c));
   });
 
@@ -120,16 +122,20 @@ describe('latestAlarm selectors', () => {
   test('latestAlarmInstant is null before an arrival exists', () => {
     expect(latestAlarmInstant({ arrival: null, zone: 'UTC', pills: [] })).toBeNull();
   });
+
+  test('pushes never contribute — a chain whose only alert is a push yields null even when it passed', () => {
+    const c: Chain = {
+      arrival: at('UTC', 2026, 6, 30, 9, 0),
+      zone: 'UTC',
+      pills: [pill('early-push', 30, 'push'), pill('tail', 60)],
+    };
+    // the push ends 08:00; even at 10:00 (everything passed) there is no alarm to report.
+    expect(latestAlarmFromComputed(computeChain(c)!)).toBeNull();
+  });
 });
 
 describe('upcomingAlarmItem', () => {
   const zone = 'UTC';
-  // wake ends 09:00 − (30+15) = 08:15; backup is the last pill → ends at 09:00.
-  const twoAlarms = (): Chain => ({
-    arrival: at(zone, 2026, 6, 30, 9, 0),
-    zone,
-    pills: [pill('wake', 420, 'alarm'), pill('gap', 30), pill('backup', 15, 'alarm')],
-  });
 
   test('before any alarm: the first alarm', () => {
     const r = computeChain(twoAlarms())!;
