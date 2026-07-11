@@ -1,6 +1,12 @@
 import { DateTime } from 'luxon';
 
-import { computeChain, latestAlarmInstant, primaryEventInstant, totalSpanMinutes } from '../chainEngine';
+import {
+  computeChain,
+  latestAlarmInstant,
+  primaryEventInstant,
+  totalSpanMinutes,
+  upcomingAlarmItem,
+} from '../chainEngine';
 import { Chain, Pill, PillType } from '../pill';
 
 const at = (zone: string, y: number, mo: number, d: number, h: number, mi: number) =>
@@ -151,5 +157,39 @@ describe('primaryEventInstant', () => {
     // melatonin (push) ends at 01:25 — earlier than the sleep alarm end (08:25) — yet the
     // primary instant is the ALARM (08:25), so a passed early push never rolls the whole day.
     expect(clock(primaryEventInstant(c)!, zone)).toBe('08:25');
+  });
+});
+
+describe('upcomingAlarmItem', () => {
+  const zone = 'UTC';
+  // wake ends 09:00 − (30+15) = 08:15; backup is the last pill → ends at 09:00.
+  const twoAlarms = (): Chain => ({
+    arrival: at(zone, 2026, 6, 30, 9, 0),
+    zone,
+    pills: [pill('wake', 420, 'alarm'), pill('gap', 30), pill('backup', 15, 'alarm')],
+  });
+
+  test('before any alarm: the first alarm', () => {
+    const r = computeChain(twoAlarms())!;
+    expect(upcomingAlarmItem(r, at(zone, 2026, 6, 30, 8, 0))!.pill.id).toBe('wake');
+  });
+
+  test('after the first alarm: the next future one', () => {
+    const r = computeChain(twoAlarms())!;
+    expect(upcomingAlarmItem(r, at(zone, 2026, 6, 30, 8, 30))!.pill.id).toBe('backup');
+  });
+
+  test('after all alarms: falls back to the last one', () => {
+    const r = computeChain(twoAlarms())!;
+    expect(upcomingAlarmItem(r, at(zone, 2026, 6, 30, 9, 30))!.pill.id).toBe('backup');
+  });
+
+  test('no alarm pills → null', () => {
+    const r = computeChain({
+      arrival: at(zone, 2026, 6, 30, 9, 0),
+      zone,
+      pills: [pill('p', 30, 'push')],
+    })!;
+    expect(upcomingAlarmItem(r, at(zone, 2026, 6, 30, 8, 0))).toBeNull();
   });
 });

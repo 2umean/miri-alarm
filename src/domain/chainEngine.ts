@@ -94,3 +94,16 @@ export function latestAlarmInstant(chain: Chain): number | null {
   const alarmEnds = computed.items.filter((it) => it.pill.type === 'alarm').map((it) => it.endAt);
   return alarmEnds.length ? Math.max(...alarmEnds) : null;
 }
+
+/**
+ * The alarm item the user should be watching: the FIRST alarm still in the
+ * future — else the LAST alarm (a fully-elapsed chain, e.g. an armed snapshot
+ * about to expire) — else null when the chain has no alarm pills. The armed
+ * summary uses this instead of the earliest alarm, which may already have
+ * passed and been skipped at arm time (v0.3 arrival-date spec).
+ */
+export function upcomingAlarmItem(computed: ChainComputed, nowMs: number): ComputedItem | null {
+  const alarms = computed.items.filter((it) => it.pill.type === 'alarm');
+  if (alarms.length === 0) return null;
+  return alarms.find((it) => it.endAt > nowMs) ?? alarms[alarms.length - 1];
+}
