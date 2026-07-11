@@ -63,8 +63,8 @@ export function formatAlarmDate(alarmMs: number, nowMs: number, zone: string): s
   return `${word.charAt(0).toUpperCase()}${word.slice(1)} · ${date}`;
 }
 
-/** Numeric month/day in the chain zone — `7/10`. Deliberately locale-neutral
- *  (spec D2: no 오늘/내일 words, no weekday), so it needs no i18n key. */
+/** Numeric month/day in the chain zone — `7/10`. No i18n key needed: no words,
+ *  no weekday (spec D2). Digits follow the system numbering, like toLocalClock. */
 export function formatMonthDay(instantMs: number, zone: string): string {
   return DateTime.fromMillis(instantMs, { zone }).toFormat('M/d');
 }
