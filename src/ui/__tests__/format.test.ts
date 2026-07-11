@@ -4,6 +4,7 @@ import {
   formatAlarmDate,
   formatDuration,
   formatClockWithDay,
+  formatMonthDay,
   splitDuration,
 } from '../format';
 
@@ -102,4 +103,16 @@ test('day labels localize to Korean when the locale is ko', () => {
   } finally {
     i18n.locale = prev;
   }
+});
+
+test('formatMonthDay renders numeric M/d (no zero padding) in the given zone', () => {
+  expect(formatMonthDay(at(6, 9, 0), 'UTC')).toBe('1/6');
+  // 2026-01-06 23:30 UTC is already the next day in Seoul — the zone decides the day.
+  expect(formatMonthDay(at(6, 23, 30), 'Asia/Seoul')).toBe('1/7');
+  expect(
+    formatMonthDay(
+      DateTime.fromObject({ year: 2026, month: 12, day: 31, hour: 8 }, { zone: 'UTC' }).toMillis(),
+      'UTC',
+    ),
+  ).toBe('12/31');
 });

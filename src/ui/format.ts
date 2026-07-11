@@ -47,18 +47,24 @@ export function formatClockWithDay(
 }
 
 /**
- * A short, localized badge for the date the alarm will ring (its wake instant),
+ * A short, localized badge for the date the alarm will ring (its ring instant),
  * relative to `nowMs` — or `null` when it rings today (so the chip is hidden).
  * Next-day → "Tomorrow · Thu, Jun 18"; further out → the date alone. The alarm
  * never rolls into the past, so a prev-day case can't occur in practice.
  */
-export function formatAlarmDate(wakeMs: number, nowMs: number, zone: string): string | null {
-  const label = relativeDayLabel(wakeMs, nowMs, zone);
+export function formatAlarmDate(alarmMs: number, nowMs: number, zone: string): string | null {
+  const label = relativeDayLabel(alarmMs, nowMs, zone);
   if (label === 'same-day') return null;
-  const date = DateTime.fromMillis(wakeMs, { zone })
+  const date = DateTime.fromMillis(alarmMs, { zone })
     .setLocale(i18n.locale)
     .toLocaleString({ weekday: 'short', month: 'short', day: 'numeric' });
   if (label !== 'next-day') return date;
   const word = t('day.next-day');
   return `${word.charAt(0).toUpperCase()}${word.slice(1)} · ${date}`;
+}
+
+/** Numeric month/day in the chain zone — `7/10`. Deliberately locale-neutral
+ *  (spec D2: no 오늘/내일 words, no weekday), so it needs no i18n key. */
+export function formatMonthDay(instantMs: number, zone: string): string {
+  return DateTime.fromMillis(instantMs, { zone }).toFormat('M/d');
 }
