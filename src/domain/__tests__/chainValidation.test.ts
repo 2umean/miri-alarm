@@ -73,6 +73,18 @@ test('an alarm-less chain past its arrival reports no-alarm but never past-event
   expect(isChainArmable(issues)).toBe(false);
 });
 
+test('past-event blocks once ALL alarms in a multi-alarm chain have passed (arrival still ahead)', () => {
+  const c: Chain = {
+    arrival: at(ZONE, 2026, 6, 30, 9, 0),
+    zone: ZONE,
+    pills: [pill('wake', 420, 'alarm'), pill('gap', 30), pill('backup', 15, 'alarm'), pill('commute', 30)],
+  };
+  // wake ends 07:45; backup ends 08:30; arrival 09:00 still ahead.
+  const issues = validateChain(c, at(ZONE, 2026, 6, 30, 8, 45));
+  expect(kinds(issues)).toContain('past-event');
+  expect(isChainArmable(issues)).toBe(false);
+});
+
 test('a chain with no alarm pill cannot be armed (a safety alarm needs a guaranteed ring)', () => {
   const c: Chain = { arrival: at(ZONE, 2026, 6, 30, 9, 0), zone: ZONE, pills: [pill('a', 60), pill('b', 30)] };
   const now = at(ZONE, 2026, 6, 29, 23, 0);
