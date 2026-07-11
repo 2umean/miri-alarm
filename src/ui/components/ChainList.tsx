@@ -158,6 +158,6 @@ const styles = StyleSheet.create({
   },
   anchorIcon: { fontSize: 18, width: ICON_W, textAlign: 'center' },
   anchorLabel: { flex: 1, color: colors.ink, fontFamily: fonts.extra, fontSize: 14 },
-  anchorDate: { color: colors.ink2, fontSize: 12, fontFamily: fonts.clock },
+  anchorDate: { color: colors.ink, fontSize: 12, fontFamily: fonts.clock },
   anchorTime: { color: colors.ink, fontSize: 19, fontFamily: fonts.clock },
 });
