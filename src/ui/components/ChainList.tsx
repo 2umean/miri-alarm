@@ -89,13 +89,12 @@ function PillRow({
             ]}
           >
             <Text style={styles.eventIcon}>{sx.eventIcon}</Text>
-            <Text style={styles.eventLabel}>
+            <Text style={styles.eventLabel} numberOfLines={1}>
               {t('chainScreen.eventEnds', { name: pill.name })}
             </Text>
             <View style={[styles.badge, { backgroundColor: sx.badgeBg }]}>
               <Text style={styles.badgeText}>{t(`chainScreen.badge.${pill.type}`)}</Text>
             </View>
-            <View style={styles.eventSpacer} />
             <Text style={styles.eventDate}>{monthDay(item.endAt)}</Text>
             <Text style={[styles.eventTime, { color: sx.eventTime }]}>{clock(item.endAt)}</Text>
           </View>
@@ -138,11 +137,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.m + 1,
   },
   eventIcon: { fontSize: 16, width: 20, textAlign: 'center' },
-  eventLabel: { color: colors.ink, fontFamily: fonts.extra, fontSize: 13.5 },
+  // flex:1 + numberOfLines keeps a long pill name from pushing the date and
+  // clock off-row — it truncates with … instead (the old spacer View did the
+  // flex-grow, letting the label run unbounded).
+  eventLabel: { flex: 1, color: colors.ink, fontFamily: fonts.extra, fontSize: 13.5 },
   badge: { borderRadius: radii.pill, paddingVertical: 2, paddingHorizontal: spacing.s },
   badgeText: { color: colors.white, fontSize: 9, fontFamily: fonts.extra },
-  eventSpacer: { flex: 1 },
-  eventDate: { color: colors.faint, fontSize: 11, fontFamily: fonts.clock },
+  eventDate: { color: colors.ink2, fontSize: 11, fontFamily: fonts.clock },
   eventTime: { fontSize: 16, fontFamily: fonts.clock },
 
   anchor: {
