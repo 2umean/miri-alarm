@@ -123,11 +123,13 @@ class SchedularmAlarmModule : Module() {
     return powerManager.isIgnoringBatteryOptimizations(context.packageName)
   }
 
-  @android.annotation.SuppressLint("BatteryLife")
   private fun requestIgnoreBatteryOptimization() {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
-    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-      data = Uri.parse("package:${context.packageName}")
+    // Play restricts the direct-grant dialog (ACTION_REQUEST_IGNORE_BATTERY_
+    // OPTIMIZATIONS + its permission) to app classes that don't include alarm
+    // apps. Open the optimization LIST instead — the user picks MIRI there.
+    // The list action takes no package data URI.
+    val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
       addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     (appContext.currentActivity ?: context).startActivity(intent)

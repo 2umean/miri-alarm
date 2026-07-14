@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, ToastAndroid, View } from 'react-native';
+import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, ToastAndroid, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AlarmService } from '../../alarm/AlarmService';
@@ -25,6 +25,11 @@ import { formatAlarmDate } from '../format';
 import { colors, fonts, radii, shadows, spacing } from '../theme';
 
 const DEFAULT_NEW_PILL: PillDraft = { icon: '🧥', name: '', dur: 15, type: 'push' };
+
+// Also registered as the privacy-policy URL in both store consoles — the
+// stores additionally require it to be reachable from INSIDE the app
+// (Apple 5.1.1(i), Play User Data policy).
+const PRIVACY_POLICY_URL = 'https://2umean.github.io/miri-alarm/privacy.html';
 
 const issueText = (i: ChainValidationIssue): string => t(`chainIssue.${i.kind}`);
 
@@ -296,6 +301,14 @@ export function ChainScreen() {
             )}
           </Pressable>
         ) : null}
+
+        <Pressable
+          accessibilityRole="link"
+          onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}
+          style={styles.privacyLink}
+        >
+          <Text style={styles.privacyLinkText}>{t('legal.privacyPolicy')}</Text>
+        </Pressable>
       </ScrollView>
 
       <ArrivalPickerSheet
@@ -423,4 +436,7 @@ const styles = StyleSheet.create({
   armDisabled: { backgroundColor: colors.disabledBg },
   armText: { color: colors.white, fontSize: 15, fontFamily: fonts.extra },
   armTextDisabled: { color: colors.disabledText },
+
+  privacyLink: { alignSelf: 'center', marginTop: spacing.xl, padding: spacing.m },
+  privacyLinkText: { color: colors.faint, fontSize: 11, fontFamily: fonts.bold },
 });

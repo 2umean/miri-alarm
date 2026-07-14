@@ -19,8 +19,9 @@ const PERMISSIONS = [
   { name: 'android.permission.VIBRATE' },
   // "Appear on top" — enables the overlay-gated direct Activity launch (M0 fix #1).
   { name: 'android.permission.SYSTEM_ALERT_WINDOW' },
-  // Lets the app request the battery-optimization exemption dialog (spec §8).
-  { name: 'android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS' },
+  // REQUEST_IGNORE_BATTERY_OPTIMIZATIONS is deliberately ABSENT: Play restricts
+  // it and alarm apps aren't an acceptable use case. The battery onboarding step
+  // opens the optimization-settings list instead (no permission needed).
 ];
 
 function addPermissions(manifest) {
