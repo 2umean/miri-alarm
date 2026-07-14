@@ -16,7 +16,7 @@ code → eas build (cloud) → eas submit → store review → testing track →
 - **EAS Build** compiles your TypeScript into native binaries **in the cloud** (`.ipa` for iOS, `.aab` for Android) — **no Mac required**, EAS even manages iOS signing certificates for you.
 - **EAS Submit** uploads each binary to the store console (Apple **App Store Connect**, Google **Play Console**).
 - Each store runs its own review, lands the build on a **testing track** first (Apple **TestFlight**, Google **Internal testing**), then you promote to **Production**.
-- **Key rule for this app:** anything touching the **alarm native code** (permissions, foreground service, AlarmKit) only changes at *build* time → always needs a full **build + submit + review**. Only pure JS/UI fixes can skip review via an over-the-air `eas update`.
+- **Key rule for this app:** every fix ships as a full **build + submit + review** — `expo-updates` is NOT installed (OTA explicitly disabled on both platforms), so there is no `eas update` shortcut, even for JS-only changes. Adding OTA later is its own project (install `expo-updates` + re-check the privacy forms, since it phones home to Expo's servers).
 
 ## Costs (year one)
 
@@ -42,16 +42,16 @@ code → eas build (cloud) → eas submit → store review → testing track →
 3. **Pick permanent IDs** (`ios.bundleIdentifier`, `android.package`).
 4. **Native capabilities in `app.config.ts` / config plugin** (bake in at build time):
    - iOS: `ios.infoPlist.NSAlarmKitUsageDescription` (a real sentence — see gotchas), `ios.deploymentTarget = "26.0"`.
-   - Android: permissions `USE_EXACT_ALARM`, `USE_FULL_SCREEN_INTENT`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE`; via config plugin set `android:foregroundServiceType="specialUse"` **and** the `PROPERTY_SPECIAL_USE_FGS_SUBTYPE` `<property>` tag.
+   - Android: permissions `USE_EXACT_ALARM`, `USE_FULL_SCREEN_INTENT`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SYSTEM_EXEMPTED`; the config plugin sets `android:foregroundServiceType="systemExempted"`. (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` is deliberately ABSENT — Play restricts it and alarm apps don't qualify; the battery onboarding step opens the optimization-settings list instead. The plugin's regression test locks this shape.)
 5. **`eas.json` build profiles:** `development` (dev client, internal), `preview` (release build, internal/testers), `production` (store).
 6. **App records:** App Store Connect → New App (note numeric App ID); Play Console → Create app (locks package name).
 7. **First Android upload is manual once** (Google API limitation) — build the `.aab`, upload by hand in Play Console, accept "App signing by Google Play". Then set up a Google **service-account key** so `eas submit` automates future uploads. For iOS, create an **App Store Connect API key** for `eas submit`.
-8. **Privacy/data forms** (required even with zero data): Apple App Privacy = "Data Not Collected"; Google Data Safety = "no data collected/shared"; plus age/content rating. **Host a privacy-policy URL** (both stores require it).
+8. **Privacy/data forms** (required even with zero data): Apple App Privacy = "Data Not Collected"; Google Data Safety = "no data collected/shared"; plus age/content rating. **Privacy policy: DONE (2026-07-14)** — live at <https://2umean.github.io/miri-alarm/privacy.html> (`gh-pages` branch) and linked from inside the app (ChainScreen footer; both stores require the in-app link, not just the console URL field).
 
 ## Every-release flow
 
 1. **Bump** `version` + `buildNumber` (iOS) / `versionCode` (Android) — every upload, or the store auto-rejects.
-2. **Native change or JS-only?** Alarm/native change → full build. Pure UI/TS → `eas update` (OTA, no review).
+2. **Every change → full build** (no OTA path in this app; see "Key rule" above).
 3. `eas build --platform all --profile production`
 4. `eas submit --platform ios` / `--platform android`
 5. **Test on real devices** (TestFlight / Internal track) — alarms behave differently than the simulator.
@@ -62,9 +62,9 @@ code → eas build (cloud) → eas submit → store review → testing track →
 - **iOS AlarmKit — do NOT add an "alarmkit" entitlement; it does not exist.** Apple confirmed (Developer Forums thread 797950, Aug 2025) that AI tools hallucinate `com.apple.developer.alarmkit`; adding it **breaks the build**. AlarmKit needs **only** `NSAlarmKitUsageDescription` + a runtime `requestAuthorization()` prompt.
 - **You do NOT need Critical Alerts.** That entitlement needs special approval and is reserved for health/safety apps. AlarmKit already rings through Silent/Focus. Skip it.
 - **A vague `NSAlarmKitUsageDescription` = rejection.** State plainly why crew need alarms.
-- **Android `FOREGROUND_SERVICE_SPECIAL_USE` review requires a DEMO VIDEO** — a screen recording of setting an alarm and it firing, plus a justification tying the service to a user-initiated, perceptible action. Weak/missing video is the #1 bounce reason.
+- **Android FGS: `systemExempted` needs NO Play declaration and NO demo video** (verified 2026-07-14 against the Play FGS policy + Android FGS-type docs): the Play declaration requirement explicitly exempts `systemExempted`/`shortService`, and holding `USE_EXACT_ALARM` makes an alarm app eligible for the type. Do **not** "downgrade" to `specialUse` — THAT type requires the full declaration + demo video and bounces on vague justifications.
 - **Android `USE_EXACT_ALARM` is gated at the binary level** — Play blocks publishing unless the app genuinely looks like an alarm/clock app. The **store listing + main UI must visibly be about alarms**. Use `USE_EXACT_ALARM` (auto-granted to qualifying alarm apps), not `SCHEDULE_EXACT_ALARM`.
 - **Android `USE_FULL_SCREEN_INTENT` needs a Play "App content" declaration** (alarm apps allowed). Since 2025-01-22, skipping it means the permission isn't auto-granted on Android 14+ and the lock-screen alarm UI **silently won't appear**.
-- **Runtime crash trap:** must add **both** `foregroundServiceType="specialUse"` **and** the `PROPERTY_SPECIAL_USE_FGS_SUBTYPE` tag (via config plugin in Expo CNG), or Android 14+ throws `ForegroundServiceTypeNotAllowedException` when the alarm service starts.
+- **Coupling trap:** `systemExempted` eligibility comes FROM holding `SCHEDULE_EXACT_ALARM`/`USE_EXACT_ALARM` — dropping the exact-alarm permission would make the ring service throw `ForegroundServiceTypeNotAllowedException` on Android 14+. The two must ship together (the plugin regression test locks both).
 - **False privacy declarations can ban the account** — if an analytics/crash SDK is ever added, update the data forms accordingly.
 - **SDK currency:** App Store Connect uploads must use the iOS 26 SDK (EAS handles this if the Expo SDK is current).
