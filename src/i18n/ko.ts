@@ -31,6 +31,7 @@ export const ko: typeof en = {
     'alarm-auth-denied': '알람 권한이 꺼져 있어요 — 알람이 깨울 수 있도록 허용해 주세요',
   },
   editor: { cancel: '취소', set: '설정' },
+  legal: { privacyPolicy: '개인정보 처리방침' },
   onboarding: {
     title: '알람이 꼭 울리도록 설정할게요',
     subtitle: 'MIRI는 안전 알람이에요. 휴대폰이 알람을 조용히 종료하지 못하도록 설정해 주세요.',

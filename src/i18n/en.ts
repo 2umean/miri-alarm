@@ -32,6 +32,7 @@ export const en = {
     'alarm-auth-denied': 'Alarm permission is off — turn it on so the alarm can wake you',
   } satisfies Record<HealthReason, string>,
   editor: { cancel: 'Cancel', set: 'Set' },
+  legal: { privacyPolicy: 'Privacy Policy' },
   onboarding: {
     title: 'Let’s make sure your alarm can wake you',
     subtitle: 'MIRI is a safety alarm. These settings stop your phone from silently killing it.',
