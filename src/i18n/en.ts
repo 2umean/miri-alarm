@@ -21,7 +21,7 @@ export const en = {
     ready: '🛏 Ready — set your arrival time',
     atRisk: '⚠ Your alarm may NOT ring — tap to fix',
     missedTitle: '⚠ The {{time}} alarm may not have rung',
-    missedBody: 'Your phone likely stopped MIRI in the background. Tap to allow background use so this can’t happen again.',
+    missedBody: 'Your phone likely stopped MIRI in the background. Tap, find MIRI in the list, and pick “Don’t optimize” so this can’t happen again.',
   },
   reason: {
     'notifications-denied': 'Notifications are off — the alarm can’t alert you',
@@ -44,7 +44,7 @@ export const en = {
     notif: { title: 'Notifications & exact alarms', desc: 'So the alarm can fire on time and show up.' },
     fullScreen: { title: 'Show over the lock screen', desc: 'So the alarm takes over the screen, not just a banner.' },
     overlay: { title: 'Appear on top', desc: 'Forces full-screen on phones that suppress it.' },
-    battery: { title: 'Disable battery optimization', desc: 'Otherwise your phone kills the alarm in the background.' },
+    battery: { title: 'Disable battery optimization', desc: 'Otherwise your phone kills the alarm in the background. Find MIRI in the list and pick “Don’t optimize”.' },
     alarmAuth: { title: 'Allow alarms', desc: 'MIRI needs permission to set alarms that wake you through silent mode and Focus.' },
   },
   alerts: {

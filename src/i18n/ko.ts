@@ -20,7 +20,7 @@ export const ko: typeof en = {
     ready: '🛏 도착 시간을 설정해 주세요',
     atRisk: '⚠ 알람이 울리지 않을 수 있어요 — 눌러서 해결',
     missedTitle: '⚠ {{time}} 알람이 울리지 못했을 수 있어요',
-    missedBody: '휴대폰이 백그라운드에서 MIRI를 중지한 것 같아요. 눌러서 백그라운드 사용을 허용하면 재발을 막을 수 있어요.',
+    missedBody: '휴대폰이 백그라운드에서 MIRI를 중지한 것 같아요. 눌러서 목록에서 MIRI를 찾아 ‘최적화 안 함’을 선택하면 재발을 막을 수 있어요.',
   },
   reason: {
     'notifications-denied': '알림이 꺼져 있어요 — 알람이 알려드릴 수 없어요',
@@ -43,7 +43,7 @@ export const ko: typeof en = {
     notif: { title: '알림 & 정확한 알람', desc: '알람이 제시간에 울리고 표시되도록 해요.' },
     fullScreen: { title: '잠금 화면 위에 표시', desc: '배너가 아니라 화면 전체를 깨워요.' },
     overlay: { title: '다른 앱 위에 표시', desc: '전체 화면을 막는 휴대폰에서 강제로 띄우는 보조 장치예요.' },
-    battery: { title: '배터리 최적화 해제', desc: '해제하지 않으면 백그라운드에서 알람이 종료돼요.' },
+    battery: { title: '배터리 최적화 해제', desc: '해제하지 않으면 백그라운드에서 알람이 종료돼요. 목록에서 MIRI를 찾아 ‘최적화 안 함’을 선택해 주세요.' },
     alarmAuth: { title: '알람 허용', desc: '무음·집중 모드에서도 깨울 수 있도록 알람 권한이 필요해요.' },
   },
   alerts: {

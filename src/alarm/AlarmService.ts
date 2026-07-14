@@ -89,7 +89,7 @@ export const AlarmService = {
     await native.requestOverlayPermission();
   },
 
-  /** Android only: battery-optimization-exemption dialog (aggressive-OEM onboarding). */
+  /** Android only: open the battery-optimization settings list (aggressive-OEM onboarding). */
   async requestBattery(): Promise<void> {
     if (!isAndroid) return;
     await native.requestDisableBatteryOptimization();
