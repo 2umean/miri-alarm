@@ -82,7 +82,10 @@ export const en = {
   },
   arrivalPicker: {
     title: 'When do you need to arrive?',
-    subtitle: 'Just set your arrival — we’ll plan the rest backwards.',
+    subtitle: 'Set the arrival date and time — we’ll plan the rest backwards.',
+    dateSection: 'Arrival date',
+    timeSection: 'Arrival time',
+    wheelHint: '✎ Scroll or type',
   },
   pillEditor: {
     createTitle: 'New event',

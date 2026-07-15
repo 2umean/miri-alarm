@@ -314,7 +314,8 @@ export function ChainScreen() {
 
       <ArrivalPickerSheet
         visible={pickerOpen}
-        initial={chain.arrival != null ? new Date(chain.arrival) : new Date()}
+        initialInstant={chain.arrival ?? nowMs}
+        zone={zone}
         onCancel={() => setPickerOpen(false)}
         onConfirm={onConfirmArrival}
       />

@@ -79,7 +79,10 @@ export const ko: typeof en = {
   },
   arrivalPicker: {
     title: '언제까지 도착해야 하나요?',
-    subtitle: '도착 시간만 정하면 나머지는 거꾸로 계산해 드려요.',
+    subtitle: '도착 날짜와 시간만 정하면 나머지는 거꾸로 계산해 드려요.',
+    dateSection: '도착 날짜',
+    timeSection: '도착 시간',
+    wheelHint: '✎ 굴리거나 직접 입력',
   },
   pillEditor: {
     createTitle: '새 이벤트 만들기',
