@@ -1,4 +1,4 @@
-import { Pill } from './pill';
+import { Pill, isEventPill } from './pill';
 
 /**
  * A preset is a named, saved pill list (design rows 08–11). It stores EVENTS
@@ -28,10 +28,12 @@ export type PresetLibrary = {
 /** List-row summary data: the emoji strip + "이벤트 {count}개 · 총 {H:MM}". */
 export type PresetSummary = { count: number; totalMinutes: number; icons: string };
 
+/** List-row summary data: the emoji strip + "이벤트 {count}개 · 총 {H:MM}" — EVENT pills only. */
 export function presetSummary(pills: Pill[]): PresetSummary {
+  const events = pills.filter(isEventPill);
   return {
-    count: pills.length,
-    totalMinutes: pills.reduce((sum, p) => sum + p.dur, 0),
-    icons: pills.map((p) => p.icon).join(''),
+    count: events.length,
+    totalMinutes: events.reduce((sum, p) => sum + p.dur, 0),
+    icons: events.map((p) => p.icon).join(''),
   };
 }
