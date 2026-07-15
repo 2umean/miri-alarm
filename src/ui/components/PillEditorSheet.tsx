@@ -112,7 +112,11 @@ export function PillEditorSheet({
             {PILL_TYPES.map((pt) => (
               <Pressable
                 key={pt}
-                onPress={() => setType(pt)}
+                onPress={() => {
+                  setType(pt);
+                  setIsIconFocused(false); // the icon input may unmount without a blur — clear the focus ring
+                  Keyboard.dismiss();
+                }}
                 style={[styles.segment, pt === type && styles.segmentActive]}
               >
                 <Text style={[styles.segmentText, pt === type && styles.segmentTextActive]}>
