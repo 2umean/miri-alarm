@@ -4,13 +4,22 @@ import DateTimePicker, {
 } from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useState } from 'react';
-import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DateTime } from 'luxon';
 
 import { YMD, instantToYMD } from '../../domain';
 import { i18n, t } from '../../i18n';
 import { colors, fonts, radii, shadows, spacing } from '../theme';
+import { useIsKeyboardShown } from '../keyboard';
 import { WheelPicker } from './WheelPicker';
 
 export type ArrivalDate = YMD;
@@ -53,12 +62,12 @@ const sameYMD = (a: YMD, b: YMD) => a.year === b.year && a.month === b.month && 
  * hour/minute wheel that can also be typed into. 취소/설정 commit model.
  */
 export function ArrivalPickerSheet({ visible, initialInstant, zone, onCancel, onConfirm }: Props) {
-  const seed = DateTime.fromMillis(initialInstant, { zone });
   const [ymd, setYmd] = useState<YMD>(() => instantToYMD(initialInstant, zone));
-  const [hour, setHour] = useState(seed.hour);
-  const [minute, setMinute] = useState(seed.minute);
+  const [hour, setHour] = useState(() => DateTime.fromMillis(initialInstant, { zone }).hour);
+  const [minute, setMinute] = useState(() => DateTime.fromMillis(initialInstant, { zone }).minute);
   const [iosDateOpen, setIosDateOpen] = useState(false);
   const insets = useSafeAreaInsets();
+  const isKeyboardShown = useIsKeyboardShown();
 
   // Re-seed during RENDER on the visible flip (not in an effect — see the old
   // component's rationale); keyed on `visible` only so a mid-scroll re-render
@@ -107,68 +116,76 @@ export function ArrivalPickerSheet({ visible, initialInstant, zone, onCancel, on
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
-      <Pressable style={styles.backdrop} onPress={onCancel} />
-      <View style={[styles.sheet, { paddingBottom: spacing.xxl + 2 + insets.bottom }]}>
-        <View style={styles.handle} />
-        <Text style={styles.title}>{t('arrivalPicker.title')}</Text>
-        <Text style={styles.subtitle}>{t('arrivalPicker.subtitle')}</Text>
+      {/* Dim lives on the avoider — see PillEditorSheet's keyboard comment. */}
+      <KeyboardAvoidingView
+        style={styles.avoider}
+        behavior="padding"
+        enabled={Platform.OS === 'ios' || isKeyboardShown}
+      >
+        <Pressable style={styles.backdrop} onPress={onCancel} />
+        <View style={[styles.sheet, { paddingBottom: spacing.xxl + 2 + insets.bottom }]}>
+          <View style={styles.handle} />
+          <Text style={styles.title}>{t('arrivalPicker.title')}</Text>
+          <Text style={styles.subtitle}>{t('arrivalPicker.subtitle')}</Text>
 
-        <Text style={styles.sectionLabel}>{t('arrivalPicker.dateSection')}</Text>
-        <Pressable style={styles.dateRow} onPress={openDatePicker}>
-          <Text style={styles.dateIcon}>📅</Text>
-          <Text style={styles.dateText}>{dateText}</Text>
-          {todayBadge ? (
-            <View style={styles.todayBadge}>
-              <Text style={styles.todayBadgeText}>{t('day.same-day')}</Text>
-            </View>
+          <Text style={styles.sectionLabel}>{t('arrivalPicker.dateSection')}</Text>
+          <Pressable style={styles.dateRow} onPress={openDatePicker}>
+            <Text style={styles.dateIcon}>📅</Text>
+            <Text style={styles.dateText}>{dateText}</Text>
+            {todayBadge ? (
+              <View style={styles.todayBadge}>
+                <Text style={styles.todayBadgeText}>{t('day.same-day')}</Text>
+              </View>
+            ) : null}
+          </Pressable>
+          {Platform.OS === 'ios' && iosDateOpen ? (
+            <DateTimePicker
+              value={new Date(ymd.year, ymd.month - 1, ymd.day)}
+              mode="date"
+              display="inline"
+              minimumDate={startOfToday()}
+              onChange={onNativeDate}
+            />
           ) : null}
-        </Pressable>
-        {Platform.OS === 'ios' && iosDateOpen ? (
-          <DateTimePicker
-            value={new Date(ymd.year, ymd.month - 1, ymd.day)}
-            mode="date"
-            display="inline"
-            minimumDate={startOfToday()}
-            onChange={onNativeDate}
-          />
-        ) : null}
 
-        <Text style={styles.sectionLabel}>{t('arrivalPicker.timeSection')}</Text>
-        <View style={styles.wheels}>
-          <WheelPicker items={HOURS} index={hour} onChange={setHour} onSubmitText={submitHourText} />
-          <Text style={styles.wheelColon}>:</Text>
-          <WheelPicker
-            items={MINUTES}
-            index={minuteIndex}
-            overrideLabel={isOffGrid ? pad2(minute) : null}
-            onChange={(i) => setMinute(i * MINUTE_STEP)}
-            onSubmitText={submitMinuteText}
-          />
-        </View>
-        <Text style={styles.wheelHint}>{t('arrivalPicker.wheelHint')}</Text>
+          <Text style={styles.sectionLabel}>{t('arrivalPicker.timeSection')}</Text>
+          <View style={styles.wheels}>
+            <WheelPicker items={HOURS} index={hour} onChange={setHour} onSubmitText={submitHourText} />
+            <Text style={styles.wheelColon}>:</Text>
+            <WheelPicker
+              items={MINUTES}
+              index={minuteIndex}
+              overrideLabel={isOffGrid ? pad2(minute) : null}
+              onChange={(i) => setMinute(i * MINUTE_STEP)}
+              onSubmitText={submitMinuteText}
+            />
+          </View>
+          <Text style={styles.wheelHint}>{t('arrivalPicker.wheelHint')}</Text>
 
-        <View style={styles.actions}>
-          <Pressable style={styles.cancel} onPress={onCancel}>
-            <Text style={styles.cancelText}>{t('editor.cancel')}</Text>
-          </Pressable>
-          <Pressable style={styles.confirmWrap} onPress={() => onConfirm(ymd, hour, minute)}>
-            <LinearGradient
-              colors={[colors.sky500, colors.sky700]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.confirm}
-            >
-              <Text style={styles.confirmText}>{t('editor.set')}</Text>
-            </LinearGradient>
-          </Pressable>
+          <View style={styles.actions}>
+            <Pressable style={styles.cancel} onPress={onCancel}>
+              <Text style={styles.cancelText}>{t('editor.cancel')}</Text>
+            </Pressable>
+            <Pressable style={styles.confirmWrap} onPress={() => onConfirm(ymd, hour, minute)}>
+              <LinearGradient
+                colors={[colors.sky500, colors.sky700]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.confirm}
+              >
+                <Text style={styles.confirmText}>{t('editor.set')}</Text>
+              </LinearGradient>
+            </Pressable>
+          </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: colors.backdrop },
+  avoider: { flex: 1, backgroundColor: colors.backdrop },
+  backdrop: { flex: 1 },
   sheet: {
     backgroundColor: colors.skyBgBottom,
     borderTopLeftRadius: 28,
