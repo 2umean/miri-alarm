@@ -31,6 +31,10 @@ export function useArmingChain() {
     // erase the "this alarm never rang" evidence.
     const misses = AlarmService.consumeMissed();
     if (misses.length) setMissed(misses[misses.length - 1]);
+    // Kicked off in PARALLEL with the armed-chain read: the label lookup must
+    // never sit between "snapshot is live" and "native alarms re-scheduled".
+    // Both stores share in-flight guards, so the concurrent read is safe.
+    const presetsPromise = loadPresets().catch(() => null);
     loadArmedChain().then(async (c) => {
       if (cancelled) return;
       const last = c ? latestAlarmInstant(c) : null;
@@ -41,7 +45,7 @@ export function useArmingChain() {
         // The start label re-derives from the CURRENT active preset (the armed
         // snapshot stores no preset name); label-only drift, never a time drift.
         // Best-effort: a presets read failure only degrades the LABEL, never the arm.
-        const lib = await loadPresets().catch(() => null);
+        const lib = await presetsPromise;
         const activeName = lib?.presets.find((p) => p.id === lib.activeId)?.name ?? null;
         AlarmService.armChain(c, chainStartLabel(activeName)).catch((e) =>
           console.warn('[useArmingChain] re-arm on launch failed:', e),

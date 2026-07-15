@@ -91,7 +91,7 @@ export function useChain() {
     if (hydrated) void saveDraftChain(state);
   }, [state, hydrated]);
 
-  // Re-evaluate past-event / bedtime and re-roll as time passes.
+  // Re-evaluate past-event / start-passed and re-roll as time passes.
   useEffect(() => {
     const id = setInterval(() => setNowMs(Date.now()), NOW_TICK_MS);
     return () => clearInterval(id);

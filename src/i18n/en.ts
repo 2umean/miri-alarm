@@ -129,7 +129,7 @@ export const en = {
     'pill-out-of-range': 'A pill’s duration is out of range.',
     infeasible: 'This timing is impossible — a step would take negative time.',
     'chain-too-long': 'The total span is unrealistically long.',
-    'no-alarm': 'Add an ⏰ alarm pill — a notification alone isn’t guaranteed to wake you.',
+    'no-alarm': 'Add an ⏰ alarm — a notification alone isn’t guaranteed to wake you.',
     'past-event': 'All alarm times have already passed.',
     'start-passed': 'Heads up: your start time has already passed.',
   } satisfies Record<ChainValidationIssue['kind'], string>,
