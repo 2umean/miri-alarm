@@ -1,5 +1,8 @@
 import { DateTime } from 'luxon';
+
+import { i18n } from '../../i18n';
 import {
+  chainStartLabel,
   composeDuration,
   formatAlarmDate,
   formatDuration,
@@ -115,4 +118,17 @@ test('formatMonthDay renders numeric M/d (no zero padding) in the given zone', (
       'UTC',
     ),
   ).toBe('12/31');
+});
+
+describe('chainStartLabel', () => {
+  test('an active preset name → "{name} starts"', () => {
+    i18n.locale = 'en';
+    expect(chainStartLabel('평일 아침')).toBe('평일 아침 starts');
+  });
+
+  test('no active preset → falls back to the current-schedule label', () => {
+    i18n.locale = 'ko';
+    expect(chainStartLabel(null)).toBe('현재 일정 시작');
+    i18n.locale = 'en'; // restore for other tests
+  });
 });

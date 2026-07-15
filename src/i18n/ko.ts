@@ -70,6 +70,7 @@ export const ko: typeof en = {
     anchorLabel: '도착',
     badge: { push: '알림', alarm: '알람' },
     eventEnds: '{{name}} 종료',
+    chainStarts: '{{name}} 시작',
     armedSummary: '✓ 알람 설정됨 · {{label}} {{time}}',
     totalPrep: '총 준비 시간',
     reorder: '순서 변경',

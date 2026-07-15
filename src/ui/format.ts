@@ -68,3 +68,12 @@ export function formatAlarmDate(alarmMs: number, nowMs: number, zone: string): s
 export function formatMonthDay(instantMs: number, zone: string): string {
   return DateTime.fromMillis(instantMs, { zone }).toFormat('M/d');
 }
+
+/**
+ * The chain-start label: "{preset} 시작", falling back to 현재 일정 when no
+ * preset is active. Feeds the start row, orphan-marker labels (native alarm,
+ * push title, armed chip) — one derivation everywhere.
+ */
+export function chainStartLabel(presetName: string | null): string {
+  return t('chainScreen.chainStarts', { name: presetName ?? t('preset.current') });
+}

@@ -73,6 +73,7 @@ export const en = {
     anchorLabel: 'Arrive',
     badge: { push: 'Notify', alarm: 'Alarm' },
     eventEnds: '{{name}} ends',
+    chainStarts: '{{name}} starts',
     armedSummary: '✓ Armed · {{label}} {{time}}',
     totalPrep: 'Total prep time',
     reorder: 'Reorder',
