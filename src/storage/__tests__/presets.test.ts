@@ -7,7 +7,8 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
 
-const KEY = 'schedularm.presets.v1';
+const KEY = 'schedularm.presets.v2';
+const V1_KEY = 'schedularm.presets.v1';
 
 const sample: PresetLibrary = {
   presets: [
@@ -140,4 +141,53 @@ test('a non-string activeId is nulled', async () => {
     JSON.stringify({ presets: [{ id: 'a', name: 'x', pills: [] }], activeId: 7 }),
   );
   expect((await loadPresets())?.activeId).toBeNull();
+});
+
+describe('presets v1 → v2 migration', () => {
+  const v1Payload = JSON.stringify({
+    presets: [{ id: 'a', name: '평일 아침', pills: [{ id: 'p1', icon: '😴', name: '수면', dur: 420, type: 'alarm' }] }],
+    activeId: 'a',
+  });
+
+  test('every preset pill list is split-converted; key moves v1 → v2', async () => {
+    await AsyncStorage.setItem(V1_KEY, v1Payload);
+    const lib = await loadPresets();
+    expect(lib?.presets[0].pills).toEqual([
+      { id: 'p1', type: 'none', icon: '😴', name: '수면', dur: 420 },
+      { id: 'p1~m', type: 'alarm' },
+    ]);
+    expect(lib?.activeId).toBe('a');
+    expect(await AsyncStorage.getItem(KEY)).not.toBeNull();
+    expect(await AsyncStorage.getItem(V1_KEY)).toBeNull();
+  });
+
+  test('an existing v2 library wins over a stale v1 key', async () => {
+    await savePresets({ presets: [{ id: 'n', name: 'new', pills: [] }], activeId: null });
+    await AsyncStorage.setItem(V1_KEY, JSON.stringify({ presets: [{ id: 'old', name: 'old', pills: [] }], activeId: null }));
+    expect((await loadPresets())?.presets.map((p) => p.id)).toEqual(['n']);
+  });
+
+  test('a corrupt v1 payload clears without minting a phantom v2', async () => {
+    await AsyncStorage.setItem(V1_KEY, '{nope');
+    expect(await loadPresets()).toBeNull();
+    expect(await AsyncStorage.getItem(V1_KEY)).toBeNull();
+    expect(await AsyncStorage.getItem(KEY)).toBeNull();
+  });
+
+  test('two overlapping loads share one migration — no clobber window', async () => {
+    await AsyncStorage.setItem(V1_KEY, v1Payload);
+    const [a, b] = await Promise.all([loadPresets(), loadPresets()]);
+    expect(a).not.toBeNull();
+    expect(b).toEqual(a);
+    expect(await AsyncStorage.getItem(KEY)).not.toBeNull();
+    expect(await AsyncStorage.getItem(V1_KEY)).toBeNull();
+  });
+
+  test('a fresh save that lands mid-migration wins over the stale upgrade copy', async () => {
+    await AsyncStorage.setItem(V1_KEY, v1Payload);
+    const loading = loadPresets(); // migration begins
+    await savePresets({ presets: [{ id: 'fresh', name: 'fresh', pills: [] }], activeId: 'fresh' });
+    await loading;
+    expect((await loadPresets())?.presets.map((p) => p.id)).toEqual(['fresh']);
+  });
 });
