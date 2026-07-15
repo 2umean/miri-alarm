@@ -7,39 +7,36 @@ import {
   totalSpanMinutes,
   upcomingAlarmItem,
 } from '../chainEngine';
-import { Chain, Pill, PillType } from '../pill';
+import { Chain, EventPill, MarkerPill, Pill, pillDur } from '../pill';
 
 const at = (zone: string, y: number, mo: number, d: number, h: number, mi: number) =>
   DateTime.fromObject({ year: y, month: mo, day: d, hour: h, minute: mi }, { zone }).toMillis();
 const clock = (ms: number, zone: string) => DateTime.fromMillis(ms, { zone }).toFormat('HH:mm');
 
-const pill = (id: string, dur: number, type: PillType = 'none'): Pill => ({
-  id,
-  icon: '⬜',
-  name: id,
-  dur,
-  type,
-});
+const event = (id: string, dur: number): EventPill => ({ id, type: 'none', icon: '⬜', name: id, dur });
+const marker = (id: string, type: 'push' | 'alarm' = 'alarm'): MarkerPill => ({ id, type });
 
-// v2 hero (design): arrival 09:00; 수면(420,alarm) 샤워(20) 아침(20) 채비(15,push) 지하철(35).
+// v3 hero: arrival 09:00; 수면(420)+⏰ 샤워(20) 아침(20) 채비(15)+🔔 지하철(35).
 const hero = (zone = 'UTC'): Chain => ({
   arrival: at(zone, 2026, 6, 30, 9, 0),
   zone,
   pills: [
-    pill('sleep', 420, 'alarm'),
-    pill('shower', 20),
-    pill('breakfast', 20),
-    pill('prep', 15, 'push'),
-    pill('commute', 35),
+    event('sleep', 420),
+    marker('wake', 'alarm'),
+    event('shower', 20),
+    event('breakfast', 20),
+    event('prep', 15),
+    marker('leave', 'push'),
+    event('commute', 35),
   ],
 });
 
 test('computeChain returns null before an arrival is set', () => {
-  expect(computeChain({ arrival: null, zone: 'UTC', pills: [pill('a', 30)] })).toBeNull();
+  expect(computeChain({ arrival: null, zone: 'UTC', pills: [event('a', 30)] })).toBeNull();
 });
 
 test('computeChain returns null for a non-finite arrival (NaN must not flow into derived times)', () => {
-  expect(computeChain({ arrival: Number.NaN, zone: 'UTC', pills: [pill('a', 30)] })).toBeNull();
+  expect(computeChain({ arrival: Number.NaN, zone: 'UTC', pills: [event('a', 30)] })).toBeNull();
 });
 
 test('the hero chain back-computes the exact clock times from the design', () => {
@@ -49,9 +46,11 @@ test('the hero chain back-computes the exact clock times from the design', () =>
   const starts = Object.fromEntries(r.items.map((it) => [it.pill.id, clock(it.startAt, c.zone)]));
 
   expect(ends.sleep).toBe('07:30'); // wake alarm
+  expect(ends.wake).toBe('07:30');
   expect(ends.shower).toBe('07:50');
   expect(ends.breakfast).toBe('08:10');
   expect(ends.prep).toBe('08:25'); // 채비 종료 push
+  expect(ends.leave).toBe('08:25');
   expect(ends.commute).toBe('09:00'); // == arrival
   expect(starts.sleep).toBe('00:30'); // 취침
   expect(clock(r.start, c.zone)).toBe('00:30'); // chain start == first pill begin
@@ -74,7 +73,7 @@ test('adjacency invariant: each pill ends exactly where the next begins', () => 
 test('each pill spans exactly its duration in elapsed ms (DST-agnostic by construction)', () => {
   const r = computeChain(hero('America/New_York'))!;
   for (const it of r.items) {
-    expect(it.endAt - it.startAt).toBe(it.pill.dur * 60_000);
+    expect(it.endAt - it.startAt).toBe(pillDur(it.pill) * 60_000);
   }
 });
 
@@ -93,7 +92,7 @@ test('totalSpanMinutes sums all durations', () => {
 const twoAlarms = (): Chain => ({
   arrival: at('UTC', 2026, 6, 30, 9, 0),
   zone: 'UTC',
-  pills: [pill('wake', 420, 'alarm'), pill('gap', 30), pill('backup', 15, 'alarm')],
+  pills: [event('sleep', 420), marker('wake'), event('gap', 30), event('tail', 15), marker('backup')],
 });
 
 describe('latestAlarm selectors', () => {
@@ -113,7 +112,7 @@ describe('latestAlarm selectors', () => {
     const c: Chain = {
       arrival: at('UTC', 2026, 6, 30, 9, 0),
       zone: 'UTC',
-      pills: [pill('p', 30, 'push')],
+      pills: [event('p', 30), marker('p-m', 'push')],
     };
     expect(latestAlarmInstant(c)).toBeNull();
     expect(latestAlarmFromComputed(computeChain(c)!)).toBeNull();
@@ -127,7 +126,7 @@ describe('latestAlarm selectors', () => {
     const c: Chain = {
       arrival: at('UTC', 2026, 6, 30, 9, 0),
       zone: 'UTC',
-      pills: [pill('early-push', 30, 'push'), pill('tail', 60)],
+      pills: [event('early-push', 30), marker('early-push-m', 'push'), event('tail', 60)],
     };
     // the push ends 08:00; even at 10:00 (everything passed) there is no alarm to report.
     expect(latestAlarmFromComputed(computeChain(c)!)).toBeNull();
@@ -156,7 +155,7 @@ describe('upcomingAlarmItem', () => {
     const r = computeChain({
       arrival: at(zone, 2026, 6, 30, 9, 0),
       zone,
-      pills: [pill('p', 30, 'push')],
+      pills: [event('p', 30), marker('p-m', 'push')],
     })!;
     expect(upcomingAlarmItem(r, at(zone, 2026, 6, 30, 8, 0))).toBeNull();
   });
@@ -164,5 +163,43 @@ describe('upcomingAlarmItem', () => {
   test('an alarm ringing exactly now counts as passed → the next one', () => {
     const r = computeChain(twoAlarms())!;
     expect(upcomingAlarmItem(r, at(zone, 2026, 6, 30, 8, 15))!.pill.id).toBe('backup');
+  });
+});
+
+describe('marker pills in the engine (v3)', () => {
+  const zone = 'UTC';
+  const arrival = at(zone, 2026, 6, 30, 9, 0);
+
+  test('a marker is zero-width: startAt === endAt === the preceding event end', () => {
+    const r = computeChain({ arrival, zone, pills: [event('sleep', 420), marker('wake'), event('commute', 35)] })!;
+    const wake = r.items[1];
+    expect(wake.startAt).toBe(wake.endAt);
+    expect(wake.endAt).toBe(r.items[0].endAt);
+    expect(clock(wake.endAt, zone)).toBe('08:25'); // 09:00 − 35
+  });
+
+  test('ORPHAN marker at index 0 fires at computed.start — no special case in the engine', () => {
+    const r = computeChain({ arrival, zone, pills: [marker('first'), event('commute', 35)] })!;
+    expect(r.items[0].startAt).toBe(r.start);
+    expect(r.items[0].endAt).toBe(r.start);
+    expect(clock(r.start, zone)).toBe('08:25');
+  });
+
+  test('DUPLICATE markers back-to-back both compute to the same instant', () => {
+    const r = computeChain({ arrival, zone, pills: [event('sleep', 60), marker('a'), marker('b')] })!;
+    expect(r.items[1].endAt).toBe(r.items[2].endAt);
+    expect(r.items[1].endAt).toBe(r.items[0].endAt);
+    expect(latestAlarmFromComputed(r)).toBe(r.items[0].endAt);
+  });
+
+  test('a marker immediately before the arrival anchor fires exactly at the arrival instant', () => {
+    const r = computeChain({ arrival, zone, pills: [event('commute', 35), marker('at-door')] })!;
+    expect(r.items[1].endAt).toBe(arrival);
+  });
+
+  test('a marker-only chain: every marker fires at start === arrival', () => {
+    const r = computeChain({ arrival, zone, pills: [marker('only')] })!;
+    expect(r.start).toBe(arrival);
+    expect(r.items[0].endAt).toBe(arrival);
   });
 });
