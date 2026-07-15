@@ -51,8 +51,8 @@ export const en = {
   alerts: {
     fallAsleep: { title: '🌙 Time to fall asleep', body: 'Sleep now to be rested for your {{wake}} wake-up.' },
     leaveHome: { title: '🚪 Leave home now', body: 'Leave by {{leave}} to arrive on time.' },
-    // v2: a push pill's end fires this — {{name}} is the pill, {{arrival}} the anchor.
-    pill: { title: '🔔 {{name}} ends', body: 'Head out at {{time}} to arrive by {{arrival}}.' },
+    // v2: a push marker fires this — {{label}} is derived from position, {{arrival}} is the anchor.
+    pill: { title: '🔔 {{label}}', body: 'Head out at {{time}} to arrive by {{arrival}}.' },
   },
 
   // ----- v2 (Schedularm UI v2 — pill chain) -----
@@ -66,13 +66,13 @@ export const en = {
     travel: 'Travel',
     contingency: 'Buffer',
   },
-  pillType: { none: 'None', push: '🔔 Notify', alarm: '⏰ Alarm' },
+  pillType: { none: 'Event', push: '🔔 Notify', alarm: '⏰ Alarm' },
   chainScreen: {
-    addPill: '＋ Add pill',
-    bedtime: 'Bedtime',
+    addPill: '＋ Add',
     anchorLabel: 'Arrive',
     badge: { push: 'Notify', alarm: 'Alarm' },
     eventEnds: '{{name}} ends',
+    chainStarts: '{{name}} starts',
     armedSummary: '✓ Armed · {{label}} {{time}}',
     totalPrep: 'Total prep time',
     reorder: 'Reorder',
@@ -82,24 +82,26 @@ export const en = {
   },
   arrivalPicker: {
     title: 'When do you need to arrive?',
-    subtitle: 'Just set your arrival — we’ll plan the rest backwards.',
+    subtitle: 'Set the arrival date and time — we’ll plan the rest backwards.',
+    dateSection: 'Arrival date',
+    timeSection: 'Arrival time',
+    wheelHint: '✎ Scroll or type',
   },
   pillEditor: {
-    createTitle: 'New pill',
-    editTitle: 'Edit pill',
+    createTitle: 'New event',
+    editTitle: 'Edit',
     namePlaceholder: 'Name',
-    typeSection: 'Type — when it ends?',
-    hintNone: '“None” — used only for timing, no alert.',
-    hintPush: 'On end: a push notification + a “{{label}}” row appears.',
-    hintAlarm: 'On end: a strong wake alarm rings.',
-    warnRowGone: 'The “{{label}}” row will disappear.',
+    kindSection: 'Kind',
+    hintEvent: 'An event — a block of time your day is planned around.',
+    hintPush: '🔔 A notification fires where the previous event ends — move it wherever you need.',
+    hintAlarm: '⏰ A strong wake alarm rings where the previous event ends — move it wherever you need.',
+    warnFieldsDropped: 'The emoji, name and duration will be cleared.',
     add: 'Add',
     save: 'Save',
     delete: 'Delete',
   },
   preset: {
     current: 'Current schedule',
-    newBadge: 'NEW',
     title: 'Presets',
     manage: 'Manage',
     done: 'Done',
@@ -127,9 +129,9 @@ export const en = {
     'pill-out-of-range': 'A pill’s duration is out of range.',
     infeasible: 'This timing is impossible — a step would take negative time.',
     'chain-too-long': 'The total span is unrealistically long.',
-    'no-alarm': 'Add an ⏰ alarm pill — a notification alone isn’t guaranteed to wake you.',
+    'no-alarm': 'Add an ⏰ alarm — a notification alone isn’t guaranteed to wake you.',
     'past-event': 'All alarm times have already passed.',
-    'bedtime-passed': 'Heads up: your start time has already passed.',
+    'start-passed': 'Heads up: your start time has already passed.',
   } satisfies Record<ChainValidationIssue['kind'], string>,
 };
 // NOTE: deliberately NOT `as const` — ko.ts is typed `typeof en`, which must

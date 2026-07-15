@@ -4,9 +4,10 @@ import { DateTime } from 'luxon';
 import {
   Chain,
   Pill,
-  PillType,
+  PillDraft,
   computeChain,
   isChainArmable,
+  pillFromDraft,
   rollChainToFuture,
   validateChain,
 } from '../domain';
@@ -27,8 +28,6 @@ const NOW_TICK_MS = 60_000;
 let idCounter = 0;
 const makeId = (): string => `p${Date.now().toString(36)}-${(idCounter++).toString(36)}`;
 const resolveName = (key: string): string => t(key);
-
-export type PillInput = { icon: string; name: string; dur: number; type: PillType };
 
 /**
  * v2 twin of useSchedule: restores the chain (v2 draft → migrate v1 → seeded
@@ -92,7 +91,7 @@ export function useChain() {
     if (hydrated) void saveDraftChain(state);
   }, [state, hydrated]);
 
-  // Re-evaluate past-event / bedtime and re-roll as time passes.
+  // Re-evaluate past-event / start-passed and re-roll as time passes.
   useEffect(() => {
     const id = setInterval(() => setNowMs(Date.now()), NOW_TICK_MS);
     return () => clearInterval(id);
@@ -118,13 +117,15 @@ export function useChain() {
   /** Move the arrival anchor. (The first arrival + seed pills come from withDefaultArrival.) */
   const setArrival = (instant: number) => dispatch({ type: 'edit-arrival', instant });
 
-  const addPill = (input: PillInput, index?: number): string => {
+  /** Add a pill from an editor draft (mints the id, builds the union member). */
+  const addPill = (draft: PillDraft, index?: number): string => {
     const id = makeId();
-    dispatch({ type: 'add-pill', pill: { id, ...input }, index });
+    dispatch({ type: 'add-pill', pill: pillFromDraft(id, draft), index });
     return id;
   };
-  const updatePill = (id: string, patch: Partial<PillInput>) =>
-    dispatch({ type: 'update-pill', id, patch });
+  /** Replace a pill from an editor draft — the sheet owns the type-flip semantics. */
+  const updatePill = (id: string, draft: PillDraft) =>
+    dispatch({ type: 'update-pill', id, next: pillFromDraft(id, draft) });
   const removePill = (id: string) => dispatch({ type: 'remove-pill', id });
   const reorderPill = (from: number, to: number) =>
     dispatch({ type: 'reorder-pill', from, to });

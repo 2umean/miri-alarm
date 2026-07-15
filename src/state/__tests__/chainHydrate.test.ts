@@ -10,13 +10,20 @@ const id = (i: number) => `id-${i}`;
 const at = (zone: string, y: number, mo: number, d: number, h: number, mi: number) =>
   DateTime.fromObject({ year: y, month: mo, day: d, hour: h, minute: mi }, { zone }).toMillis();
 
-test('seedPills materialises the four default pills with resolved names + ids', () => {
+test('seedPills materialises the PRE-SPLIT seed with resolved names + ids', () => {
   const pills = seedPills(name, id);
-  expect(pills.map((p) => [p.id, p.name, p.type])).toEqual([
-    ['id-0', 'name:pill.sleep', 'alarm'],
-    ['id-1', 'name:pill.shower', 'none'],
-    ['id-2', 'name:pill.breakfast', 'none'],
-    ['id-3', 'name:pill.commute', 'none'],
+  expect(pills.map((p) => [p.id, p.type])).toEqual([
+    ['id-0', 'none'],
+    ['id-1', 'alarm'],
+    ['id-2', 'none'],
+    ['id-3', 'none'],
+    ['id-4', 'none'],
+  ]);
+  expect(pills.filter((p) => p.type === 'none').map((p) => p.name)).toEqual([
+    'name:pill.sleep',
+    'name:pill.shower',
+    'name:pill.breakfast',
+    'name:pill.commute',
   ]);
 });
 
@@ -29,12 +36,14 @@ test('migratedChain maps v1 durations to a zoned chain preserving alert semantic
   );
   expect(chain.arrival).toBe(1_800_000_000_000);
   expect(chain.zone).toBe('Asia/Seoul');
-  expect(chain.pills.map((p) => [p.name, p.dur, p.type])).toEqual([
-    ['name:pill.sleep', 480, 'alarm'],
-    ['name:pill.prep', 45, 'push'],
-    ['name:pill.travel', 60, 'none'],
-    ['name:pill.contingency', 15, 'none'],
+  expect(chain.pills.map((p) => p.type)).toEqual(['none', 'alarm', 'none', 'push', 'none', 'none']);
+  expect(chain.pills.filter((p) => p.type === 'none').map((p) => p.name)).toEqual([
+    'name:pill.sleep',
+    'name:pill.prep',
+    'name:pill.travel',
+    'name:pill.contingency',
   ]);
+  expect(chain.pills.filter((p) => p.type === 'none').map((p) => p.dur)).toEqual([480, 45, 60, 15]);
 });
 
 test('reconcileAndRoll re-zones to the device and rolls a passed chain to the future', () => {
@@ -44,8 +53,8 @@ test('reconcileAndRoll re-zones to the device and rolls a passed chain to the fu
     arrival: at(zone, 2026, 1, 6, 9, 0),
     zone: 'America/New_York', // stale stored zone, different from the device
     pills: [
-      { id: 'a', icon: '😴', name: 's', dur: 420, type: 'alarm' },
-      { id: 'b', icon: '🚇', name: 'c', dur: 35, type: 'none' },
+      { id: 'a', type: 'none', icon: '😴', name: 's', dur: 420 },
+      { id: 'b', type: 'none', icon: '🚇', name: 'c', dur: 35 },
     ],
   };
   const now = at(zone, 2026, 1, 6, 9, 30); // after the arrival itself on day 6
@@ -62,7 +71,7 @@ test('withDefaultArrival anchors a fresh chain to the next 09:00 and seeds the d
   expect(DateTime.fromMillis(out.arrival!, { zone }).toFormat('yyyy-MM-dd HH:mm')).toBe(
     '2026-01-06 09:00',
   );
-  expect(out.pills.map((p) => p.name)).toEqual([
+  expect(out.pills.filter((p) => p.type === 'none').map((p) => p.name)).toEqual([
     'name:pill.sleep',
     'name:pill.shower',
     'name:pill.breakfast',
@@ -85,7 +94,7 @@ test('withDefaultArrival passes an anchored chain through untouched (referential
 
 test('withDefaultArrival keeps existing pills when only the arrival is missing', () => {
   const zone = 'UTC';
-  const pills = [{ id: 'a', icon: '😴', name: 's', dur: 420, type: 'alarm' as const }];
+  const pills = [{ id: 'a', type: 'none' as const, icon: '😴', name: 's', dur: 420 }];
   const out = withDefaultArrival({ arrival: null, zone, pills }, zone, at(zone, 2026, 1, 6, 0, 0), name, id);
   expect(out.arrival).not.toBeNull();
   expect(out.pills).toBe(pills);
@@ -113,7 +122,7 @@ test('reconcileAndRoll leaves a still-future chain untouched (only re-zones)', (
   const stored: Chain = {
     arrival: at(zone, 2026, 1, 6, 9, 0),
     zone,
-    pills: [{ id: 'a', icon: '😴', name: 's', dur: 420, type: 'alarm' }],
+    pills: [{ id: 'a', type: 'none', icon: '😴', name: 's', dur: 420 }],
   };
   const now = at(zone, 2026, 1, 6, 0, 0); // before everything
   const out = reconcileAndRoll(stored, zone, now);

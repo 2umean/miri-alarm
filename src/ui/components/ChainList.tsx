@@ -1,6 +1,14 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { ChainComputed, ComputedItem, toLocalClock } from '../../domain';
+import {
+  ChainComputed,
+  ComputedItem,
+  EventPill,
+  MarkerPill,
+  isMarkerPill,
+  labelSourceFor,
+  toLocalClock,
+} from '../../domain';
 import { t } from '../../i18n';
 import { formatDuration, formatMonthDay } from '../format';
 import { colors, fonts, pillStyle, radii, shadows, spacing } from '../theme';
@@ -8,32 +16,53 @@ import { colors, fonts, pillStyle, radii, shadows, spacing } from '../theme';
 type Props = {
   computed: ChainComputed;
   zone: string;
+  /** "{preset} 시작" — the start row text AND the orphan-marker fallback label. */
+  startLabel: string;
   onPressPill: (id: string) => void;
   onPressAnchor: () => void;
 };
 
 /**
- * Renders the v2 chain (Chain.dc.html): a bedtime cap, one card per pill (styled
- * by type, with a trailing event row for push/alarm), and the arrival anchor.
- * Purely presentational — all times come pre-computed from the engine.
+ * Renders the v3 chain: a start row (when the whole preset begins), one card
+ * per event, a bordered 🔔/⏰ row per marker (labels derived from position),
+ * and the arrival anchor. Purely presentational — all times pre-computed.
  */
-export function ChainList({ computed, zone, onPressPill, onPressAnchor }: Props) {
+export function ChainList({ computed, zone, startLabel, onPressPill, onPressAnchor }: Props) {
   const clock = (ms: number) => toLocalClock(ms, zone);
   const monthDay = (ms: number) => formatMonthDay(ms, zone);
+  const pills = computed.items.map((it) => it.pill);
 
   return (
     <View style={styles.list}>
       {computed.items.length > 0 ? (
-        <View style={styles.cap}>
-          <Text style={styles.capIcon}>🛏</Text>
-          <Text style={styles.capLabel}>{t('chainScreen.bedtime')}</Text>
-          <Text style={styles.capTime}>{clock(computed.start)}</Text>
+        <View style={styles.startRow}>
+          <View style={styles.startDot} />
+          <Text style={styles.startLabel} numberOfLines={1}>{startLabel}</Text>
+          <Text style={styles.startDate}>{monthDay(computed.start)}</Text>
+          <Text style={styles.startTime}>{clock(computed.start)}</Text>
         </View>
       ) : null}
 
-      {computed.items.map((item) => (
-        <PillRow key={item.pill.id} item={item} clock={clock} monthDay={monthDay} onPress={() => onPressPill(item.pill.id)} />
-      ))}
+      {computed.items.map((item, index) =>
+        isMarkerPill(item.pill) ? (
+          <MarkerRow
+            key={item.pill.id}
+            item={item}
+            marker={item.pill}
+            label={labelSourceFor(pills, index)?.name ?? null}
+            startLabel={startLabel}
+            clock={clock}
+            monthDay={monthDay}
+            onPress={() => onPressPill(item.pill.id)}
+          />
+        ) : (
+          <EventRow
+            key={item.pill.id}
+            pill={item.pill}
+            onPress={() => onPressPill(item.pill.id)}
+          />
+        ),
+      )}
 
       <Pressable style={styles.anchor} onPress={onPressAnchor}>
         <Text style={styles.anchorIcon}>📍</Text>
@@ -45,62 +74,57 @@ export function ChainList({ computed, zone, onPressPill, onPressAnchor }: Props)
   );
 }
 
-function PillRow({
+function EventRow({ pill, onPress }: { pill: EventPill; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress}>
+      <View style={[styles.card, styles.cardNone]}>
+        <Text style={styles.cardIcon}>{pill.icon}</Text>
+        <Text style={styles.cardName}>{pill.name}</Text>
+        <Text style={[styles.cardDur, { color: colors.ink2 }]}>{formatDuration(pill.dur)}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+function MarkerRow({
   item,
+  marker,
+  label,
+  startLabel,
   clock,
   monthDay,
   onPress,
 }: {
   item: ComputedItem;
+  marker: MarkerPill;
+  /** Preceding event name, or null for an orphan (falls back to startLabel). */
+  label: string | null;
+  startLabel: string;
   clock: (ms: number) => string;
   monthDay: (ms: number) => string;
   onPress: () => void;
 }) {
-  const { pill } = item;
-  const isEvent = pill.type === 'push' || pill.type === 'alarm';
-  const sx = pill.type === 'none' ? null : pillStyle[pill.type];
-
+  const sx = pillStyle[marker.type];
+  const text = label != null ? t('chainScreen.eventEnds', { name: label }) : startLabel;
   return (
     <Pressable onPress={onPress}>
       <View
         style={[
-          styles.card,
-          sx
-            ? { backgroundColor: sx.cardBg, borderWidth: 1.5, borderColor: sx.cardBorder, borderLeftWidth: 4, borderLeftColor: sx.accent }
-            : styles.cardNone,
+          styles.eventRow,
+          marker.type === 'alarm'
+            ? { borderWidth: 2, borderColor: sx.eventBorder, ...shadows.focus }
+            : { borderWidth: 1.5, borderColor: sx.eventBorder, ...shadows.bubble },
         ]}
       >
-        <Text style={styles.cardIcon}>{pill.icon}</Text>
-        <Text style={styles.cardName}>{pill.name}</Text>
-        <Text style={[styles.cardDur, { color: sx ? sx.durText : colors.ink2 }]}>
-          {formatDuration(pill.dur)}
-        </Text>
+        <Text style={styles.eventIcon}>{sx.eventIcon}</Text>
+        <Text style={styles.eventLabel} numberOfLines={1}>{text}</Text>
+        <View style={[styles.badge, { backgroundColor: sx.badgeBg }]}>
+          <Text style={styles.badgeText}>{t(`chainScreen.badge.${marker.type}`)}</Text>
+        </View>
+        <View style={styles.eventSpacer} />
+        <Text style={styles.eventDate}>{monthDay(item.endAt)}</Text>
+        <Text style={[styles.eventTime, { color: sx.eventTime }]}>{clock(item.endAt)}</Text>
       </View>
-
-      {isEvent && sx ? (
-        <>
-          <View style={[styles.connector, { backgroundColor: sx.accent }]} />
-          <View
-            style={[
-              styles.eventRow,
-              pill.type === 'alarm'
-                ? { borderWidth: 2, borderColor: sx.eventBorder, ...shadows.focus }
-                : { borderWidth: 1.5, borderColor: sx.eventBorder, ...shadows.bubble },
-            ]}
-          >
-            <Text style={styles.eventIcon}>{sx.eventIcon}</Text>
-            <Text style={styles.eventLabel} numberOfLines={1}>
-              {t('chainScreen.eventEnds', { name: pill.name })}
-            </Text>
-            <View style={[styles.badge, { backgroundColor: sx.badgeBg }]}>
-              <Text style={styles.badgeText}>{t(`chainScreen.badge.${pill.type}`)}</Text>
-            </View>
-            <View style={styles.eventSpacer} />
-            <Text style={styles.eventDate}>{monthDay(item.endAt)}</Text>
-            <Text style={[styles.eventTime, { color: sx.eventTime }]}>{clock(item.endAt)}</Text>
-          </View>
-        </>
-      ) : null}
     </Pressable>
   );
 }
@@ -109,10 +133,11 @@ const ICON_W = 22;
 
 const styles = StyleSheet.create({
   list: { gap: spacing.s - 1 },
-  cap: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2, marginLeft: spacing.xs },
-  capIcon: { fontSize: 12 },
-  capLabel: { color: colors.faint, fontSize: 11, fontFamily: fonts.bold },
-  capTime: { color: colors.faint, fontSize: 12, fontFamily: fonts.clock },
+  startRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.s, marginLeft: spacing.xs, marginBottom: 2 },
+  startDot: { width: 10, height: 10, borderRadius: 5, borderWidth: 1.5, borderColor: colors.faint }, // hollow dot (design Chain component)
+  startLabel: { flexShrink: 1, color: colors.faint, fontSize: 11, fontFamily: fonts.bold },
+  startDate: { color: colors.faint, fontSize: 11, fontFamily: fonts.clock, marginLeft: 'auto' as const },
+  startTime: { color: colors.faint, fontSize: 12, fontFamily: fonts.clock },
 
   card: {
     flexDirection: 'row',
@@ -127,7 +152,6 @@ const styles = StyleSheet.create({
   cardName: { flex: 1, color: colors.ink, fontFamily: fonts.bold, fontSize: 13.5 },
   cardDur: { fontSize: 13, fontFamily: fonts.clock },
 
-  connector: { width: 2, height: 9, marginLeft: 24 },
   eventRow: {
     flexDirection: 'row',
     alignItems: 'center',

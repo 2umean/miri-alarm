@@ -1,8 +1,8 @@
 import { MINUTE_MS } from './schedule';
-import { Chain, Pill } from './pill';
+import { Chain, Pill, pillDur } from './pill';
 
 /**
- * Reverse-calc for the v2 pill chain. Same DST-safe philosophy as v1's engine:
+ * Reverse-calc for the v3 pill chain. Same DST-safe philosophy as v1's engine:
  * every time is the arrival anchor minus an ELAPSED-ms offset, so gaps are
  * DST-correct by construction (no wall-clock arithmetic across offsets here).
  */
@@ -14,14 +14,14 @@ export type ComputedItem = {
 };
 
 export type ChainComputed = {
-  start: number; // epoch ms when the first pill begins (the bedtime/취침 cap); == arrival when there are no pills
+  start: number; // epoch ms when the first item begins (the chain-start row); == arrival when there are no pills
   items: ComputedItem[];
   arrival: number;
 };
 
 /** Total span (sum of all pill durations), in minutes. */
 export function totalSpanMinutes(chain: Chain): number {
-  return chain.pills.reduce((sum, p) => sum + p.dur, 0);
+  return chain.pills.reduce((sum, p) => sum + pillDur(p), 0);
 }
 
 /**
@@ -42,9 +42,9 @@ export function computeChain(chain: Chain): ChainComputed | null {
   for (let i = n - 1; i >= 0; i -= 1) {
     const pill = chain.pills[i];
     const endAt = arrival - suffixAfter * MINUTE_MS;
-    const startAt = endAt - pill.dur * MINUTE_MS;
+    const startAt = endAt - pillDur(pill) * MINUTE_MS;
     items[i] = { pill, startAt, endAt };
-    suffixAfter += pill.dur;
+    suffixAfter += pillDur(pill);
   }
 
   // suffixAfter is now the total span; the first pill begins that far before arrival.

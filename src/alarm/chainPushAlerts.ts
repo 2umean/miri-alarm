@@ -1,8 +1,8 @@
-import { Chain, ChainComputed, toLocalClock } from '../domain';
+import { Chain, ChainComputed, isMarkerPill, labelSourceFor, toLocalClock } from '../domain';
 import { t } from '../i18n';
 
 /**
- * v2 companion push alerts. Schedules a best-effort push for every 'push' pill.
+ * v2 companion push alerts. Schedules a best-effort push for every 'push' MARKER.
  * Alarm pills are excluded (their ids are in `excludePillIds`) because Phase 3
  * routes every alarm pill through the OS-guaranteed native module. Best-effort by
  * design: expo-notifications is imported dynamically so a dev client built
@@ -14,6 +14,7 @@ export async function scheduleChainPush(
   chain: Chain,
   computed: ChainComputed,
   excludePillIds?: Set<string>,
+  startLabel?: string,
 ): Promise<void> {
   try {
     const Notifications = await import('expo-notifications');
@@ -37,17 +38,21 @@ export async function scheduleChainPush(
 
     const arrival = toLocalClock(computed.arrival, chain.zone);
 
-    for (const it of computed.items) {
-      if (it.pill.type === 'none') continue; // timing only, no alert
+    const pills = computed.items.map((it) => it.pill);
+    for (let index = 0; index < computed.items.length; index += 1) {
+      const it = computed.items[index];
+      if (!isMarkerPill(it.pill)) continue; // events are timing only, no alert
       if (excludePillIds?.has(it.pill.id)) continue; // fired by a native strong alarm instead
       if (it.endAt <= Date.now()) continue; // already past (best-effort, skip)
+      const source = labelSourceFor(pills, index);
+      const label = source ? t('chainScreen.eventEnds', { name: source.name }) : (startLabel ?? '');
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: t('alerts.pill.title', { name: it.pill.name }),
+          title: t('alerts.pill.title', { label }),
           body: t('alerts.pill.body', { time: toLocalClock(it.endAt, chain.zone), arrival }),
           sound: 'default',
         },
-        // Keyed by stable pill id — endAt is not unique (a 0-min pill can share one).
+        // Keyed by stable pill id — endAt is not unique (duplicate markers share one).
         identifier: `chain-${it.pill.id}`,
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,

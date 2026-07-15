@@ -1,5 +1,8 @@
 import { DateTime } from 'luxon';
+
+import { i18n } from '../../i18n';
 import {
+  chainStartLabel,
   composeDuration,
   formatAlarmDate,
   formatDuration,
@@ -115,4 +118,26 @@ test('formatMonthDay renders numeric M/d (no zero padding) in the given zone', (
       'UTC',
     ),
   ).toBe('12/31');
+});
+
+describe('chainStartLabel', () => {
+  test('an active preset name → "{name} starts"', () => {
+    const prev = i18n.locale;
+    i18n.locale = 'en';
+    try {
+      expect(chainStartLabel('평일 아침')).toBe('평일 아침 starts');
+    } finally {
+      i18n.locale = prev;
+    }
+  });
+
+  test('no active preset → falls back to the current-schedule label', () => {
+    const prev = i18n.locale;
+    i18n.locale = 'ko';
+    try {
+      expect(chainStartLabel(null)).toBe('현재 일정 시작');
+    } finally {
+      i18n.locale = prev;
+    }
+  });
 });

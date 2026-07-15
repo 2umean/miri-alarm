@@ -4,6 +4,8 @@ import { AlarmService } from '../alarm/AlarmService';
 import { AlarmHealth } from '../alarm/alarmHealth';
 import { Chain, latestAlarmInstant } from '../domain';
 import { clearArmedChain, loadArmedChain, saveArmedChain } from '../storage/armedChain';
+import { loadPresets } from '../storage/presets';
+import { chainStartLabel } from '../ui/format';
 
 import type { MissedAlarm } from '../../modules/schedularm-alarm';
 
@@ -29,15 +31,23 @@ export function useArmingChain() {
     // erase the "this alarm never rang" evidence.
     const misses = AlarmService.consumeMissed();
     if (misses.length) setMissed(misses[misses.length - 1]);
-    loadArmedChain().then((c) => {
+    // Kicked off in PARALLEL with the armed-chain read: the label lookup must
+    // never sit between "snapshot is live" and "native alarms re-scheduled".
+    // Both stores share in-flight guards, so the concurrent read is safe.
+    const presetsPromise = loadPresets().catch(() => null);
+    loadArmedChain().then(async (c) => {
       if (cancelled) return;
       const last = c ? latestAlarmInstant(c) : null;
       if (c && last != null && last > Date.now()) {
         setArmed(c);
         // Re-ensure native scheduling matches the snapshot — self-heals after an
         // app update cancels AlarmManager alarms, or any native↔JS divergence.
-        // Best-effort: a failure here doesn't drop the (still-valid) snapshot.
-        AlarmService.armChain(c).catch((e) =>
+        // The start label re-derives from the CURRENT active preset (the armed
+        // snapshot stores no preset name); label-only drift, never a time drift.
+        // Best-effort: a presets read failure only degrades the LABEL, never the arm.
+        const lib = await presetsPromise;
+        const activeName = lib?.presets.find((p) => p.id === lib.activeId)?.name ?? null;
+        AlarmService.armChain(c, chainStartLabel(activeName)).catch((e) =>
           console.warn('[useArmingChain] re-arm on launch failed:', e),
         );
       } else if (c) {
@@ -50,11 +60,11 @@ export function useArmingChain() {
   }, [refreshHealth]);
 
   const arm = useCallback(
-    async (chain: Chain) => {
+    async (chain: Chain, startLabel: string) => {
       try {
         // Arm native FIRST and await it — only persist + mark armed if the OS
         // actually scheduled the alarms (else a silent oversleep would look armed).
-        await AlarmService.armChain(chain);
+        await AlarmService.armChain(chain, startLabel);
         await saveArmedChain(chain);
         setArmed(chain);
       } catch (e) {

@@ -8,3 +8,4 @@ export * from './chainValidation';
 export * from './chainRollover';
 export * from './chainMigration';
 export * from './preset';
+export * from './markerLabel';

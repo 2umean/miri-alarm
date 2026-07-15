@@ -7,6 +7,9 @@ import { AlarmService } from '../../alarm/AlarmService';
 import {
   ChainValidationIssue,
   computeChain,
+  DEFAULT_PILL_DRAFT,
+  draftFromPill,
+  labelSourceFor,
   resolveArrivalInstant,
   toLocalClock,
   upcomingAlarmItem,
@@ -21,10 +24,8 @@ import { ChainList } from '../components/ChainList';
 import { PillDraft, PillEditorSheet } from '../components/PillEditorSheet';
 import { PresetListSheet } from '../components/PresetListSheet';
 import { ReorderView } from '../components/ReorderView';
-import { formatAlarmDate } from '../format';
+import { chainStartLabel, formatAlarmDate } from '../format';
 import { colors, fonts, radii, shadows, spacing } from '../theme';
-
-const DEFAULT_NEW_PILL: PillDraft = { icon: '🧥', name: '', dur: 15, type: 'push' };
 
 // Also registered as the privacy-policy URL in both store consoles — the
 // stores additionally require it to be reachable from INSIDE the app
@@ -59,6 +60,8 @@ export function ChainScreen() {
 
   const atRisk = !health.isArmReliable || health.reasons.length > 0;
 
+  const startLabel = chainStartLabel(activePreset?.name ?? null);
+
   // Armed snapshot summary: the next alarm still to ring — or, once all have
   // rung, the last one (the snapshot is about to expire). A passed alarm was
   // skipped at arm time or has fired — advertising its dead time would repeat
@@ -69,12 +72,13 @@ export function ChainScreen() {
     if (!c) return null;
     const item = upcomingAlarmItem(c, nowMs);
     if (!item) return null; // unreachable for a real armed chain (arm gate requires an alarm)
+    const source = labelSourceFor(c.items.map((it) => it.pill), c.items.indexOf(item));
     return {
-      label: t('chainScreen.eventEnds', { name: item.pill.name }),
+      label: source ? t('chainScreen.eventEnds', { name: source.name }) : startLabel,
       time: toLocalClock(item.endAt, armed.zone),
       date: formatAlarmDate(item.endAt, nowMs, armed.zone),
     };
-  }, [armed, nowMs]);
+  }, [armed, nowMs, startLabel]);
 
   // Editing an armed chain disarms it first: the native alarms keep firing at the
   // OLD times, so leaving the chain armed would show times that will not ring.
@@ -164,6 +168,7 @@ export function ChainScreen() {
 
   const editingPill =
     editor?.mode === 'edit' ? chain.pills.find((p) => p.id === editor.id) : undefined;
+  const editorInitial = editingPill ? draftFromPill(editingPill) : DEFAULT_PILL_DRAFT;
 
   // Until the stored draft is restored, the state is a freshly seeded default
   // chain — painting it would flash the wrong times, so show just the backdrop.
@@ -197,11 +202,6 @@ export function ChainScreen() {
             </Text>
             <Text style={styles.presetChipCaret}>▾</Text>
           </Pressable>
-          {presets.length === 0 ? (
-            <View style={styles.newBadge}>
-              <Text style={styles.newBadgeText}>{t('preset.newBadge')}</Text>
-            </View>
-          ) : null}
         </View>
 
         {missed ? (
@@ -258,6 +258,7 @@ export function ChainScreen() {
             <ChainList
               computed={computed}
               zone={zone}
+              startLabel={startLabel}
               onPressPill={(id) => setEditor({ mode: 'edit', id })}
               onPressAnchor={() => setPickerOpen(true)}
             />
@@ -277,7 +278,7 @@ export function ChainScreen() {
 
         {chain.arrival != null ? (
           <Pressable
-            onPress={armed ? disarm : () => armable && arm(chain)}
+            onPress={armed ? disarm : () => armable && arm(chain, startLabel)}
             disabled={!armed && !armable}
             style={styles.armWrap}
           >
@@ -313,7 +314,8 @@ export function ChainScreen() {
 
       <ArrivalPickerSheet
         visible={pickerOpen}
-        initial={chain.arrival != null ? new Date(chain.arrival) : new Date()}
+        initialInstant={chain.arrival ?? nowMs}
+        zone={zone}
         onCancel={() => setPickerOpen(false)}
         onConfirm={onConfirmArrival}
       />
@@ -322,7 +324,7 @@ export function ChainScreen() {
         <PillEditorSheet
           visible
           mode={editor.mode}
-          initial={editingPill ?? DEFAULT_NEW_PILL}
+          initial={editorInitial}
           autosaveNote={activePreset ? t('preset.autosaveNote', { name: activePreset.name }) : undefined}
           onCancel={() => setEditor(null)}
           onSubmit={onSubmitPill}
@@ -341,6 +343,7 @@ export function ChainScreen() {
       <ReorderView
         visible={reorderOpen}
         pills={chain.pills}
+        startLabel={startLabel}
         onClose={() => setReorderOpen(false)}
         onReorder={(from, to) => {
           disarmForEdit();
@@ -386,8 +389,6 @@ const styles = StyleSheet.create({
   },
   presetChipName: { color: colors.ink, fontSize: 13, fontFamily: fonts.extra, flexShrink: 1 },
   presetChipCaret: { color: colors.faint, fontSize: 11, fontFamily: fonts.extra },
-  newBadge: { backgroundColor: colors.skyBg, borderRadius: radii.pill, paddingVertical: 3, paddingHorizontal: 8 },
-  newBadgeText: { color: colors.sky700, fontSize: 9, fontFamily: fonts.extra },
 
   chip: { borderRadius: radii.pill, paddingVertical: spacing.s + 1, paddingHorizontal: spacing.l, marginBottom: spacing.m },
   armed: { backgroundColor: colors.mintBg },

@@ -1,12 +1,13 @@
-import { Pill } from './pill';
+import { Pill, isEventPill } from './pill';
 
 /**
- * A preset is a named, saved pill list (design rows 08–11). It stores EVENTS
- * ONLY — never the arrival anchor or zone, which stay global on the working
- * chain. Pill ids keep their original values: ids only need uniqueness within
- * one chain, and every layer treats pills as immutable (reducers copy on
- * write), so shared references between a preset and the working chain — or
- * between two presets snapshotted from the same base — are safe.
+ * A preset is a named, saved pill list (design rows 08–11). It stores the
+ * PILL LIST only (events and markers) — never the arrival anchor or zone,
+ * which stay global on the working chain. Pill ids keep their original
+ * values: ids only need uniqueness within one chain, and every layer treats
+ * pills as immutable (reducers copy on write), so shared references between
+ * a preset and the working chain — or between two presets snapshotted from
+ * the same base — are safe.
  */
 export type Preset = {
   id: string; // stable, caller-supplied (hook mints) — same contract as Pill.id
@@ -28,10 +29,12 @@ export type PresetLibrary = {
 /** List-row summary data: the emoji strip + "이벤트 {count}개 · 총 {H:MM}". */
 export type PresetSummary = { count: number; totalMinutes: number; icons: string };
 
+/** List-row summary data: the emoji strip + "이벤트 {count}개 · 총 {H:MM}" — EVENT pills only. */
 export function presetSummary(pills: Pill[]): PresetSummary {
+  const events = pills.filter(isEventPill);
   return {
-    count: pills.length,
-    totalMinutes: pills.reduce((sum, p) => sum + p.dur, 0),
-    icons: pills.map((p) => p.icon).join(''),
+    count: events.length,
+    totalMinutes: events.reduce((sum, p) => sum + p.dur, 0),
+    icons: events.map((p) => p.icon).join(''),
   };
 }

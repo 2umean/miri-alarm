@@ -3,21 +3,45 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Chain } from '../domain';
 import { LegacyDurations } from '../domain/chainMigration';
 import { parseStoredChain, sanitizeArrival, sanitizeZone } from './chainSanitize';
+import { migrateV2ChainPayload } from './legacyV2';
 
 /**
  * The whole in-progress (editable) v2 chain — arrival anchor + captured zone +
  * ordered pills. Persisted on every change and restored on launch so nothing
  * resets across app restarts. Distinct from the *armed* snapshot.
  *
- * Stored under a new v2 key; the legacy v1 draft is read separately
+ * Stored under a v3 key; the legacy v1 draft is read separately
  * (loadLegacyDraft) so the Phase 2 hook can migrate it into a chain.
  */
 
-const DRAFT_KEY = 'schedularm.draft.v2';
+const DRAFT_KEY = 'schedularm.draft.v3';
+const V2_DRAFT_KEY = 'schedularm.draft.v2';
 const LEGACY_DRAFT_KEY = 'schedularm.draft.v1';
 
-export async function loadDraftChain(): Promise<Chain | null> {
-  return parseStoredChain(await AsyncStorage.getItem(DRAFT_KEY));
+// Concurrent loads share one in-flight read: a raced second load could
+// otherwise see v3 (not yet written) AND v2 (already removed) both empty,
+// return null, and let the caller's default state clobber migrated data.
+let pendingLoad: Promise<Chain | null> | null = null;
+
+export function loadDraftChain(): Promise<Chain | null> {
+  pendingLoad ??= readDraftChain().finally(() => {
+    pendingLoad = null;
+  });
+  return pendingLoad;
+}
+
+async function readDraftChain(): Promise<Chain | null> {
+  const raw = await AsyncStorage.getItem(DRAFT_KEY);
+  if (raw != null) return parseStoredChain(raw);
+  // One-time v2 → v3 migration: read, convert (ring-time-preserving split),
+  // persist under v3, clear v2. A corrupt v2 payload converts to null and is
+  // still cleared — a fresh seed beats a permanent parse-crash loop.
+  const v2raw = await AsyncStorage.getItem(V2_DRAFT_KEY);
+  if (v2raw == null) return null;
+  const migrated = migrateV2ChainPayload(v2raw);
+  if (migrated) await AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(migrated));
+  await AsyncStorage.removeItem(V2_DRAFT_KEY);
+  return migrated;
 }
 
 export async function saveDraftChain(chain: Chain): Promise<void> {
@@ -26,6 +50,7 @@ export async function saveDraftChain(chain: Chain): Promise<void> {
 
 export async function clearDraftChain(): Promise<void> {
   await AsyncStorage.removeItem(DRAFT_KEY);
+  await AsyncStorage.removeItem(V2_DRAFT_KEY); // a discard must not leave a resurrectable v2 ghost
 }
 
 /** A legacy v1 draft, reduced to what a v2 migration needs (durations + anchor + zone). */

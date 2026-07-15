@@ -44,7 +44,7 @@ export function withDefaultArrival(
   };
 }
 
-/** Build a v2 chain from a legacy v1 draft's durations (one-time migration). */
+/** Build a v3 (pre-split) chain from a legacy v1 draft's durations (one-time migration). */
 export function migratedChain(
   legacy: LegacyDurations & { arrival: number | null },
   deviceZone: string,

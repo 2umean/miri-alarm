@@ -35,16 +35,25 @@ function sanitizeDur(value: unknown): number {
   return Number.isFinite(n) ? Math.round(n) : 0;
 }
 
-/** Coerce one stored entry into a valid Pill, or null if it isn't a plain object. */
+/**
+ * Coerce one stored entry into a valid Pill, or null if it isn't a plain
+ * object. Branches on the SANITIZED type and emits the matching union member:
+ * a marker keeps only {id, type} (stray event fields are dropped), an event
+ * gets fallback values. This is the shared boundary for draft AND armed — a
+ * malformed element must be normalised here, never reach the engine.
+ */
 export function sanitizePill(value: unknown, index: number): Pill | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const v = value as Record<string, unknown>;
+  const id = typeof v.id === 'string' && v.id ? v.id : `pill-${index}`;
+  const type = sanitizeType(v.type);
+  if (type !== 'none') return { id, type };
   return {
-    id: typeof v.id === 'string' && v.id ? v.id : `pill-${index}`,
+    id,
+    type,
     icon: typeof v.icon === 'string' ? v.icon : '',
     name: typeof v.name === 'string' ? v.name : '',
     dur: sanitizeDur(v.dur),
-    type: sanitizeType(v.type),
   };
 }
 

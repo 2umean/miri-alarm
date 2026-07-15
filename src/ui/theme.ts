@@ -28,40 +28,24 @@ export const colors = {
   white: '#FFFFFF',
   backdrop: 'rgba(12,24,48,0.34)', // modal dim behind bottom sheets
   // v2 pill-chain palette (Schedularm UI v2).
-  faint: '#94A8C2', // bedtime cap + drag handles
+  faint: '#94A8C2', // start row + drag handles
   pushEventBorder: '#BBD9F7', // push event-row outline
-  alarmCardBg: '#FFF8EE', // alarm pill card fill
-  alarmCardBorder: '#FFE0A6', // alarm pill card border
   alarmAccentText: '#E8743C', // alarm event time
   dashed: '#A9CFF5', // dashed "add" affordances (＋ 이벤트 추가, ＋ 새 프리셋)
 } as const;
 
 /**
- * Per-pill-type visual recipe (v2). Keyed by PillType so a card/event row reads
- * its colors from one place instead of branching on type with inline hex.
+ * Per-marker-type visual recipe (v3). Keyed by 'push' | 'alarm' so a marker row
+ * reads its colors from one place instead of branching with inline hex.
  */
 export const pillStyle = {
-  none: {
-    cardBg: colors.bubble,
-    cardBorder: 'transparent',
-    accent: 'transparent',
-    durText: colors.ink2,
-  },
   push: {
-    cardBg: colors.skyBg,
-    cardBorder: colors.line,
-    accent: colors.sky500,
-    durText: colors.sky700,
     eventBorder: colors.pushEventBorder,
     eventTime: colors.sky700,
     badgeBg: colors.sky500,
     eventIcon: '🔔',
   },
   alarm: {
-    cardBg: colors.alarmCardBg,
-    cardBorder: colors.alarmCardBorder,
-    accent: colors.amber,
-    durText: colors.warnText,
     eventBorder: colors.coral,
     eventTime: colors.alarmAccentText,
     badgeBg: colors.amber,

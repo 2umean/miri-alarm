@@ -1,5 +1,5 @@
 import { DateTime } from 'luxon';
-import { resolveArrivalInstant, toLocalClock, relativeDayLabel } from '../datetime';
+import { resolveArrivalInstant, toLocalClock, relativeDayLabel, instantToYMD } from '../datetime';
 
 const nowAt = (zone: string, y: number, mo: number, d: number, h: number, mi: number) =>
   DateTime.fromObject({ year: y, month: mo, day: d, hour: h, minute: mi }, { zone }).toMillis();
@@ -67,4 +67,27 @@ test('an explicit date with a passed time returns that past instant (rollover ad
   const ms = resolveArrivalInstant(8, 0, 'UTC', now, { year: 2026, month: 1, day: 6 });
   expect(ms).toBeLessThan(now);
   expect(DateTime.fromMillis(ms, { zone: 'UTC' }).toFormat('yyyy-MM-dd HH:mm')).toBe('2026-01-06 08:00');
+});
+
+describe('instantToYMD (the inverse the picker needs to open on the current arrival)', () => {
+  test('round-trips with resolveArrivalInstant in the same zone', () => {
+    const zone = 'Asia/Seoul';
+    const now = nowAt(zone, 2026, 7, 14, 12, 0);
+    const ymd = { year: 2026, month: 7, day: 15 };
+    const instant = resolveArrivalInstant(9, 0, zone, now, ymd);
+    expect(instantToYMD(instant, zone)).toEqual(ymd);
+  });
+
+  test('the calendar date is the ZONE\'s date, not UTC\'s', () => {
+    // 2026-01-06 23:30 UTC is already Jan 7 in Seoul (UTC+9).
+    const instant = nowAt('UTC', 2026, 1, 6, 23, 30);
+    expect(instantToYMD(instant, 'Asia/Seoul')).toEqual({ year: 2026, month: 1, day: 7 });
+    expect(instantToYMD(instant, 'UTC')).toEqual({ year: 2026, month: 1, day: 6 });
+  });
+
+  test('stable across a DST fall-back day', () => {
+    const zone = 'America/New_York';
+    const instant = nowAt(zone, 2026, 11, 1, 12, 0); // the 25-hour day
+    expect(instantToYMD(instant, zone)).toEqual({ year: 2026, month: 11, day: 1 });
+  });
 });

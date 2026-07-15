@@ -2,15 +2,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { Preset, PresetLibrary } from '../domain/preset';
 import { sanitizePills } from './chainSanitize';
+import { migrateV1PresetsPayload } from './legacyV2';
 
 /**
- * The preset library + active pointer, one payload under a v1 key (internal
- * keys keep the schedularm.* convention — rebrand spec's "kept internal"
- * list). The working draft chain (draftChain.ts) remains the source of truth
- * for what's on screen; while a preset is active this store mirrors it.
+ * The preset library + active pointer, one payload under a versioned key
+ * (internal keys keep the schedularm.* convention — rebrand spec's "kept
+ * internal" list). The working draft chain (draftChain.ts) remains the
+ * source of truth for what's on screen; while a preset is active this store
+ * mirrors it.
  */
 
-const PRESETS_KEY = 'schedularm.presets.v1';
+const PRESETS_KEY = 'schedularm.presets.v2';
+const V1_PRESETS_KEY = 'schedularm.presets.v1';
 
 /** Coerce one stored entry into a valid Preset, or null to drop it. Unlike
     pills (which get fallback values), an unnamed preset is meaningless — the
@@ -53,8 +56,35 @@ export function parseStoredPresets(raw: string | null): PresetLibrary | null {
   }
 }
 
-export async function loadPresets(): Promise<PresetLibrary | null> {
-  return parseStoredPresets(await AsyncStorage.getItem(PRESETS_KEY));
+// Concurrent loads share one in-flight read (same rationale as draft/armed):
+// a future boot re-arm reads presets concurrently with usePresets' own hydrate.
+let pendingLoad: Promise<PresetLibrary | null> | null = null;
+
+export function loadPresets(): Promise<PresetLibrary | null> {
+  pendingLoad ??= readPresets().finally(() => {
+    pendingLoad = null;
+  });
+  return pendingLoad;
+}
+
+async function readPresets(): Promise<PresetLibrary | null> {
+  const raw = await AsyncStorage.getItem(PRESETS_KEY);
+  if (raw != null) return parseStoredPresets(raw);
+  const v1raw = await AsyncStorage.getItem(V1_PRESETS_KEY);
+  if (v1raw == null) return null;
+  const migrated = migrateV1PresetsPayload(v1raw);
+  // Re-check before writing: defends against a hypothetical ungated future
+  // writer — today's only savePresets caller is gated on hydration, but the
+  // armed-chain path proved this race class real, so all three stores share
+  // the shape.
+  const winner = await AsyncStorage.getItem(PRESETS_KEY);
+  if (winner != null) {
+    await AsyncStorage.removeItem(V1_PRESETS_KEY);
+    return parseStoredPresets(winner);
+  }
+  if (migrated) await AsyncStorage.setItem(PRESETS_KEY, JSON.stringify(migrated));
+  await AsyncStorage.removeItem(V1_PRESETS_KEY);
+  return migrated;
 }
 
 export async function savePresets(library: PresetLibrary): Promise<void> {

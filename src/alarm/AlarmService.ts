@@ -31,22 +31,22 @@ export const AlarmService = {
   isSupported: isAndroid || isIos,
 
   /**
-   * Arm a chain (Schedularm UI v2, Phase 3): EVERY alarm pill becomes an
-   * OS-guaranteed native alarm; push pills go through expo-notifications. Awaits
+   * Arm a chain (Schedularm UI v2, Phase 3): EVERY alarm marker becomes an
+   * OS-guaranteed native alarm; push markers go through expo-notifications. Awaits
    * the native scheduling and REJECTS if it fails (e.g. iOS AlarmKit auth), so the
    * caller never marks a chain "armed" when nothing was actually scheduled. No-op
    * without a usable arrival.
    */
-  async armChain(chain: Chain): Promise<void> {
+  async armChain(chain: Chain, startLabel: string): Promise<void> {
     if (!isAndroid && !isIos) return;
     const computed = computeChain(chain);
     if (!computed) return;
-    const alarms = planNativeAlarms(computed, Date.now());
+    const alarms = planNativeAlarms(computed, Date.now(), startLabel);
     // Await native FIRST — if it throws, the caller leaves the chain un-armed.
     if (alarms.length) await native.scheduleAlarms(alarms);
     if (isIos) ensureIosNotificationPermission();
-    // Push pills only; alarm pill ids are excluded (they ring natively).
-    void scheduleChainPush(chain, computed, new Set(alarms.map((a) => a.id)));
+    // Push markers only; alarm marker ids are excluded (they ring natively).
+    void scheduleChainPush(chain, computed, new Set(alarms.map((a) => a.id)), startLabel);
   },
 
   /**
