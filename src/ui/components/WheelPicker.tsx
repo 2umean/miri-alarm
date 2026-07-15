@@ -16,6 +16,8 @@ import { colors, fonts, spacing } from '../theme';
 const ITEM_H = 44;
 const VISIBLE_ROWS = 5; // odd, so one row sits exactly centred
 const PAD_H = ((VISIBLE_ROWS - 1) / 2) * ITEM_H;
+// Release window for the isProgrammatic flag after a programmatic scrollTo.
+const SCROLL_SETTLE_MS = 50;
 
 type Props = {
   /** Display label per grid slot (e.g. '0'…'23' or '00','05',…'55'). */
@@ -52,7 +54,7 @@ export function WheelPicker({ items, index, overrideLabel, onChange, onSubmitTex
     // scrollTo with animated:false emits no momentum-end; release the flag next tick.
     const id = setTimeout(() => {
       isProgrammatic.current = false;
-    }, 50);
+    }, SCROLL_SETTLE_MS);
     return () => clearTimeout(id);
   }, [index, items.length]);
 
@@ -86,7 +88,7 @@ export function WheelPicker({ items, index, overrideLabel, onChange, onSubmitTex
         <View style={{ height: PAD_H }} />
         {items.map((label, i) => (
           <Pressable
-            key={label}
+            key={i}
             style={styles.item}
             onPress={() => {
               if (i === index) {
