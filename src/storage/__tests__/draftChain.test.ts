@@ -211,6 +211,12 @@ describe('v2 → v3 draft migration', () => {
     expect(await AsyncStorage.getItem(V3_KEY)).not.toBeNull();
     expect(await AsyncStorage.getItem(V2_KEY)).toBeNull();
   });
+
+  test('clearDraftChain also clears a not-yet-migrated v2 draft (no resurrection)', async () => {
+    await AsyncStorage.setItem(V2_KEY, v2Payload);
+    await clearDraftChain();
+    expect(await loadDraftChain()).toBeNull();
+  });
 });
 
 describe('legacy v1 draft', () => {

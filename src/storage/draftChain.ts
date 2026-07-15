@@ -50,6 +50,7 @@ export async function saveDraftChain(chain: Chain): Promise<void> {
 
 export async function clearDraftChain(): Promise<void> {
   await AsyncStorage.removeItem(DRAFT_KEY);
+  await AsyncStorage.removeItem(V2_DRAFT_KEY); // a discard must not leave a resurrectable v2 ghost
 }
 
 /** A legacy v1 draft, reduced to what a v2 migration needs (durations + anchor + zone). */

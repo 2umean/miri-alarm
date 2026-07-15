@@ -122,4 +122,19 @@ describe('v2 → v3 armed migration (an app update must never be why someone ove
     expect(await AsyncStorage.getItem(V2_ARMED_KEY)).toBeNull();
     expect(await AsyncStorage.getItem(ARMED_KEY)).toBeNull();
   });
+
+  test('an existing v3 snapshot wins — a stale v2 key is ignored, not re-migrated over it', async () => {
+    await saveArmedChain({ arrival: 1_900_000_000_000, zone: 'UTC', pills: [{ id: 'new', type: 'alarm' }] });
+    await AsyncStorage.setItem(V2_ARMED_KEY, v2Armed);
+    expect((await loadArmedChain())?.pills).toEqual([{ id: 'new', type: 'alarm' }]);
+  });
+
+  test('a fresh arm that lands mid-migration wins over the stale upgrade copy', async () => {
+    await AsyncStorage.setItem(V2_ARMED_KEY, v2Armed);
+    const loading = loadArmedChain(); // migration begins
+    await saveArmedChain({ arrival: 1_900_000_000_000, zone: 'UTC', pills: [{ id: 'fresh', type: 'alarm' }] });
+    await loading;
+    const after = await loadArmedChain();
+    expect(after?.pills).toEqual([{ id: 'fresh', type: 'alarm' }]);
+  });
 });

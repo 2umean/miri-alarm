@@ -38,6 +38,13 @@ async function readArmedChain(): Promise<Chain | null> {
   const v2raw = await AsyncStorage.getItem(V2_ARMED_KEY);
   if (v2raw == null) return null;
   const migrated = migrateV2ChainPayload(v2raw);
+  // Re-check before writing: arm() may have saved a FRESH v3 snapshot while we
+  // were migrating — the user's new arm must win over the stale upgrade copy.
+  const winner = await AsyncStorage.getItem(ARMED_KEY);
+  if (winner != null) {
+    await AsyncStorage.removeItem(V2_ARMED_KEY);
+    return parseStoredChain(winner);
+  }
   if (migrated) await AsyncStorage.setItem(ARMED_KEY, JSON.stringify(migrated));
   await AsyncStorage.removeItem(V2_ARMED_KEY);
   return migrated;
