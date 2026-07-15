@@ -50,7 +50,7 @@ export const ko: typeof en = {
   alerts: {
     fallAsleep: { title: '🌙 잠들 시간이에요', body: '{{wake}} 기상을 위해 지금 주무세요.' },
     leaveHome: { title: '🚪 지금 출발하세요', body: '{{leave}}까지 출발해야 제시간에 도착해요.' },
-    pill: { title: '🔔 {{name}} 종료', body: '{{time}}에 나가면 {{arrival}} 도착에 맞아요.' },
+    pill: { title: '🔔 {{label}}', body: '{{time}}에 나가면 {{arrival}} 도착에 맞아요.' },
   },
 
   // ----- v2 (Schedularm UI v2 — 이벤트 체인) -----

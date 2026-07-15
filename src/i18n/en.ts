@@ -51,8 +51,8 @@ export const en = {
   alerts: {
     fallAsleep: { title: '🌙 Time to fall asleep', body: 'Sleep now to be rested for your {{wake}} wake-up.' },
     leaveHome: { title: '🚪 Leave home now', body: 'Leave by {{leave}} to arrive on time.' },
-    // v2: a push pill's end fires this — {{name}} is the pill, {{arrival}} the anchor.
-    pill: { title: '🔔 {{name}} ends', body: 'Head out at {{time}} to arrive by {{arrival}}.' },
+    // v2: a push marker fires this — {{label}} is derived from position, {{arrival}} is the anchor.
+    pill: { title: '🔔 {{label}}', body: 'Head out at {{time}} to arrive by {{arrival}}.' },
   },
 
   // ----- v2 (Schedularm UI v2 — pill chain) -----
