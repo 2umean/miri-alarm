@@ -186,18 +186,30 @@ describe('v2 → v3 draft migration', () => {
     await saveDraftChain({ arrival: 1_900_000_000_000, zone: 'UTC', pills: [{ id: 'new', type: 'alarm' }] });
     await AsyncStorage.setItem(V2_KEY, v2Payload);
     expect((await loadDraftChain())?.pills).toEqual([{ id: 'new', type: 'alarm' }]);
+    expect(await AsyncStorage.getItem(V2_KEY)).not.toBeNull(); // orphaned v2 stays — by design, v3 short-circuits
   });
 
   test('a corrupt v2 payload migrates to nothing and is cleared (fresh start, not a crash loop)', async () => {
     await AsyncStorage.setItem(V2_KEY, '{nope');
     expect(await loadDraftChain()).toBeNull();
     expect(await AsyncStorage.getItem(V2_KEY)).toBeNull();
+    expect(await AsyncStorage.getItem(V3_KEY)).toBeNull(); // a failed migration must not mint a phantom v3
+    expect(await loadDraftChain()).toBeNull(); // second load: still null, no retry loop
   });
 
   test('the v1 legacy path is untouched by the bump (still read separately for the hook)', async () => {
     await AsyncStorage.setItem(V1_KEY, JSON.stringify({ arrival: 1, zone: 'UTC', sleep: 480, prep: 45, travel: 60, contingency: 15 }));
     expect(await loadDraftChain()).toBeNull(); // v1 is NOT a draft-chain payload
     expect((await loadLegacyDraft())?.sleep).toBe(480);
+  });
+
+  test('two overlapping loads share one migration — no clobber window', async () => {
+    await AsyncStorage.setItem(V2_KEY, v2Payload);
+    const [a, b] = await Promise.all([loadDraftChain(), loadDraftChain()]);
+    expect(a).not.toBeNull();
+    expect(b).toEqual(a);
+    expect(await AsyncStorage.getItem(V3_KEY)).not.toBeNull();
+    expect(await AsyncStorage.getItem(V2_KEY)).toBeNull();
   });
 });
 

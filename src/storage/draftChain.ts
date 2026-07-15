@@ -18,7 +18,19 @@ const DRAFT_KEY = 'schedularm.draft.v3';
 const V2_DRAFT_KEY = 'schedularm.draft.v2';
 const LEGACY_DRAFT_KEY = 'schedularm.draft.v1';
 
-export async function loadDraftChain(): Promise<Chain | null> {
+// Concurrent loads share one in-flight read: a raced second load could
+// otherwise see v3 (not yet written) AND v2 (already removed) both empty,
+// return null, and let the caller's default state clobber migrated data.
+let pendingLoad: Promise<Chain | null> | null = null;
+
+export function loadDraftChain(): Promise<Chain | null> {
+  pendingLoad ??= readDraftChain().finally(() => {
+    pendingLoad = null;
+  });
+  return pendingLoad;
+}
+
+async function readDraftChain(): Promise<Chain | null> {
   const raw = await AsyncStorage.getItem(DRAFT_KEY);
   if (raw != null) return parseStoredChain(raw);
   // One-time v2 → v3 migration: read, convert (ring-time-preserving split),
