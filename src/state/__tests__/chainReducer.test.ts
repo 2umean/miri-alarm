@@ -1,18 +1,13 @@
 import { chainReducer, initialChainState, ChainState } from '../chainReducer';
-import { Pill, PillType } from '../../domain/pill';
+import { Pill } from '../../domain/pill';
 
-const pill = (id: string, dur = 30, type: PillType = 'none'): Pill => ({
-  id,
-  icon: '⬜',
-  name: id,
-  dur,
-  type,
-});
+const event = (id: string, dur: number): Pill => ({ id, type: 'none', icon: '⬜', name: id, dur });
+const marker = (id: string, type: 'push' | 'alarm' = 'alarm'): Pill => ({ id, type });
 
 const withPills = (...ids: string[]): ChainState => ({
   arrival: 1_900_000_000_000,
   zone: 'Asia/Seoul',
-  pills: ids.map((id) => pill(id)),
+  pills: ids.map((id) => event(id, 30)),
 });
 
 test('initialChainState is empty with no arrival', () => {
@@ -48,17 +43,17 @@ test('roll-arrival moves the anchor once one exists', () => {
 
 describe('add-pill', () => {
   test('appends when no index is given', () => {
-    const s = chainReducer(withPills('a', 'b'), { type: 'add-pill', pill: pill('c') });
+    const s = chainReducer(withPills('a', 'b'), { type: 'add-pill', pill: event('c', 30) });
     expect(s.pills.map((p) => p.id)).toEqual(['a', 'b', 'c']);
   });
 
   test('inserts at the given index', () => {
-    const s = chainReducer(withPills('a', 'b'), { type: 'add-pill', pill: pill('x'), index: 1 });
+    const s = chainReducer(withPills('a', 'b'), { type: 'add-pill', pill: event('x', 30), index: 1 });
     expect(s.pills.map((p) => p.id)).toEqual(['a', 'x', 'b']);
   });
 
   test('clamps an out-of-range index to the end', () => {
-    const s = chainReducer(withPills('a'), { type: 'add-pill', pill: pill('z'), index: 99 });
+    const s = chainReducer(withPills('a'), { type: 'add-pill', pill: event('z', 30), index: 99 });
     expect(s.pills.map((p) => p.id)).toEqual(['a', 'z']);
   });
 });
@@ -90,20 +85,40 @@ describe('reorder-pill', () => {
   });
 });
 
-describe('update-pill', () => {
-  test('patches only the matching pill', () => {
+describe('update-pill (whole-pill replacement — PillPatch cannot express a union)', () => {
+  test('replaces only the matching pill', () => {
     const s = chainReducer(withPills('a', 'b'), {
       type: 'update-pill',
       id: 'b',
-      patch: { type: 'alarm', name: 'wake' },
+      next: { id: 'b', type: 'alarm' },
     });
-    expect(s.pills[0]).toEqual(pill('a'));
-    expect(s.pills[1]).toMatchObject({ id: 'b', type: 'alarm', name: 'wake' });
+    expect(s.pills[0]).toEqual(event('a', 30));
+    expect(s.pills[1]).toEqual({ id: 'b', type: 'alarm' });
   });
 
-  test('a partial patch leaves untouched fields intact', () => {
-    const s = chainReducer(withPills('a'), { type: 'update-pill', id: 'a', patch: { dur: 99 } });
-    expect(s.pills[0]).toEqual({ id: 'a', icon: '⬜', name: 'a', dur: 99, type: 'none' });
+  test('an event → marker replacement drops the event fields entirely', () => {
+    const s = chainReducer(withPills('a'), { type: 'update-pill', id: 'a', next: { id: 'a', type: 'push' } });
+    expect(s.pills[0]).toEqual({ id: 'a', type: 'push' });
+    expect('dur' in s.pills[0]).toBe(false);
+  });
+
+  test('a marker → event replacement carries the full draft-built event', () => {
+    const start: ChainState = { arrival: 1_900_000_000_000, zone: 'Asia/Seoul', pills: [{ id: 'm', type: 'alarm' }] };
+    const s = chainReducer(start, {
+      type: 'update-pill',
+      id: 'm',
+      next: { id: 'm', type: 'none', icon: '🧥', name: '외출 준비', dur: 15 },
+    });
+    expect(s.pills[0]).toEqual({ id: 'm', type: 'none', icon: '🧥', name: '외출 준비', dur: 15 });
+  });
+
+  test('the stored id wins over a mismatched next.id (ids are stable)', () => {
+    const s = chainReducer(withPills('a'), {
+      type: 'update-pill',
+      id: 'a',
+      next: { id: 'WRONG', type: 'alarm' },
+    });
+    expect(s.pills[0].id).toBe('a');
   });
 });
 
@@ -111,7 +126,7 @@ describe('replace-pills', () => {
   test('swaps the pill list wholesale', () => {
     const s = chainReducer(withPills('a', 'b'), {
       type: 'replace-pills',
-      pills: [pill('x'), pill('y')],
+      pills: [event('x', 30), event('y', 30)],
     });
     expect(s.pills.map((p) => p.id)).toEqual(['x', 'y']);
   });
@@ -128,8 +143,8 @@ describe('replace-pills', () => {
 test('reducer never mutates the input state', () => {
   const start = withPills('a', 'b');
   const snapshot = JSON.parse(JSON.stringify(start));
-  chainReducer(start, { type: 'add-pill', pill: pill('c') });
+  chainReducer(start, { type: 'add-pill', pill: event('c', 30) });
   chainReducer(start, { type: 'remove-pill', id: 'a' });
-  chainReducer(start, { type: 'update-pill', id: 'a', patch: { dur: 1 } });
+  chainReducer(start, { type: 'update-pill', id: 'a', next: event('a', 1) });
   expect(start).toEqual(snapshot);
 });

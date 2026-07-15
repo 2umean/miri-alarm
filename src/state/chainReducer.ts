@@ -12,8 +12,6 @@ import { Chain, Pill } from '../domain/pill';
 
 export type ChainState = Chain;
 
-export type PillPatch = Partial<Pick<Pill, 'icon' | 'name' | 'dur' | 'type'>>;
-
 export type ChainAction =
   // Replace the whole state from a restored draft (storage → reducer).
   | { type: 'hydrate'; chain: ChainState }
@@ -27,8 +25,9 @@ export type ChainAction =
   | { type: 'remove-pill'; id: string }
   // Move the pill at `from` to `to` (drag-reorder). Out-of-range or no-op indices are ignored.
   | { type: 'reorder-pill'; from: number; to: number }
-  // Patch any of a pill's editable fields (rename / re-icon / re-type / change duration).
-  | { type: 'update-pill'; id: string; patch: PillPatch }
+  // Replace a pill wholesale (the editor sheet owns the union shape; a Partial
+  // patch cannot express EventPill | MarkerPill).
+  | { type: 'update-pill'; id: string; next: Pill }
   // Wholesale pill-list swap (preset apply); arrival & zone untouched.
   | { type: 'replace-pills'; pills: Pill[] };
 
@@ -71,7 +70,7 @@ export function chainReducer(state: ChainState, action: ChainAction): ChainState
     case 'update-pill':
       return {
         ...state,
-        pills: state.pills.map((p) => (p.id === action.id ? { ...p, ...action.patch } : p)),
+        pills: state.pills.map((p) => (p.id === action.id ? { ...action.next, id: p.id } : p)),
       };
     case 'replace-pills':
       return { ...state, pills: action.pills };

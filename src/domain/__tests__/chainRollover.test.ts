@@ -1,18 +1,13 @@
 import { DateTime } from 'luxon';
 
 import { rollChainToFuture } from '../chainRollover';
-import { Chain, Pill, PillType } from '../pill';
+import { Chain, Pill } from '../pill';
 
 const at = (zone: string, y: number, mo: number, d: number, h: number, mi: number) =>
   DateTime.fromObject({ year: y, month: mo, day: d, hour: h, minute: mi }, { zone }).toMillis();
 
-const pill = (id: string, dur: number, type: PillType = 'none'): Pill => ({
-  id,
-  icon: '⬜',
-  name: id,
-  dur,
-  type,
-});
+const event = (id: string, dur: number): Pill => ({ id, type: 'none', icon: '⬜', name: id, dur });
+const marker = (id: string, type: 'push' | 'alarm' = 'alarm'): Pill => ({ id, type });
 
 const arrivalLocal = (c: Chain) => DateTime.fromMillis(c.arrival!, { zone: c.zone });
 
@@ -20,16 +15,16 @@ const arrivalLocal = (c: Chain) => DateTime.fromMillis(c.arrival!, { zone: c.zon
 const base = (zone: string, d: number): Chain => ({
   arrival: at(zone, 2026, 1, d, 9, 0),
   zone,
-  pills: [pill('sleep', 420, 'alarm'), pill('commute', 35)],
+  pills: [event('sleep', 420), marker('wake'), event('commute', 35)],
 });
 
 test('no arrival → identity', () => {
-  const c: Chain = { arrival: null, zone: 'UTC', pills: [pill('a', 30, 'alarm')] };
+  const c: Chain = { arrival: null, zone: 'UTC', pills: [event('a', 30), marker('m')] };
   expect(rollChainToFuture(c, Date.UTC(2026, 0, 6))).toBe(c);
 });
 
 test('a non-finite arrival → identity (defensive, NaN must not roll)', () => {
-  const c: Chain = { arrival: Number.NaN, zone: 'UTC', pills: [pill('a', 30, 'alarm')] };
+  const c: Chain = { arrival: Number.NaN, zone: 'UTC', pills: [event('a', 30), marker('m')] };
   expect(rollChainToFuture(c, Date.UTC(2026, 0, 6))).toBe(c);
 });
 
@@ -90,7 +85,7 @@ test('rolling across a spring-forward day preserves the wall-clock arrival time'
   const c: Chain = {
     arrival: at(zone, 2026, 3, 7, 12, 0),
     zone,
-    pills: [pill('sleep', 420, 'alarm'), pill('commute', 60)],
+    pills: [event('sleep', 420), marker('wake'), event('commute', 60)],
   };
   const now = at(zone, 2026, 3, 7, 12, 30);
   const rolled = rollChainToFuture(c, now);
@@ -106,7 +101,7 @@ test('rolling across a fall-back day does not overshoot (25h day, next occurrenc
   // 24.5 real hours later — but the NEXT 09:00 (Sun 11-01) is still 30 minutes
   // ahead. A fixed-24h ceil bulk jump would skip it and land on 11-02.
   const zone = 'America/New_York';
-  const c: Chain = { arrival: at(zone, 2026, 10, 31, 9, 0), zone, pills: [pill('sleep', 420, 'alarm')] };
+  const c: Chain = { arrival: at(zone, 2026, 10, 31, 9, 0), zone, pills: [event('sleep', 420), marker('wake')] };
   const now = at(zone, 2026, 11, 1, 8, 30);
   const rolled = rollChainToFuture(c, now);
   const local = arrivalLocal(rolled);
