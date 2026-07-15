@@ -66,7 +66,6 @@ export const ko: typeof en = {
   pillType: { none: '이벤트', push: '🔔 알림', alarm: '⏰ 알람' },
   chainScreen: {
     addPill: '＋ 이벤트 추가',
-    bedtime: '취침',
     anchorLabel: '도착',
     badge: { push: '알림', alarm: '알람' },
     eventEnds: '{{name}} 종료',
