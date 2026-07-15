@@ -24,6 +24,12 @@ export function resolveArrivalInstant(
   return target.toMillis();
 }
 
+/** The zone-correct calendar date of an instant — the inverse of resolveArrivalInstant's date path. */
+export function instantToYMD(instantMs: number, zone: string): YMD {
+  const d = DateTime.fromMillis(instantMs, { zone });
+  return { year: d.year, month: d.month, day: d.day };
+}
+
 export function toLocalClock(instantMs: number, zone: string): string {
   return DateTime.fromMillis(instantMs, { zone }).toFormat('HH:mm');
 }
