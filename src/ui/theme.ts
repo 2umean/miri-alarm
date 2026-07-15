@@ -42,20 +42,12 @@ export const colors = {
  */
 export const pillStyle = {
   push: {
-    cardBg: colors.skyBg,
-    cardBorder: colors.line,
-    accent: colors.sky500,
-    durText: colors.sky700,
     eventBorder: colors.pushEventBorder,
     eventTime: colors.sky700,
     badgeBg: colors.sky500,
     eventIcon: '🔔',
   },
   alarm: {
-    cardBg: colors.alarmCardBg,
-    cardBorder: colors.alarmCardBorder,
-    accent: colors.amber,
-    durText: colors.warnText,
     eventBorder: colors.coral,
     eventTime: colors.alarmAccentText,
     badgeBg: colors.amber,

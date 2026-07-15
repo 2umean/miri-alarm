@@ -9,14 +9,15 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { Pill } from '../../domain';
+import { Pill, isMarkerPill, labelSourceFor, pillDur } from '../../domain';
 import { t } from '../../i18n';
 import { formatDuration } from '../format';
-import { colors, fonts, radii, shadows, spacing } from '../theme';
+import { colors, fonts, pillStyle, radii, shadows, spacing } from '../theme';
 
 type Props = {
   visible: boolean;
   pills: Pill[];
+  startLabel: string;
   onClose: () => void;
   onReorder: (from: number, to: number) => void;
 };
@@ -31,10 +32,10 @@ const ROW_H = 58; // fixed row height (incl. gap) — keeps the reorder math sim
  * NOTE: the gesture interaction is device-only — it cannot be exercised by tsc
  * or jest, so it needs a manual pass on a real build.
  */
-export function ReorderView({ visible, pills, onClose, onReorder }: Props) {
+export function ReorderView({ visible, pills, startLabel, onClose, onReorder }: Props) {
   const draggingIndex = useSharedValue(-1);
   const dragY = useSharedValue(0);
-  const total = pills.reduce((sum, p) => sum + p.dur, 0);
+  const total = pills.reduce((sum, p) => sum + pillDur(p), 0); // 총 준비 시간 = events only
   const insets = useSafeAreaInsets();
 
   return (
@@ -58,6 +59,14 @@ export function ReorderView({ visible, pills, onClose, onReorder }: Props) {
               <Row
                 key={pill.id}
                 pill={pill}
+                markerLabel={
+                  isMarkerPill(pill)
+                    ? (() => {
+                        const source = labelSourceFor(pills, index);
+                        return source ? t('chainScreen.eventEnds', { name: source.name }) : startLabel;
+                      })()
+                    : null
+                }
                 index={index}
                 count={pills.length}
                 draggingIndex={draggingIndex}
@@ -79,6 +88,7 @@ export function ReorderView({ visible, pills, onClose, onReorder }: Props) {
 
 function Row({
   pill,
+  markerLabel,
   index,
   count,
   draggingIndex,
@@ -86,6 +96,7 @@ function Row({
   onReorder,
 }: {
   pill: Pill;
+  markerLabel: string | null;
   index: number;
   count: number;
   draggingIndex: SharedValue<number>;
@@ -135,17 +146,25 @@ function Row({
   return (
     <Animated.View style={[styles.rowAbsolute, { top: index * ROW_H }, animated]}>
       <GestureDetector gesture={pan}>
-        <View style={styles.row}>
-          <Text style={styles.handle}>⋮⋮</Text>
-          <Text style={styles.rowIcon}>{pill.icon}</Text>
-          <Text style={styles.rowName}>{pill.name}</Text>
-          {badge ? (
-            <View style={[styles.badge, { backgroundColor: badge.bg }]}>
-              <Text style={[styles.badgeText, { color: badge.fg }]}>{badge.text}</Text>
-            </View>
-          ) : null}
-          <Text style={styles.rowDur}>{formatDuration(pill.dur)}</Text>
-        </View>
+        {isMarkerPill(pill) ? (
+          <View style={[styles.row, styles.markerRow, { borderColor: pillStyle[pill.type].eventBorder }]}>
+            <Text style={styles.handle}>⋮⋮</Text>
+            <Text style={styles.rowIcon}>{pillStyle[pill.type].eventIcon}</Text>
+            <Text style={styles.rowName} numberOfLines={1}>{markerLabel}</Text>
+            {badge ? (
+              <View style={[styles.badge, { backgroundColor: badge.bg }]}>
+                <Text style={[styles.badgeText, { color: badge.fg }]}>{badge.text}</Text>
+              </View>
+            ) : null}
+          </View>
+        ) : (
+          <View style={styles.row}>
+            <Text style={styles.handle}>⋮⋮</Text>
+            <Text style={styles.rowIcon}>{pill.icon}</Text>
+            <Text style={styles.rowName}>{pill.name}</Text>
+            <Text style={styles.rowDur}>{formatDuration(pill.dur)}</Text>
+          </View>
+        )}
       </GestureDetector>
     </Animated.View>
   );
@@ -169,6 +188,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.m,
     ...shadows.bubble,
   },
+  markerRow: { borderWidth: 1.5, backgroundColor: colors.bubble },
   handle: { color: colors.faint, fontSize: 15, letterSpacing: -2 },
   rowIcon: { fontSize: 18 },
   rowName: { flex: 1, color: colors.ink, fontFamily: fonts.bold, fontSize: 14 },
