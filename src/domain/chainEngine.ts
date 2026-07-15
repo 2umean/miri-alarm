@@ -2,7 +2,7 @@ import { MINUTE_MS } from './schedule';
 import { Chain, Pill, pillDur } from './pill';
 
 /**
- * Reverse-calc for the v2 pill chain. Same DST-safe philosophy as v1's engine:
+ * Reverse-calc for the v3 pill chain. Same DST-safe philosophy as v1's engine:
  * every time is the arrival anchor minus an ELAPSED-ms offset, so gaps are
  * DST-correct by construction (no wall-clock arithmetic across offsets here).
  */

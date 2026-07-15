@@ -27,6 +27,8 @@ web-build/
 *.ipa.zip
 # Gradle output from compiling the local Expo module
 modules/schedularm-alarm/android/build/
+# Jest coverage output
+coverage/
 
 # Env / secrets
 .env

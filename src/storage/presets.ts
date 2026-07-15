@@ -73,8 +73,10 @@ async function readPresets(): Promise<PresetLibrary | null> {
   const v1raw = await AsyncStorage.getItem(V1_PRESETS_KEY);
   if (v1raw == null) return null;
   const migrated = migrateV1PresetsPayload(v1raw);
-  // Re-check before writing: a live-mirror savePresets may have written a
-  // FRESH v2 library while we were migrating — it must win over the stale copy.
+  // Re-check before writing: defends against a hypothetical ungated future
+  // writer — today's only savePresets caller is gated on hydration, but the
+  // armed-chain path proved this race class real, so all three stores share
+  // the shape.
   const winner = await AsyncStorage.getItem(PRESETS_KEY);
   if (winner != null) {
     await AsyncStorage.removeItem(V1_PRESETS_KEY);

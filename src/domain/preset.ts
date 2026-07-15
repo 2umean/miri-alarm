@@ -1,12 +1,13 @@
 import { Pill, isEventPill } from './pill';
 
 /**
- * A preset is a named, saved pill list (design rows 08–11). It stores EVENTS
- * ONLY — never the arrival anchor or zone, which stay global on the working
- * chain. Pill ids keep their original values: ids only need uniqueness within
- * one chain, and every layer treats pills as immutable (reducers copy on
- * write), so shared references between a preset and the working chain — or
- * between two presets snapshotted from the same base — are safe.
+ * A preset is a named, saved pill list (design rows 08–11). It stores the
+ * PILL LIST only (events and markers) — never the arrival anchor or zone,
+ * which stay global on the working chain. Pill ids keep their original
+ * values: ids only need uniqueness within one chain, and every layer treats
+ * pills as immutable (reducers copy on write), so shared references between
+ * a preset and the working chain — or between two presets snapshotted from
+ * the same base — are safe.
  */
 export type Preset = {
   id: string; // stable, caller-supplied (hook mints) — same contract as Pill.id

@@ -40,6 +40,7 @@ export function useArmingChain() {
         // app update cancels AlarmManager alarms, or any native↔JS divergence.
         // The start label re-derives from the CURRENT active preset (the armed
         // snapshot stores no preset name); label-only drift, never a time drift.
+        // Best-effort: a presets read failure only degrades the LABEL, never the arm.
         const lib = await loadPresets().catch(() => null);
         const activeName = lib?.presets.find((p) => p.id === lib.activeId)?.name ?? null;
         AlarmService.armChain(c, chainStartLabel(activeName)).catch((e) =>

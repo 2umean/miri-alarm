@@ -122,13 +122,22 @@ test('formatMonthDay renders numeric M/d (no zero padding) in the given zone', (
 
 describe('chainStartLabel', () => {
   test('an active preset name → "{name} starts"', () => {
+    const prev = i18n.locale;
     i18n.locale = 'en';
-    expect(chainStartLabel('평일 아침')).toBe('평일 아침 starts');
+    try {
+      expect(chainStartLabel('평일 아침')).toBe('평일 아침 starts');
+    } finally {
+      i18n.locale = prev;
+    }
   });
 
   test('no active preset → falls back to the current-schedule label', () => {
+    const prev = i18n.locale;
     i18n.locale = 'ko';
-    expect(chainStartLabel(null)).toBe('현재 일정 시작');
-    i18n.locale = 'en'; // restore for other tests
+    try {
+      expect(chainStartLabel(null)).toBe('현재 일정 시작');
+    } finally {
+      i18n.locale = prev;
+    }
   });
 });

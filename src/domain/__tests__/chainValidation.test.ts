@@ -20,7 +20,7 @@ const hero = (): Chain => ({
 const kinds = (issues: ChainValidationIssue[]) => issues.map((i) => i.kind);
 
 test('a healthy chain before bedtime has no issues and is armable', () => {
-  const now = at(ZONE, 2026, 6, 29, 23, 0); // before start 00:30
+  const now = at(ZONE, 2026, 6, 29, 23, 0); // before start 00:50
   const issues = validateChain(hero(), now);
   expect(issues).toEqual([]);
   expect(isChainArmable(issues)).toBe(true);

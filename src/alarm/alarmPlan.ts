@@ -22,7 +22,7 @@ export function planNativeAlarms(
   // The ring countdown's "leave" target: the start of the LAST EVENT pill (the
   // final real leg). A trailing zero-width marker must not drag it onto the
   // arrival instant itself.
-  const lastEvent = [...computed.items].reverse().find((it) => isEventPill(it.pill));
+  const lastEvent = computed.items.findLast((it) => isEventPill(it.pill));
   const leaveAt = lastEvent ? lastEvent.startAt : computed.arrival;
   return computed.items
     .map((it, index) => ({ it, index }))
