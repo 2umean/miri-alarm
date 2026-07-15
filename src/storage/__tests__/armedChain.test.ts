@@ -12,7 +12,10 @@ const ARMED_KEY = 'schedularm.armed.v2';
 const sample: Chain = {
   arrival: 1_900_000_000_000,
   zone: 'Asia/Seoul',
-  pills: [{ id: 'p1', icon: '😴', name: '수면', dur: 420, type: 'alarm' }],
+  pills: [
+    { id: 'p1', type: 'none', icon: '😴', name: '수면', dur: 420 },
+    { id: 'p1m', type: 'alarm' },
+  ],
 };
 
 beforeEach(async () => {
@@ -60,5 +63,5 @@ test('malformed pill elements are sanitised/dropped, not passed raw to the engin
   );
   const pills = (await loadArmedChain())?.pills;
   expect(pills).toHaveLength(1); // the null element is dropped
-  expect(pills?.[0]).toMatchObject({ id: 'pill-1', dur: 0, type: 'none' }); // coerced to safe values
+  expect(pills?.[0]).toEqual({ id: 'pill-1', type: 'none', icon: '🚿', name: 'x', dur: 0 }); // coerced to safe values
 });

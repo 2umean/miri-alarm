@@ -15,8 +15,9 @@ const sample: PresetLibrary = {
       id: 'a',
       name: '평일 아침',
       pills: [
-        { id: 'p1', icon: '😴', name: '수면', dur: 420, type: 'alarm' },
-        { id: 'p2', icon: '🚿', name: '샤워', dur: 20, type: 'none' },
+        { id: 'p1', type: 'none', icon: '😴', name: '수면', dur: 420 },
+        { id: 'p1m', type: 'alarm' },
+        { id: 'p2', type: 'none', icon: '🚿', name: '샤워', dur: 20 },
       ],
     },
     { id: 'b', name: '주말 늦잠', pills: [] },

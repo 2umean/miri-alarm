@@ -20,8 +20,9 @@ const sample: Chain = {
   arrival: 1_900_000_000_000,
   zone: 'Asia/Seoul',
   pills: [
-    { id: 'p1', icon: '😴', name: '수면', dur: 420, type: 'alarm' },
-    { id: 'p2', icon: '🚿', name: '샤워', dur: 20, type: 'none' },
+    { id: 'p1', type: 'none', icon: '😴', name: '수면', dur: 420 },
+    { id: 'p1m', type: 'alarm' },
+    { id: 'p2', type: 'none', icon: '🚿', name: '샤워', dur: 20 },
   ],
 };
 
@@ -52,9 +53,10 @@ test('clearDraftChain removes the stored draft', async () => {
 test('an out-of-range pill duration is preserved verbatim on load (validation gates, storage does not)', async () => {
   await AsyncStorage.setItem(
     V2_KEY,
-    JSON.stringify({ ...sample, pills: [{ id: 'p1', icon: '😴', name: 'x', dur: 99999, type: 'alarm' }] }),
+    JSON.stringify({ ...sample, pills: [{ id: 'p1', icon: '😴', name: 'x', dur: 99999, type: 'none' }] }),
   );
-  expect((await loadDraftChain())?.pills[0].dur).toBe(99999);
+  const p = (await loadDraftChain())?.pills[0];
+  expect(p).toEqual({ id: 'p1', type: 'none', icon: '😴', name: 'x', dur: 99999 });
 });
 
 test('an invalid IANA zone falls back to UTC', async () => {
@@ -110,9 +112,27 @@ test('non-object pill entries are dropped, and a missing id is synthesised by in
 test('a non-finite duration becomes zero', async () => {
   await AsyncStorage.setItem(
     V2_KEY,
-    JSON.stringify({ ...sample, pills: [{ id: 'p1', icon: '😴', name: 'x', dur: 'nope', type: 'alarm' }] }),
+    JSON.stringify({ ...sample, pills: [{ id: 'p1', icon: '😴', name: 'x', dur: 'nope', type: 'none' }] }),
   );
-  expect((await loadDraftChain())?.pills[0].dur).toBe(0);
+  expect((await loadDraftChain())?.pills[0]).toEqual({ id: 'p1', type: 'none', icon: '😴', name: 'x', dur: 0 });
+});
+
+test('a stored marker keeps only id+type — stray icon/name/dur fields are dropped', async () => {
+  await AsyncStorage.setItem(
+    V2_KEY,
+    JSON.stringify({ ...sample, pills: [{ id: 'm1', type: 'alarm', icon: '👻', name: 'ghost', dur: 999 }] }),
+  );
+  expect((await loadDraftChain())?.pills[0]).toEqual({ id: 'm1', type: 'alarm' });
+});
+
+test('a marker with a missing id gets one synthesised by index', async () => {
+  await AsyncStorage.setItem(V2_KEY, JSON.stringify({ ...sample, pills: [{ type: 'push' }] }));
+  expect((await loadDraftChain())?.pills[0]).toEqual({ id: 'pill-0', type: 'push' });
+});
+
+test('an event entry missing fields still coerces to a full EventPill (defaults, dur 0)', async () => {
+  await AsyncStorage.setItem(V2_KEY, JSON.stringify({ ...sample, pills: [{ id: 'e', type: 'none' }] }));
+  expect((await loadDraftChain())?.pills[0]).toEqual({ id: 'e', type: 'none', icon: '', name: '', dur: 0 });
 });
 
 test('a missing zone falls back to UTC', async () => {
