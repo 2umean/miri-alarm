@@ -4,10 +4,12 @@ import { sanitizeArrival, sanitizeZone } from './chainSanitize';
 
 /**
  * FROZEN readers for the v2 storage format (schedularm.draft.v2 / armed.v2 /
- * presets.v1) + the v2→v3 pill splitter. The coercion rules are a frozen COPY
- * of the pre-union sanitizePill — deliberately NOT shared with the live
+ * presets.v1) + the v2→v3 pill splitter. The PILL coercion rules are a frozen
+ * COPY of the pre-union sanitizePill — deliberately NOT shared with the live
  * sanitizer, so future changes to the v3 boundary can never silently change
- * what old payloads migrate to. Delete this file once the v2 keys are extinct.
+ * what old payloads migrate to. (arrival/zone reuse the live sanitizers on
+ * purpose: version-agnostic scalars.) Delete this file once the v2 keys are
+ * extinct.
  */
 
 type V2Pill = { id: string; icon: string; name: string; dur: number; type: PillType };

@@ -87,3 +87,31 @@ test('migrateV1PresetsPayload drops unnamed presets and nulls a ghost activeId (
   const raw = JSON.stringify({ presets: [{ id: 'x', pills: [] }], activeId: 'x' });
   expect(migrateV1PresetsPayload(raw)).toEqual({ presets: [], activeId: null });
 });
+
+test('a missing/empty id on an ALERT-typed v2 pill gets the fallback id AND the ~m suffix', () => {
+  expect(convertV2Pills([{ icon: '⏰', name: 'x', dur: 30, type: 'alarm' }])).toEqual([
+    { id: 'pill-0', type: 'none', icon: '⏰', name: 'x', dur: 30 },
+    { id: 'pill-0~m', type: 'alarm' },
+  ]);
+});
+
+test('migrateV1PresetsPayload: corrupt/primitive payloads → null (parity with the chain path)', () => {
+  expect(migrateV1PresetsPayload(null)).toBeNull();
+  expect(migrateV1PresetsPayload('{nope')).toBeNull();
+  expect(migrateV1PresetsPayload('5')).toBeNull();
+  expect(migrateV1PresetsPayload('[]')).toBeNull();
+});
+
+test('migrateV1PresetsPayload: duplicate preset ids keep the FIRST entry (v1 rule)', () => {
+  const raw = JSON.stringify({
+    presets: [
+      { id: 'a', name: 'first', pills: [] },
+      { id: 'a', name: 'second', pills: [] },
+    ],
+    activeId: 'a',
+  });
+  const out = migrateV1PresetsPayload(raw)!;
+  expect(out.presets).toHaveLength(1);
+  expect(out.presets[0].name).toBe('first');
+  expect(out.activeId).toBe('a');
+});
