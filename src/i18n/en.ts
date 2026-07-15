@@ -68,7 +68,7 @@ export const en = {
   },
   pillType: { none: 'Event', push: '🔔 Notify', alarm: '⏰ Alarm' },
   chainScreen: {
-    addPill: '＋ Add pill',
+    addPill: '＋ Add',
     anchorLabel: 'Arrive',
     badge: { push: 'Notify', alarm: 'Alarm' },
     eventEnds: '{{name}} ends',
@@ -99,7 +99,6 @@ export const en = {
   },
   preset: {
     current: 'Current schedule',
-    newBadge: 'NEW',
     title: 'Presets',
     manage: 'Manage',
     done: 'Done',
