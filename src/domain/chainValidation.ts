@@ -1,4 +1,4 @@
-import { Chain, MAX_PILL_MINUTES } from './pill';
+import { Chain, MAX_PILL_MINUTES, isEventPill } from './pill';
 import { computeChain, latestAlarmFromComputed, totalSpanMinutes } from './chainEngine';
 
 /** Max total chain span (sum of all pill durations), in minutes. ~26h — covers a long sleep + commute + buffers.
@@ -17,7 +17,7 @@ export type ChainValidationIssue =
   | { kind: 'chain-too-long' } // total span exceeds MAX_CHAIN_SPAN
   | { kind: 'no-alarm' } // no alarm pill — a safety alarm needs ≥1 OS-guaranteed ring, not just pushes
   | { kind: 'past-event' } // every alarm instant has passed — nothing left that can ring
-  | { kind: 'bedtime-passed' }; // the first pill already began (non-blocking nudge; v1's sleep-debt analog)
+  | { kind: 'start-passed' }; // the chain start already passed (non-blocking nudge)
 
 export function validateChain(chain: Chain, nowMs: number): ChainValidationIssue[] {
   const issues: ChainValidationIssue[] = [];
@@ -26,6 +26,7 @@ export function validateChain(chain: Chain, nowMs: number): ChainValidationIssue
   // infeasible marker if any duration is negative.
   let infeasible = false;
   for (const pill of chain.pills) {
+    if (!isEventPill(pill)) continue; // a marker has no duration to be out of range
     if (pill.dur < 0) infeasible = true;
     if (pill.dur < 0 || pill.dur > MAX_PILL_MINUTES) {
       issues.push({ kind: 'pill-out-of-range', id: pill.id });
@@ -53,14 +54,14 @@ export function validateChain(chain: Chain, nowMs: number): ChainValidationIssue
     if (lastAlarm != null && lastAlarm <= nowMs) {
       issues.push({ kind: 'past-event' });
     } else if (computed.start <= nowMs) {
-      issues.push({ kind: 'bedtime-passed' });
+      issues.push({ kind: 'start-passed' }); // start-passed is the nudge; past-event supersedes it
     }
   }
 
   return issues;
 }
 
-/** The safety gate: which issue kinds block arming. bedtime-passed is a nudge, not a blocker. */
+/** The safety gate: which issue kinds block arming. start-passed is a nudge, not a blocker. */
 const BLOCKING: ReadonlyArray<ChainValidationIssue['kind']> = [
   'no-arrival',
   'pill-out-of-range',

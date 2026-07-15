@@ -129,7 +129,7 @@ export const en = {
     'chain-too-long': 'The total span is unrealistically long.',
     'no-alarm': 'Add an ⏰ alarm pill — a notification alone isn’t guaranteed to wake you.',
     'past-event': 'All alarm times have already passed.',
-    'bedtime-passed': 'Heads up: your start time has already passed.',
+    'start-passed': 'Heads up: your start time has already passed.',
   } satisfies Record<ChainValidationIssue['kind'], string>,
 };
 // NOTE: deliberately NOT `as const` — ko.ts is typed `typeof en`, which must
