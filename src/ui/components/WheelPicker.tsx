@@ -1,0 +1,168 @@
+// src/ui/components/WheelPicker.tsx
+import { useEffect, useRef, useState } from 'react';
+import {
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+
+import { colors, fonts, spacing } from '../theme';
+
+const ITEM_H = 44;
+const VISIBLE_ROWS = 5; // odd, so one row sits exactly centred
+const PAD_H = ((VISIBLE_ROWS - 1) / 2) * ITEM_H;
+
+type Props = {
+  /** Display label per grid slot (e.g. '0'…'23' or '00','05',…'55'). */
+  items: string[];
+  /** Selected grid index. An off-grid value keeps the wheel at this index and overrides the text. */
+  index: number;
+  /** Shown in the centre slot instead of items[index] (e.g. a typed ':47'). */
+  overrideLabel?: string | null;
+  onChange: (index: number) => void;
+  /** Commit of the centre TextInput (raw digits). Parent parses/clamps. */
+  onSubmitText: (text: string) => void;
+};
+
+/**
+ * One wheel column, "scroll + tap" (spec): scroll snaps to the grid; tapping a
+ * NON-centred row selects it; tapping the CENTRED value swaps it for a numeric
+ * TextInput. Taps live on the items INSIDE the ScrollView (the ScrollView is
+ * their ancestor, so a drag that starts on any row — centre included — is
+ * stolen by the scroll as usual; a sibling overlay would dead-zone it). An
+ * off-grid override is display-only until the next scroll snaps back.
+ */
+export function WheelPicker({ items, index, overrideLabel, onChange, onSubmitText }: Props) {
+  const scrollRef = useRef<ScrollView>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [text, setText] = useState('');
+  // Distinguish user scrolls from our own scrollTo (which must not re-fire onChange).
+  const isProgrammatic = useRef(false);
+
+  // Keep the wheel positioned on the selected index whenever it changes from
+  // outside (open/seed, typed commit). animated:false → no momentum events.
+  useEffect(() => {
+    isProgrammatic.current = true;
+    scrollRef.current?.scrollTo({ y: index * ITEM_H, animated: false });
+    // scrollTo with animated:false emits no momentum-end; release the flag next tick.
+    const id = setTimeout(() => {
+      isProgrammatic.current = false;
+    }, 50);
+    return () => clearTimeout(id);
+  }, [index, items.length]);
+
+  const settle = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (isProgrammatic.current) return;
+    const raw = Math.round(e.nativeEvent.contentOffset.y / ITEM_H);
+    const next = Math.min(items.length - 1, Math.max(0, raw));
+    if (next !== index || overrideLabel != null) onChange(next); // a scroll also clears an off-grid override
+  };
+
+  const commitText = () => {
+    setIsEditing(false);
+    if (text) onSubmitText(text);
+  };
+
+  return (
+    <View style={styles.column}>
+      <ScrollView
+        ref={scrollRef}
+        style={styles.scroll}
+        contentOffset={{ x: 0, y: index * ITEM_H }}
+        snapToInterval={ITEM_H}
+        decelerationRate="fast"
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled
+        onMomentumScrollEnd={settle}
+        // A drag that ends dead-on a snap point emits no momentum phase (Android);
+        // settle() is idempotent so handling both events is safe.
+        onScrollEndDrag={settle}
+      >
+        <View style={{ height: PAD_H }} />
+        {items.map((label, i) => (
+          <Pressable
+            key={label}
+            style={styles.item}
+            onPress={() => {
+              if (i === index) {
+                setText('');
+                setIsEditing(true); // tap the centred number → type an exact value
+              } else {
+                onChange(i); // tap any other row → select it (the effect scrolls to it)
+              }
+            }}
+          >
+            <Text style={[styles.itemText, i === index && !overrideLabel && styles.itemTextActive]}>
+              {label}
+            </Text>
+          </Pressable>
+        ))}
+        <View style={{ height: PAD_H }} />
+      </ScrollView>
+
+      {/* Centre slot overlay: hairlines, the off-grid value, and the edit input.
+          Touch-transparent except while editing — taps reach the items below. */}
+      <View pointerEvents={isEditing ? 'auto' : 'none'} style={styles.centerBand}>
+        <View style={styles.hairline} />
+        {isEditing ? (
+          <TextInput
+            style={styles.centerInput}
+            value={text}
+            onChangeText={(v) => setText(v.replace(/[^0-9]/g, '').slice(0, 2))}
+            keyboardType="number-pad"
+            maxLength={2}
+            autoFocus
+            selectTextOnFocus
+            onBlur={commitText}
+            onSubmitEditing={commitText}
+          />
+        ) : (
+          <View style={styles.centerSlot}>
+            {overrideLabel != null ? <Text style={styles.centerOverride}>{overrideLabel}</Text> : null}
+          </View>
+        )}
+        <View style={styles.hairline} />
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  column: { height: ITEM_H * VISIBLE_ROWS, flex: 1 },
+  scroll: { flex: 1 },
+  item: { height: ITEM_H, alignItems: 'center', justifyContent: 'center' },
+  itemText: { color: colors.disabledText, fontSize: 20, fontFamily: fonts.clock },
+  itemTextActive: { color: colors.ink, fontSize: 24 },
+  centerBand: {
+    position: 'absolute',
+    top: PAD_H,
+    left: 0,
+    right: 0,
+    height: ITEM_H,
+    justifyContent: 'space-between',
+  },
+  hairline: { height: 1.5, backgroundColor: colors.line, marginHorizontal: spacing.s },
+  centerSlot: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  // An off-grid value paints OVER the (nearest-grid) item behind it.
+  centerOverride: {
+    color: colors.ink,
+    fontSize: 24,
+    fontFamily: fonts.clock,
+    backgroundColor: colors.skyBgBottom,
+    paddingHorizontal: spacing.m,
+  },
+  centerInput: {
+    flex: 1,
+    textAlign: 'center',
+    color: colors.ink,
+    fontSize: 24,
+    fontFamily: fonts.clock,
+    backgroundColor: colors.skyBg,
+    padding: 0,
+  },
+});
