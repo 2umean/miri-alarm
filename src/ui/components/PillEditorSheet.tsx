@@ -13,14 +13,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { MAX_PILL_MINUTES, PillType, PILL_TYPES } from '../../domain';
+import { MAX_PILL_MINUTES, PILL_TYPES, PillDraft, PillType } from '../../domain';
 import { t } from '../../i18n';
 import { composeDuration, formatDuration, splitDuration } from '../format';
 import { colors, fonts, radii, shadows, spacing } from '../theme';
 import { lastGrapheme } from '../lastGrapheme';
 import { useIsKeyboardShown } from '../keyboard';
 
-export type PillDraft = { icon: string; name: string; dur: number; type: PillType };
+export type { PillDraft } from '../../domain'; // re-export: ChainScreen's import site stays stable
 
 type Props = {
   visible: boolean;
@@ -81,7 +81,6 @@ export function PillEditorSheet({
     if (capped || Number(m || '0') >= 60) syncFields(total);
   };
 
-  const label = t('chainScreen.eventEnds', { name: name || initial.name });
   const submit = () =>
     onSubmit({ icon: icon || lastIconRef.current, name: name.trim() || initial.name, dur, type });
 
@@ -108,86 +107,7 @@ export function PillEditorSheet({
             {mode === 'create' ? t('pillEditor.createTitle') : t('pillEditor.editTitle')}
           </Text>
 
-          <View style={styles.quickRow}>
-            {QUICK_PICKS.map((e) => (
-              <Pressable
-                key={e}
-                onPress={() => {
-                  pickIcon(e);
-                  Keyboard.dismiss();
-                }}
-                style={[styles.emoji, e === icon && styles.emojiActive]}
-              >
-                <Text style={styles.emojiText}>{e}</Text>
-              </Pressable>
-            ))}
-          </View>
-
-          <View style={styles.fieldRow}>
-            <TextInput
-              style={[styles.iconInput, isIconFocused && styles.iconInputFocused]}
-              value={icon}
-              onChangeText={(txt) => pickIcon(lastGrapheme(txt))}
-              onFocus={() => {
-                setIsIconFocused(true);
-                // Blank the field so it clearly invites a new emoji; blur or
-                // submit restores lastIconRef if the user types nothing.
-                setIcon('');
-              }}
-              onBlur={() => {
-                setIsIconFocused(false);
-                if (!icon) setIcon(lastIconRef.current); // empty is never saved
-              }}
-              returnKeyType="done"
-            />
-            <TextInput
-              style={styles.nameInput}
-              value={name}
-              onChangeText={setName}
-              placeholder={t('pillEditor.namePlaceholder')}
-              placeholderTextColor={colors.disabledText}
-              returnKeyType="done"
-            />
-            <View style={styles.stepper}>
-              <Pressable onPress={() => setTotal(dur - STEP)} style={[styles.step, styles.minus]}>
-                <Text style={[styles.stepText, styles.minusText]}>−</Text>
-              </Pressable>
-              <View style={styles.durFields}>
-                <TextInput
-                  style={styles.durInput}
-                  value={hStr}
-                  onChangeText={(txt) => {
-                    const v = onlyDigits(txt).slice(0, 2);
-                    setHStr(v);
-                    recompute(v, mStr);
-                  }}
-                  onBlur={() => syncFields(dur)}
-                  keyboardType="number-pad"
-                  maxLength={2}
-                  selectTextOnFocus
-                />
-                <Text style={styles.durColon}>:</Text>
-                <TextInput
-                  style={styles.durInput}
-                  value={mStr}
-                  onChangeText={(txt) => {
-                    const v = onlyDigits(txt).slice(0, 2);
-                    setMStr(v);
-                    recompute(hStr, v);
-                  }}
-                  onBlur={() => syncFields(dur)}
-                  keyboardType="number-pad"
-                  maxLength={2}
-                  selectTextOnFocus
-                />
-              </View>
-              <Pressable onPress={() => setTotal(dur + STEP)} style={[styles.step, styles.plus]}>
-                <Text style={[styles.stepText, styles.plusText]}>＋</Text>
-              </Pressable>
-            </View>
-          </View>
-
-          <Text style={styles.sectionLabel}>{t('pillEditor.typeSection')}</Text>
+          <Text style={styles.sectionLabel}>{t('pillEditor.kindSection')}</Text>
           <View style={styles.segmented}>
             {PILL_TYPES.map((pt) => (
               <Pressable
@@ -202,20 +122,101 @@ export function PillEditorSheet({
             ))}
           </View>
 
+          {type === 'none' ? (
+            <>
+              <View style={styles.quickRow}>
+                {QUICK_PICKS.map((e) => (
+                  <Pressable
+                    key={e}
+                    onPress={() => {
+                      pickIcon(e);
+                      Keyboard.dismiss();
+                    }}
+                    style={[styles.emoji, e === icon && styles.emojiActive]}
+                  >
+                    <Text style={styles.emojiText}>{e}</Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              <View style={styles.fieldRow}>
+                <TextInput
+                  style={[styles.iconInput, isIconFocused && styles.iconInputFocused]}
+                  value={icon}
+                  onChangeText={(txt) => pickIcon(lastGrapheme(txt))}
+                  onFocus={() => {
+                    setIsIconFocused(true);
+                    // Blank the field so it clearly invites a new emoji; blur or
+                    // submit restores lastIconRef if the user types nothing.
+                    setIcon('');
+                  }}
+                  onBlur={() => {
+                    setIsIconFocused(false);
+                    if (!icon) setIcon(lastIconRef.current); // empty is never saved
+                  }}
+                  returnKeyType="done"
+                />
+                <TextInput
+                  style={styles.nameInput}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder={t('pillEditor.namePlaceholder')}
+                  placeholderTextColor={colors.disabledText}
+                  returnKeyType="done"
+                />
+                <View style={styles.stepper}>
+                  <Pressable onPress={() => setTotal(dur - STEP)} style={[styles.step, styles.minus]}>
+                    <Text style={[styles.stepText, styles.minusText]}>−</Text>
+                  </Pressable>
+                  <View style={styles.durFields}>
+                    <TextInput
+                      style={styles.durInput}
+                      value={hStr}
+                      onChangeText={(txt) => {
+                        const v = onlyDigits(txt).slice(0, 2);
+                        setHStr(v);
+                        recompute(v, mStr);
+                      }}
+                      onBlur={() => syncFields(dur)}
+                      keyboardType="number-pad"
+                      maxLength={2}
+                      selectTextOnFocus
+                    />
+                    <Text style={styles.durColon}>:</Text>
+                    <TextInput
+                      style={styles.durInput}
+                      value={mStr}
+                      onChangeText={(txt) => {
+                        const v = onlyDigits(txt).slice(0, 2);
+                        setMStr(v);
+                        recompute(hStr, v);
+                      }}
+                      onBlur={() => syncFields(dur)}
+                      keyboardType="number-pad"
+                      maxLength={2}
+                      selectTextOnFocus
+                    />
+                  </View>
+                  <Pressable onPress={() => setTotal(dur + STEP)} style={[styles.step, styles.plus]}>
+                    <Text style={[styles.stepText, styles.plusText]}>＋</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </>
+          ) : null}
+
           <View style={[styles.hint, type === 'alarm' && styles.hintAlarm]}>
             <Text style={styles.hintText}>
               {type === 'none'
-                ? t('pillEditor.hintNone')
+                ? t('pillEditor.hintEvent')
                 : type === 'push'
-                  ? t('pillEditor.hintPush', { label })
+                  ? t('pillEditor.hintPush')
                   : t('pillEditor.hintAlarm')}
             </Text>
           </View>
-          {mode === 'edit' && type === 'none' && initial.type !== 'none' ? (
+          {mode === 'edit' && initial.type === 'none' && type !== 'none' ? (
             <View style={styles.warn}>
-              <Text style={styles.warnText}>
-                ⚠️ {t('pillEditor.warnRowGone', { label: t('chainScreen.eventEnds', { name: initial.name }) })}
-              </Text>
+              <Text style={styles.warnText}>⚠️ {t('pillEditor.warnFieldsDropped')}</Text>
             </View>
           ) : null}
           {autosaveNote ? (
