@@ -45,7 +45,14 @@ code → eas build (cloud) → eas submit → store review → testing track →
    - Android: permissions `USE_EXACT_ALARM`, `USE_FULL_SCREEN_INTENT`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SYSTEM_EXEMPTED`; the config plugin sets `android:foregroundServiceType="systemExempted"`. (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` is deliberately ABSENT — Play restricts it and alarm apps don't qualify; the battery onboarding step opens the optimization-settings list instead. The plugin's regression test locks this shape.)
 5. **`eas.json` build profiles:** `development` (dev client, internal), `preview` (release build, internal/testers), `production` (store).
 6. **App records:** App Store Connect → New App (note numeric App ID); Play Console → Create app (locks package name).
-7. **First Android upload is manual once** (Google API limitation) — build the `.aab`, upload by hand in Play Console, accept "App signing by Google Play". Then set up a Google **service-account key** so `eas submit` automates future uploads. For iOS, create an **App Store Connect API key** for `eas submit`.
+7. **Android submit automation = a Google service-account key** (set up 2026-07-15, verified against current docs — the old Play Console "API access" linking page was REMOVED in 2024; guides mentioning it are stale):
+   1. Google Cloud Console → create/pick a project → **IAM & Admin → Service Accounts → Create Service Account** (name only, **no GCP IAM roles needed**) → done.
+   2. On the new account: **Manage keys → Add key → Create new key → JSON** → download; save as `credentials/play-service-account.json` (gitignored via `/credentials/`).
+   3. Still in Cloud Console: enable the **Google Play Android Developer API** (`console.cloud.google.com/apis/library/androidpublisher.googleapis.com`) in that same project.
+   4. Play Console → **Users and permissions → Invite new users** → the service account's email → **App permissions** tab → select MIRI → grant **"Release apps to testing tracks"** + **"Manage testing tracks and edit tester lists"** (+ "View app information" comes as the read-only base) → Invite. Production releases would additionally need "Release to production" — deliberately NOT granted.
+   5. Gotcha: a 403 "The caller does not have permission" right after setup usually means **propagation lag (up to 24–48 h)**, not misconfiguration. Wait and retry before debugging.
+   6. The app record itself + the FIRST release rollout must still happen in the Play Console UI (no API exists for app creation, and the first release needs Google's first review). But the first `.aab` **upload** can go through `eas submit` with `releaseStatus: "draft"` — a never-published app only accepts draft releases via API ("Only releases with status draft may be created on draft app" otherwise). After the app is first published, flip `releaseStatus` to `"completed"` (or delete the line) in `eas.json`.
+   For iOS, create an **App Store Connect API key** for `eas submit` (done — `credentials/AuthKey.p8`).
 8. **Privacy/data forms** (required even with zero data): Apple App Privacy = "Data Not Collected"; Google Data Safety = "no data collected/shared"; plus age/content rating. **Privacy policy: DONE (2026-07-14)** — live at <https://2umean.github.io/miri-alarm/privacy.html> (`gh-pages` branch) and linked from inside the app (ChainScreen footer; both stores require the in-app link, not just the console URL field).
 
 ## Every-release flow
@@ -56,6 +63,28 @@ code → eas build (cloud) → eas submit → store review → testing track →
 4. `eas submit --platform ios` / `--platform android`
 5. **Test on real devices** (TestFlight / Internal track) — alarms behave differently than the simulator.
 6. **Submit for review → release.** Apple ~1 day; Google hours–days.
+
+## Android → Google Play recipe (local build, as practiced)
+
+Mirrors the iOS TestFlight flow. Local builds don't consume EAS build quota; `eas submit`
+is a separate free hosted service (the `.aab` is uploaded to EAS and submitted from their servers).
+
+```sh
+eas build -p android --profile production --local --non-interactive   # → build-<ts>.aab in repo root
+eas submit -p android --profile production --path build-*.aab --non-interactive
+```
+
+- Credentials: `submit.production.android` in `eas.json` points at `credentials/play-service-account.json`
+  (local-only, gitignored). versionCode auto-increments remotely (`appVersionSource: remote` + `autoIncrement`).
+- **Tracks** (`track` in `eas.json`): `internal` = Internal testing (≤100 testers, live in minutes,
+  no store listing/review needed; new apps show a temporary listing for up to 48 h; testers join via
+  the opt-in link `play.google.com/apps/testing/com.umean.miri`). `alpha` = the default Closed testing
+  track — needs the FULL console setup (store listing, content rating, data safety…) + review, and is
+  the ONLY track that counts toward the personal-account 12-testers×14-days production requirement.
+  Internal-track engagement does NOT count.
+- **Until first publish:** keep `releaseStatus: "draft"` — drafts land in the Console, where you finish
+  the rollout by hand. Signing: first upload auto-enrolls Play App Signing; the EAS keystore becomes the
+  upload key (nothing to configure, but back the keystore up).
 
 ## ⚠️ MIRI-specific store traps (tie to the alarm permissions)
 
