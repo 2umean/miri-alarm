@@ -1,6 +1,6 @@
 {
   "name": "miri",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "main": "index.ts",
   "dependencies": {
     "@expo-google-fonts/nunito": "^0.4.2",
