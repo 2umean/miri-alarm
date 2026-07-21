@@ -141,9 +141,12 @@ class AlarmForegroundService : Service() {
       this, AlarmConstants.REQ_DISMISS, dismissIntent, piFlags()
     )
 
+    // Lead with the alarm's label (event emoji + name) — this notification is the
+    // ring surface when the phone is unlocked and in use (heads-up banner).
+    val label = firingId?.let { AlarmController.findAlarm(this, it)?.label }.orEmpty()
     return NotificationCompat.Builder(this, AlarmConstants.CHANNEL_ID)
-      .setContentTitle("MIRI Alarm")
-      .setContentText("Alarm — tap to dismiss")
+      .setContentTitle(label.ifBlank { getString(R.string.fallback_ring_title) })
+      .setContentText(getString(R.string.fallback_ring_text))
       .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
       .setCategory(NotificationCompat.CATEGORY_ALARM)
       .setPriority(NotificationCompat.PRIORITY_MAX)
@@ -153,7 +156,11 @@ class AlarmForegroundService : Service() {
       .setSilent(true)
       .setFullScreenIntent(fullScreenPi, true)
       .setContentIntent(fullScreenPi)
-      .addAction(android.R.drawable.ic_lock_idle_alarm, "Dismiss", dismissPi)
+      .addAction(
+        android.R.drawable.ic_lock_idle_alarm,
+        getString(R.string.ring_dismiss),
+        dismissPi
+      )
       .build()
   }
 

@@ -62,10 +62,11 @@ object AlarmNotifications {
     val dismissPi = PendingIntent.getBroadcast(
       context, AlarmConstants.REQ_DISMISS_FALLBACK, dismiss, piFlags()
     )
+    // Same title convention as the FGS ring notification: the alarm's label leads.
     val label = alarmId?.let { AlarmController.findAlarm(context, it)?.label }.orEmpty()
     val notification = baseBuilder(context)
-      .setContentTitle(context.getString(R.string.fallback_ring_title))
-      .setContentText(label.ifBlank { context.getString(R.string.fallback_ring_text) })
+      .setContentTitle(label.ifBlank { context.getString(R.string.fallback_ring_title) })
+      .setContentText(context.getString(R.string.fallback_ring_text))
       .setOngoing(true)
       .setFullScreenIntent(fullScreenPi, true)
       .setContentIntent(fullScreenPi)

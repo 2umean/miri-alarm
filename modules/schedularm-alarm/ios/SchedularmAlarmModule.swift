@@ -15,9 +15,9 @@ import SwiftUI
 /// synthesized). AlarmKit provides no built-in empty-metadata type.
 struct EmptyMetadata: AlarmMetadata {}
 
-/// One alarm from JS (NativeAlarm). `label`/`leaveAt` are accepted for contract
-/// parity with Android but unused on iOS (AlarmKit presents its own system UI;
-/// per-alarm label + leave-home chip are deferred).
+/// One alarm from JS (NativeAlarm). `label` titles the AlarmKit alert (event
+/// emoji + name, already localized by JS). `leaveAt` is accepted for contract
+/// parity with Android but unused on iOS (the leave-home chip is deferred).
 struct NativeAlarmRecord: Record {
   @Field var id: String = ""
   @Field var at: Double = 0
@@ -40,24 +40,29 @@ public class SchedularmAlarmModule: Module {
     AsyncFunction("scheduleAlarms") { (alarms: [NativeAlarmRecord]) in
       self.cancelPersisted()
 
-      // Presentation is identical for every alarm (label/leave unused on iOS), so
-      // build it once outside the loop.
-      let alert = AlarmPresentation.Alert(
-        title: LocalizedStringResource("ring_greeting", table: "SchedularmAlarm"),
-        stopButton: AlarmButton(
-          text: LocalizedStringResource("ring_dismiss", table: "SchedularmAlarm"),
-          textColor: .white,
-          systemImageName: "alarm.fill"
-        )
+      // Stop button and tint are shared; the alert itself is per-alarm because
+      // its title is that alarm's label.
+      let stopButton = AlarmButton(
+        text: LocalizedStringResource("ring_dismiss", table: "SchedularmAlarm"),
+        textColor: .white,
+        systemImageName: "alarm.fill"
       )
-      let attributes = AlarmAttributes<EmptyMetadata>(
-        presentation: AlarmPresentation(alert: alert),
-        metadata: nil,
-        tintColor: Color(red: 0x4F / 255.0, green: 0xA8 / 255.0, blue: 0xFF / 255.0) // sky500
-      )
+      let tintColor = Color(red: 0x4F / 255.0, green: 0xA8 / 255.0, blue: 0xFF / 255.0) // sky500
 
       var scheduled: [String] = []
       for a in alarms {
+        // Interpolating keeps the runtime label out of localization-key/format-
+        // string parsing — text and emoji pass through verbatim.
+        let title = a.label.isEmpty
+          ? LocalizedStringResource("ring_alarm", table: "SchedularmAlarm")
+          : LocalizedStringResource("\(a.label)")
+        let attributes = AlarmAttributes<EmptyMetadata>(
+          presentation: AlarmPresentation(
+            alert: AlarmPresentation.Alert(title: title, stopButton: stopButton)
+          ),
+          metadata: nil,
+          tintColor: tintColor
+        )
         let id = UUID()
         // Persist the id BEFORE scheduling: if schedule(id:) throws mid-loop, the
         // already-scheduled alarms (and this one) stay recorded, so a later

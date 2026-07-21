@@ -12,7 +12,10 @@ export type NativeAlarm = {
   id: string;
   /** Absolute instant to ring, epoch ms. */
   at: number;
-  /** Shown on the ring screen to say which alarm fired (the pill name). */
+  /**
+   * Ring title on both platforms — the event's emoji + derived name, already
+   * localized (Android ring screen/notifications, iOS AlarmKit alert).
+   */
   label: string;
   /** Departure instant for the ring's countdown chip, epoch ms (0 = unknown). Android only. */
   leaveAt: number;
