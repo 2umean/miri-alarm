@@ -27,7 +27,9 @@ type Props = {
   /** Shown in the centre slot instead of items[index] (e.g. a typed ':47'). */
   overrideLabel?: string | null;
   onChange: (index: number) => void;
-  /** Commit of the centre TextInput (raw digits). Parent parses/clamps. */
+  /** Largest typeable value (23 for hours, 59 for minutes) — typed digits clamp to it. */
+  max: number;
+  /** Centre-TextInput commit (clamped digits), fired on EVERY keystroke. Parent parses. */
   onSubmitText: (text: string) => void;
 };
 
@@ -39,10 +41,12 @@ type Props = {
  * stolen by the scroll as usual; a sibling overlay would dead-zone it). An
  * off-grid override is display-only until the next scroll snaps back.
  */
-export function WheelPicker({ items, index, overrideLabel, onChange, onSubmitText }: Props) {
+export function WheelPicker({ items, index, overrideLabel, onChange, max, onSubmitText }: Props) {
   const scrollRef = useRef<ScrollView>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState('');
+  // The value displayed when editing began — an emptied field reverts to it.
+  const preEdit = useRef('');
   // Distinguish user scrolls from our own scrollTo (which must not re-fire onChange).
   const isProgrammatic = useRef(false);
 
@@ -62,13 +66,33 @@ export function WheelPicker({ items, index, overrideLabel, onChange, onSubmitTex
     if (isProgrammatic.current) return;
     const raw = Math.round(e.nativeEvent.contentOffset.y / ITEM_H);
     const next = Math.min(items.length - 1, Math.max(0, raw));
+    // A scroll while the editor is open takes over: close it, so the field
+    // can't keep showing typed digits while the scrolled row is committed.
+    if (isEditing) {
+      setIsEditing(false);
+      setText('');
+    }
     if (next !== index || overrideLabel != null) onChange(next); // a scroll also clears an off-grid override
   };
 
-  const commitText = () => {
-    setIsEditing(false);
-    if (text) onSubmitText(text);
+  // Commit on every keystroke (PillEditorSheet recipe), NOT on blur/submit:
+  // the iOS number-pad has no return key, so onSubmitEditing can never fire
+  // there, and tapping the sheet's confirm button does not blur a focused
+  // TextInput — a blur-only commit silently dropped the typed value. So that
+  // the committed value always matches what is on screen, an over-max entry
+  // clamps in the field itself (capped resync, same recipe) and an emptied
+  // field reverts to the pre-edit value instead of leaving a stale keystroke.
+  // Digits stay exactly as typed unless clamping is needed ('05' keeps its
+  // zero) — a Number round-trip would bail out of re-rendering on '0'→'00'
+  // and strand the native field out of sync with state.
+  const editText = (raw: string) => {
+    const digits = raw.replace(/[^0-9]/g, '').slice(0, 2);
+    const shown = Number(digits) > max ? String(max) : digits;
+    setText(shown);
+    onSubmitText(shown || preEdit.current);
   };
+
+  const stopEditing = () => setIsEditing(false);
 
   return (
     <View style={styles.column}>
@@ -92,6 +116,7 @@ export function WheelPicker({ items, index, overrideLabel, onChange, onSubmitTex
             style={styles.item}
             onPress={() => {
               if (i === index) {
+                preEdit.current = (overrideLabel ?? items[i]).replace(/[^0-9]/g, '');
                 setText('');
                 setIsEditing(true); // tap the centred number → type an exact value
               } else {
@@ -115,13 +140,13 @@ export function WheelPicker({ items, index, overrideLabel, onChange, onSubmitTex
           <TextInput
             style={styles.centerInput}
             value={text}
-            onChangeText={(v) => setText(v.replace(/[^0-9]/g, '').slice(0, 2))}
+            onChangeText={editText}
             keyboardType="number-pad"
             maxLength={2}
             autoFocus
             selectTextOnFocus
-            onBlur={commitText}
-            onSubmitEditing={commitText}
+            onBlur={stopEditing}
+            onSubmitEditing={stopEditing}
           />
         ) : (
           <View style={styles.centerSlot}>
