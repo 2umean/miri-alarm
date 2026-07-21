@@ -35,6 +35,8 @@ type Props = {
 };
 
 const MINUTE_STEP = 5;
+const MAX_HOUR = 23;
+const MAX_MINUTE = 59;
 const HOURS = Array.from({ length: 24 }, (_, h) => String(h));
 const MINUTES = Array.from({ length: 60 / MINUTE_STEP }, (_, i) => String(i * MINUTE_STEP).padStart(2, '0'));
 const pad2 = (n: number) => String(n).padStart(2, '0');
@@ -111,8 +113,8 @@ export function ArrivalPickerSheet({ visible, initialInstant, zone, onCancel, on
   const isOffGrid = minute % MINUTE_STEP !== 0;
   const minuteIndex = Math.min(MINUTES.length - 1, Math.floor(minute / MINUTE_STEP));
 
-  const submitHourText = (text: string) => setHour(Math.min(23, Math.max(0, Number(text))));
-  const submitMinuteText = (text: string) => setMinute(Math.min(59, Math.max(0, Number(text))));
+  const submitHourText = (text: string) => setHour(Math.min(MAX_HOUR, Math.max(0, Number(text))));
+  const submitMinuteText = (text: string) => setMinute(Math.min(MAX_MINUTE, Math.max(0, Number(text))));
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
@@ -150,11 +152,18 @@ export function ArrivalPickerSheet({ visible, initialInstant, zone, onCancel, on
 
           <Text style={styles.sectionLabel}>{t('arrivalPicker.timeSection')}</Text>
           <View style={styles.wheels}>
-            <WheelPicker items={HOURS} index={hour} onChange={setHour} onSubmitText={submitHourText} />
+            <WheelPicker
+              items={HOURS}
+              index={hour}
+              max={MAX_HOUR}
+              onChange={setHour}
+              onSubmitText={submitHourText}
+            />
             <Text style={styles.wheelColon}>:</Text>
             <WheelPicker
               items={MINUTES}
               index={minuteIndex}
+              max={MAX_MINUTE}
               overrideLabel={isOffGrid ? pad2(minute) : null}
               onChange={(i) => setMinute(i * MINUTE_STEP)}
               onSubmitText={submitMinuteText}
