@@ -9,9 +9,10 @@ import type { NativeAlarm } from '../../modules/schedularm-alarm';
  * timestamp immediately (mirrors the push path's past filter).
  *
  * The label is derived from position (a marker stores no name): the nearest
- * preceding event's "{name} ends", or `startLabel` for an orphan marker. This
- * derivation is what keeps NativeAlarm's contract — and the Kotlin/Swift ring
- * screens — untouched.
+ * preceding event's "{icon} {name} ends", or `startLabel` for an orphan marker.
+ * The event's emoji rides inside the label string so the native ring surfaces
+ * (AlarmKit alert title, Android ring screen + notifications) show it without
+ * a contract change.
  */
 export function planNativeAlarms(
   computed: ChainComputed,
@@ -29,7 +30,9 @@ export function planNativeAlarms(
     .filter(({ it }) => it.pill.type === 'alarm' && it.endAt > nowMs)
     .map(({ it, index }) => {
       const source = labelSourceFor(pills, index);
-      const label = source ? t('chainScreen.eventEnds', { name: source.name }) : startLabel;
+      const text = source ? t('chainScreen.eventEnds', { name: source.name }) : startLabel;
+      const icon = source?.icon.trim() ?? '';
+      const label = icon ? `${icon} ${text}` : text;
       return { id: it.pill.id, at: it.endAt, label, leaveAt };
     });
 }

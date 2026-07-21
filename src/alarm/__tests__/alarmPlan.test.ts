@@ -34,7 +34,7 @@ test('maps only alarm markers; label = "{preceding event} ends"; leaveAt = last 
   ]);
   const alarms = planNativeAlarms(c, NOW, START);
   expect(alarms).toEqual([
-    { id: 'wake', at: NOW + 1 * HOUR, label: 'Sleep ends', leaveAt: NOW + 2 * HOUR },
+    { id: 'wake', at: NOW + 1 * HOUR, label: '⬜ Sleep ends', leaveAt: NOW + 2 * HOUR },
   ]);
 });
 
@@ -50,12 +50,20 @@ test('DUPLICATE alarm markers produce two NativeAlarms at the same `at`', () => 
   expect(alarms).toHaveLength(2);
   expect(alarms[0].at).toBe(alarms[1].at);
   expect(alarms.map((a) => a.id)).toEqual(['a', 'b']);
-  expect(alarms.map((a) => a.label)).toEqual(['Sleep ends', 'Sleep ends']);
+  expect(alarms.map((a) => a.label)).toEqual(['⬜ Sleep ends', '⬜ Sleep ends']);
 });
 
 test('a marker between markers scans back past them for its label', () => {
   const c = computed(NOW + 2 * HOUR, [event('sleep', 1, 'Sleep'), marker('p', 'push'), marker('a', 'alarm')]);
-  expect(planNativeAlarms(c, NOW, START)[0].label).toBe('Sleep ends');
+  expect(planNativeAlarms(c, NOW, START)[0].label).toBe('⬜ Sleep ends');
+});
+
+test('label carries the source event emoji; a blank icon adds no prefix', () => {
+  const withEmoji: Pill = { id: 'sleep', type: 'none', icon: '🛏️', name: 'Sleep', dur: 1 };
+  const blankIcon: Pill = { id: 'work', type: 'none', icon: '  ', name: 'Work', dur: 1 };
+  const c = computed(NOW + 4 * HOUR, [withEmoji, marker('wake'), blankIcon, marker('door')]);
+  const labels = planNativeAlarms(c, NOW, START).map((a) => a.label);
+  expect(labels).toEqual(['🛏️ Sleep ends', 'Work ends']);
 });
 
 test('leaveAt skips a TRAILING marker — it stays on the last event leg, not the arrival', () => {

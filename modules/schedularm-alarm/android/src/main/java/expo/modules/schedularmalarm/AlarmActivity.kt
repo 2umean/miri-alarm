@@ -11,14 +11,15 @@ import android.view.Gravity
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.LinearLayout
+import android.widget.TextClock
 import android.widget.TextView
-import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 /**
- * Full-screen, must-dismiss alarm UI shown over the lock screen ("Soft Sky":
- * night-to-sunrise gradient — spec 2026-06-12-soft-sky-visual-design §2.4).
+ * Full-screen, must-dismiss alarm UI shown over the lock screen. Styled like the
+ * platform's default alarm screen — dark neutral background, the alarm's label
+ * (event emoji + name) as the title, a big live clock — so it reads correctly at
+ * any hour, not just morning (spec 2026-07-21-alarm-screen-event-name-design).
  * Layout is built in code so the module needs no bundled drawable/layout assets;
  * strings come from res/values{,-ko}/strings.xml so the OS localizes them.
  */
@@ -51,66 +52,44 @@ class AlarmActivity : Activity() {
 
   private fun buildView(): LinearLayout {
     val match = ViewGroup.LayoutParams.MATCH_PARENT
-    val clockFmt = SimpleDateFormat("HH:mm", Locale.getDefault())
+    // Honors the device 12/24-hour preference, unlike a fixed HH:mm pattern.
+    val timeFmt = android.text.format.DateFormat.getTimeFormat(this)
 
     val root = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
       gravity = Gravity.CENTER_HORIZONTAL
       layoutParams = ViewGroup.LayoutParams(match, match)
-      setPadding(48, 160, 48, 64)
-      background = GradientDrawable(
-        GradientDrawable.Orientation.TL_BR,
-        intArrayOf(0xFF2C7BD4.toInt(), 0xFF4FA8FF.toInt(), 0xFFFFB84C.toInt())
-      )
+      setPadding(48, 64, 48, 64)
+      setBackgroundColor(Color.parseColor("#0E1116"))
     }
 
-    val sun = TextView(this).apply {
-      text = "☀️"
-      textSize = 34f
-      gravity = Gravity.CENTER
-    }
-    val greeting = TextView(this).apply {
-      text = getString(R.string.ring_greeting)
+    // Which alarm fired — the pill label (event emoji + name) is the title, the
+    // way the platform's default alarm screen leads with the alarm's own label.
+    val entry = firingId?.let { AlarmController.findAlarm(applicationContext, it) }
+    val label = entry?.label.orEmpty()
+    val title = TextView(this).apply {
+      text = label.ifBlank { getString(R.string.fallback_ring_title) }
       textSize = 22f
       setTextColor(Color.WHITE)
       typeface = Typeface.DEFAULT_BOLD
       gravity = Gravity.CENTER
-      setPadding(0, 12, 0, 0)
     }
-    val subtitle = TextView(this).apply {
-      text = getString(R.string.ring_subtitle)
-      textSize = 14f
-      setTextColor(Color.parseColor("#EAF4FF"))
-      gravity = Gravity.CENTER
-      setPadding(0, 4, 0, 0)
-    }
-
-    // Which alarm fired (the pill label) — distinguishes one alarm from another.
-    val entry = firingId?.let { AlarmController.findAlarm(applicationContext, it) }
-    val label = entry?.label.orEmpty()
-    val clock = TextView(this).apply {
-      text = clockFmt.format(Date())
-      textSize = 64f
+    // Live clock: TextClock ticks by itself and follows the 12/24-hour setting.
+    // Bare time (no AM/PM) like the lock-screen clock.
+    val clock = TextClock(this).apply {
+      format12Hour = "h:mm"
+      format24Hour = "HH:mm"
+      textSize = 76f
       setTextColor(Color.WHITE)
       typeface = Typeface.DEFAULT_BOLD
       gravity = Gravity.CENTER
-      setPadding(0, 24, 0, 0)
+      setPadding(0, 16, 0, 0)
     }
 
-    root.addView(sun)
-    root.addView(greeting)
-    root.addView(subtitle)
-    if (label.isNotBlank()) {
-      val labelView = TextView(this).apply {
-        text = label
-        textSize = 15f
-        setTextColor(Color.WHITE)
-        typeface = Typeface.DEFAULT_BOLD
-        gravity = Gravity.CENTER
-        setPadding(0, 10, 0, 0)
-      }
-      root.addView(labelView)
-    }
+    // Spacers above and below keep the title/clock block vertically centered,
+    // with the dismiss pill pinned to the bottom.
+    root.addView(android.view.View(this), LinearLayout.LayoutParams(0, 0, 1f))
+    root.addView(title)
     root.addView(clock)
 
     // Leave-home countdown chip — only when a future leave instant is known.
@@ -119,7 +98,7 @@ class AlarmActivity : Activity() {
     if (leaveAt > now) {
       val minutesLeft = ((leaveAt - now) / 60000L).toInt()
       val chip = TextView(this).apply {
-        text = getString(R.string.ring_leave_chip, clockFmt.format(Date(leaveAt)), minutesLeft)
+        text = getString(R.string.ring_leave_chip, timeFmt.format(Date(leaveAt)), minutesLeft)
         textSize = 13f
         setTextColor(Color.WHITE)
         typeface = Typeface.DEFAULT_BOLD
@@ -136,9 +115,7 @@ class AlarmActivity : Activity() {
       root.addView(chip, chipParams)
     }
 
-    // Spacer pushes the dismiss pill to the bottom.
-    val spacer = android.view.View(this)
-    root.addView(spacer, LinearLayout.LayoutParams(0, 0, 1f))
+    root.addView(android.view.View(this), LinearLayout.LayoutParams(0, 0, 1f))
 
     val dismiss = TextView(this).apply {
       text = getString(R.string.ring_dismiss)
