@@ -134,10 +134,10 @@ const ICON_W = 22;
 const styles = StyleSheet.create({
   list: { gap: spacing.s - 1 },
   startRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.s, marginLeft: spacing.xs, marginBottom: 2 },
-  startDot: { width: 10, height: 10, borderRadius: 5, borderWidth: 1.5, borderColor: colors.faint }, // hollow dot (design Chain component)
-  startLabel: { flexShrink: 1, color: colors.faint, fontSize: 11, fontFamily: fonts.bold },
-  startDate: { color: colors.faint, fontSize: 11, fontFamily: fonts.clock, marginLeft: 'auto' as const },
-  startTime: { color: colors.faint, fontSize: 12, fontFamily: fonts.clock },
+  startDot: { width: 10, height: 10, borderRadius: 5, borderWidth: 1.5, borderColor: colors.ink2 }, // hollow dot (design Chain component)
+  startLabel: { flexShrink: 1, color: colors.ink, fontSize: 13.5, fontFamily: fonts.bold },
+  startDate: { color: colors.ink2, fontSize: 11, fontFamily: fonts.clock, marginLeft: 'auto' as const },
+  startTime: { color: colors.ink, fontSize: 16, fontFamily: fonts.clock },
 
   card: {
     flexDirection: 'row',
