@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AlarmService } from '../../alarm/AlarmService';
 import { AlarmHealth } from '../../alarm/alarmHealth';
 import { t } from '../../i18n';
 import { getConsent, setConsent, track } from '../../telemetry';
+import { PRIVACY_POLICY_URL } from '../legal';
 import { colors, fonts, radii, shadows, spacing } from '../theme';
 
 type Props = { onDone: () => void };
@@ -153,6 +154,13 @@ export function OnboardingScreen({ onDone }: Props) {
             {shareTelemetry ? `✓ ${t('consent.toggleOn')}` : `○ ${t('consent.toggleOff')}`}
           </Text>
         </Pressable>
+        <Pressable
+          accessibilityRole="link"
+          onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}
+          style={styles.consentPolicyLink}
+        >
+          <Text style={styles.consentPolicyLinkText}>{t('legal.privacyPolicy')} ↗</Text>
+        </Pressable>
       </View>
 
       <Pressable
@@ -253,4 +261,6 @@ const styles = StyleSheet.create({
   consentToggleOn: { backgroundColor: colors.mintBg, borderColor: colors.green },
   consentToggleText: { color: colors.ink2, fontSize: 12, fontFamily: fonts.extra },
   consentToggleTextOn: { color: colors.green },
+  consentPolicyLink: { alignSelf: 'flex-start', paddingVertical: spacing.s, marginBottom: spacing.s },
+  consentPolicyLinkText: { color: colors.sky700, fontSize: 12, fontFamily: fonts.bold },
 });

@@ -57,6 +57,15 @@ test('backdrop press cancels without saving', () => {
   expect(props.onSave).not.toHaveBeenCalled();
 });
 
+test('privacy-policy link is present and does not save or cancel', () => {
+  const { renderer, props } = mount();
+  const link = renderer.root.findAllByType(Pressable).find((p) => p.props.accessibilityRole === 'link');
+  expect(link).toBeDefined();
+  act(() => link!.props.onPress());
+  expect(props.onSave).not.toHaveBeenCalled();
+  expect(props.onCancel).not.toHaveBeenCalled();
+});
+
 test('shows on/off labels for the toggle state', () => {
   const on = mount({ initialGranted: true });
   expect(texts(on.renderer).join(' ')).toContain('Sharing on');

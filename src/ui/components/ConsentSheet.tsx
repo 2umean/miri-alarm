@@ -1,9 +1,10 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { t } from '../../i18n';
+import { PRIVACY_POLICY_URL } from '../legal';
 import { colors, fonts, radii, shadows, spacing } from '../theme';
 
 type Props = {
@@ -32,6 +33,13 @@ export function ConsentSheet({ visible, initialGranted, onCancel, onSave }: Prop
           <View style={styles.handle} />
           <Text style={styles.title}>{t('consent.title')}</Text>
           <Text style={styles.body}>{t('consent.body')}</Text>
+          <Pressable
+            accessibilityRole="link"
+            onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}
+            style={styles.policyLink}
+          >
+            <Text style={styles.policyLinkText}>{t('legal.privacyPolicy')} ↗</Text>
+          </Pressable>
           <Pressable
             accessibilityRole="switch"
             accessibilityState={{ checked: granted }}
@@ -71,6 +79,8 @@ const styles = StyleSheet.create({
   handle: { width: 40, height: 5, borderRadius: 3, backgroundColor: colors.line, alignSelf: 'center', marginBottom: spacing.m + 2 },
   title: { color: colors.ink, fontSize: 18, fontFamily: fonts.extra, marginBottom: spacing.s },
   body: { color: colors.ink2, fontSize: 12, fontFamily: fonts.semi, lineHeight: 18, marginBottom: spacing.l },
+  policyLink: { alignSelf: 'flex-start', paddingVertical: spacing.s, marginBottom: spacing.s },
+  policyLinkText: { color: colors.sky700, fontSize: 12, fontFamily: fonts.bold },
   toggle: {
     alignSelf: 'flex-start',
     backgroundColor: colors.bubble,

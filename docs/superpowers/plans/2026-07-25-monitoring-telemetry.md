@@ -38,7 +38,7 @@
 | Create `docs/store-privacy-answers.md` | Exact store-form answers |
 | Modify `privacy.html` (branch `gh-pages`) | Analytics/crash section, ko+en |
 
-**Two deliberate deviations from the spec table** (record in the final commit message): `alarm_health` drops `manufacturer`/`osVersion` props — PostHog auto-attaches `$device_manufacturer`/`$os_version` via expo-device, so sending them again is duplication; `chain_armed` gains `pillCount` and is tracked from ChainScreen (not the hook) because `usedPreset` is only known there.
+**Four deliberate deviations from the spec table** (record in the final commit message): (1) `alarm_health` drops `manufacturer`/`osVersion` props — PostHog auto-attaches `$device_manufacturer`/`$os_version` via expo-device, so sending them again is duplication; (2) `chain_armed` gains `pillCount` and is tracked from ChainScreen (not the hook) because `usedPreset` is only known there; (3) `chain_armed` also drops `hasArrivalDate` — degenerate at the only call site (arm button renders only when an arrival exists); (4) installed `@sentry/react-native` is `~7.11.0` (the `npx expo install` SDK-56-compatible resolution), not the ~8.20 the vendor-facts section assumed — plugin/metro/API surface verified equivalent on 7.11.
 
 ---
 

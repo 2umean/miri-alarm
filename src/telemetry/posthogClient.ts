@@ -17,6 +17,7 @@ export function startPosthog(): void {
       captureAppLifecycleEvents: false, // default TRUE since 4.39 — explicit off
       enableSessionReplay: false, // default, restated to document intent
       preloadFeatureFlags: false, // we use no flags; skip the startup fetch
+      disableGeoip: true, // no IP-derived location: not disclosed in policy/store forms, not wanted
     });
   }
   void client.optIn();

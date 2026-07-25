@@ -28,12 +28,8 @@ import { PillDraft, PillEditorSheet } from '../components/PillEditorSheet';
 import { PresetListSheet } from '../components/PresetListSheet';
 import { ReorderView } from '../components/ReorderView';
 import { chainStartLabel, formatAlarmDate } from '../format';
+import { PRIVACY_POLICY_URL } from '../legal';
 import { colors, fonts, radii, shadows, spacing } from '../theme';
-
-// Also registered as the privacy-policy URL in both store consoles — the
-// stores additionally require it to be reachable from INSIDE the app
-// (Apple 5.1.1(i), Play User Data policy).
-const PRIVACY_POLICY_URL = 'https://2umean.github.io/miri-alarm/privacy.html';
 
 const issueText = (i: ChainValidationIssue): string => t(`chainIssue.${i.kind}`);
 
