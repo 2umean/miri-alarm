@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -53,11 +53,15 @@ export function OnboardingScreen({ onDone }: Props) {
   const refresh = () => setHealth(AlarmService.getHealth());
   const insets = useSafeAreaInsets();
   const [shareTelemetry, setShareTelemetry] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const hasUserTouched = useRef(false);
 
   // Prefill for RE-onboarding (existing user pushed back here by a lost
   // permission): reflect their earlier choice instead of resetting to off.
   useEffect(() => {
-    void getConsent().then((c) => setShareTelemetry(c === 'granted'));
+    void getConsent().then((c) => {
+      if (!hasUserTouched.current) setShareTelemetry(c === 'granted');
+    });
   }, []);
 
   const has = (r: AlarmHealth['reasons'][number]) => !health.reasons.includes(r);
@@ -139,7 +143,10 @@ export function OnboardingScreen({ onDone }: Props) {
         <Pressable
           accessibilityRole="switch"
           accessibilityState={{ checked: shareTelemetry }}
-          onPress={() => setShareTelemetry((v) => !v)}
+          onPress={() => {
+            hasUserTouched.current = true;
+            setShareTelemetry((v) => !v);
+          }}
           style={[styles.consentToggle, shareTelemetry && styles.consentToggleOn]}
         >
           <Text style={[styles.consentToggleText, shareTelemetry && styles.consentToggleTextOn]}>
@@ -150,17 +157,22 @@ export function OnboardingScreen({ onDone }: Props) {
 
       <Pressable
         onPress={async () => {
+          if (isSubmitting) return;
+          setIsSubmitting(true);
           await setConsent(shareTelemetry);
           track('onboarding_completed', { consentGranted: shareTelemetry });
           onDone();
         }}
-        disabled={!health.isArmReliable}
-        style={[styles.continue, health.isArmReliable ? styles.continueOn : styles.continueOff]}
+        disabled={!health.isArmReliable || isSubmitting}
+        style={[
+          styles.continue,
+          health.isArmReliable && !isSubmitting ? styles.continueOn : styles.continueOff,
+        ]}
       >
         <Text
           style={[
             styles.continueText,
-            health.isArmReliable ? styles.continueTextOn : styles.continueTextOff,
+            health.isArmReliable && !isSubmitting ? styles.continueTextOn : styles.continueTextOff,
           ]}
         >
           {health.isArmReliable ? t('onboarding.continueReady') : t('onboarding.continueBlocked')}

@@ -58,6 +58,9 @@ test('backdrop press cancels without saving', () => {
 });
 
 test('shows on/off labels for the toggle state', () => {
-  const { renderer } = mount({ initialGranted: true });
-  expect(texts(renderer).join(' ')).toContain('Sharing on');
+  const on = mount({ initialGranted: true });
+  expect(texts(on.renderer).join(' ')).toContain('Sharing on');
+
+  const off = mount({ initialGranted: false });
+  expect(texts(off.renderer).join(' ')).toContain('Sharing off');
 });
