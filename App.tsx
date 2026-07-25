@@ -9,6 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AlarmService } from './src/alarm/AlarmService';
 import { isOnboarded, markOnboarded } from './src/storage/onboarding';
+import { initTelemetry } from './src/telemetry';
 import { colors } from './src/ui/theme';
 import { ChainScreen } from './src/ui/screens/ChainScreen';
 import { OnboardingScreen } from './src/ui/screens/OnboardingScreen';
@@ -27,6 +28,10 @@ export default function App() {
     'Nunito-ExtraBold': Nunito_800ExtraBold,
   });
   const fontsReady = fontsLoaded || !!fontsError; // degrade to system fonts rather than hang on splash
+
+  useEffect(() => {
+    void initTelemetry(); // idempotent; starts SDKs iff consent was granted earlier
+  }, []);
 
   useEffect(() => {
     isOnboarded().then((done) => {
