@@ -33,6 +33,15 @@ export const en = {
   } satisfies Record<HealthReason, string>,
   editor: { cancel: 'Cancel', set: 'Set' },
   legal: { privacyPolicy: 'Privacy Policy' },
+  consent: {
+    onboardingTitle: 'Help improve MIRI?',
+    title: 'Anonymous usage & crash reports',
+    body: 'Share anonymous usage statistics and crash reports to help make MIRI’s alarms more reliable. Your schedule contents — names, emoji, times — never leave your device. Data is processed in the EU (Sentry, PostHog). You can change this anytime under Data Settings.',
+    toggleOn: 'Sharing on',
+    toggleOff: 'Sharing off',
+    save: 'Save',
+    dataSettings: 'Data Settings',
+  },
   onboarding: {
     title: 'Let’s make sure your alarm can wake you',
     subtitle: 'MIRI is a safety alarm. These settings stop your phone from silently killing it.',
