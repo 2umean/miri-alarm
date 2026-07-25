@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { AlarmService } from '../alarm/AlarmService';
 import { AlarmHealth } from '../alarm/alarmHealth';
@@ -27,7 +27,8 @@ export function useArmingChain() {
 
   useEffect(() => {
     let cancelled = false;
-    refreshHealth();
+    const snapshot = AlarmService.getHealth();
+    setHealth(snapshot);
     // BEFORE the re-arm below: re-arming replaces the native store, which would
     // erase the "this alarm never rang" evidence.
     const misses = AlarmService.consumeMissed();
@@ -35,12 +36,11 @@ export function useArmingChain() {
       setMissed(misses[misses.length - 1]);
       track('alarm_missed', {
         count: misses.length,
-        maxMinutesLate: Math.round(
+        maxMinutesSinceScheduled: Math.round(
           misses.reduce((max, m) => Math.max(max, Date.now() - m.at), 0) / 60000,
         ),
       });
     }
-    const snapshot = AlarmService.getHealth();
     track('alarm_health', {
       reasons: snapshot.reasons.join('+') || 'none',
       isArmReliable: snapshot.isArmReliable,
@@ -72,10 +72,16 @@ export function useArmingChain() {
     return () => {
       cancelled = true;
     };
-  }, [refreshHealth]);
+  }, []);
+
+  const armInFlight = useRef(false);
 
   const arm = useCallback(
     async (chain: Chain, startLabel: string): Promise<boolean> => {
+      // Concurrent arms would interleave native scheduleAlarms (iOS persists its
+      // scheduled-id list per call — an overlap orphans live AlarmKit alarms).
+      if (armInFlight.current) return false;
+      armInFlight.current = true;
       try {
         // Arm native FIRST and await it — only persist + mark armed if the OS
         // actually scheduled the alarms (else a silent oversleep would look armed).
@@ -88,6 +94,8 @@ export function useArmingChain() {
         console.warn('[useArmingChain] arm failed; leaving un-armed:', e);
         refreshHealth();
         return false;
+      } finally {
+        armInFlight.current = false;
       }
     },
     [refreshHealth],

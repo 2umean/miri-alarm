@@ -10,9 +10,9 @@ import {
   DEFAULT_PILL_DRAFT,
   draftFromPill,
   labelSourceFor,
-  pillDur,
   resolveArrivalInstant,
   toLocalClock,
+  totalSpanMinutes,
   upcomingAlarmItem,
 } from '../../domain';
 import { useArmingChain } from '../../hooks/useArmingChain';
@@ -303,7 +303,7 @@ export function ChainScreen() {
                     track('chain_armed', {
                       alarmCount: chain.pills.filter((p) => p.type === 'alarm').length,
                       pillCount: chain.pills.length,
-                      chainDurationMin: chain.pills.reduce((sum, p) => sum + pillDur(p), 0),
+                      chainDurationMin: totalSpanMinutes(chain),
                       usedPreset: activePreset != null,
                     });
                   }

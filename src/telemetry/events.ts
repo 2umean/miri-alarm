@@ -6,7 +6,7 @@
  */
 export type TelemetryEvents = {
   chain_armed: { alarmCount: number; pillCount: number; chainDurationMin: number; usedPreset: boolean };
-  alarm_missed: { count: number; maxMinutesLate: number };
+  alarm_missed: { count: number; maxMinutesSinceScheduled: number };
   alarm_health: { reasons: string; isArmReliable: boolean; isAggressiveOEM: boolean };
   preset_applied: { presetCount: number };
   preset_saved: { presetCount: number };
