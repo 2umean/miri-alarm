@@ -1,4 +1,4 @@
-import PostHog from 'posthog-react-native';
+import PostHog, { PostHogPersistedProperty } from 'posthog-react-native';
 
 import type { TelemetryProps } from './events';
 
@@ -22,9 +22,13 @@ export function startPosthog(): void {
   void client.optIn();
 }
 
-/** PostHog drops (not queues) events while opted out — verified against @posthog/core. */
+/** Revocation: opt out AND drop the persisted backlog — the SDK's flush timer
+ * and AppState-foreground flush still fire, but no-op on an empty queue, so
+ * nothing can leave the device after this returns. */
 export function stopPosthog(): void {
-  if (client) void client.optOut();
+  if (!client) return;
+  void client.optOut();
+  client.setPersistedProperty(PostHogPersistedProperty.Queue, null);
 }
 
 export function capturePosthog(event: string, props: TelemetryProps): void {

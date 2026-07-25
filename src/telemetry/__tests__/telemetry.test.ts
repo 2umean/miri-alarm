@@ -87,3 +87,20 @@ test('getConsent reflects stored state', async () => {
   const { facade } = freshFacade();
   expect(await facade.getConsent()).toBe('denied');
 });
+
+test('setConsent(false) from unset persists denied, and a subsequent track is dropped', async () => {
+  const { facade, posthog } = freshFacade();
+  await facade.setConsent(false);
+  expect(await AsyncStorage.getItem(KEY)).toBe('denied');
+  facade.track('preset_saved', { presetCount: 1 });
+  await settle();
+  expect(posthog.capturePosthog).not.toHaveBeenCalled();
+});
+
+test('two sequential initTelemetry calls with stored granted start Sentry exactly once', async () => {
+  await AsyncStorage.setItem(KEY, 'granted');
+  const { facade, sentry } = freshFacade();
+  await facade.initTelemetry();
+  await facade.initTelemetry();
+  expect(sentry.startSentry).toHaveBeenCalledTimes(1);
+});

@@ -8,6 +8,25 @@ export type { ConsentState } from './consent';
 let consent: ConsentState = 'unset';
 let ready: Promise<void> | null = null;
 
+// Each vendor guarded independently — a throwing constructor/shutdown in one
+// SDK must never skip or crash out of the other.
+const startAll = () => {
+  try {
+    startSentry();
+  } catch {}
+  try {
+    startPosthog();
+  } catch {}
+};
+const stopAll = () => {
+  try {
+    stopPosthog();
+  } catch {}
+  try {
+    stopSentry();
+  } catch {}
+};
+
 /**
  * Idempotent; App.tsx calls it once on mount, and every other entry point
  * awaits it internally — so callers never race the stored-consent read.
@@ -19,8 +38,7 @@ export function initTelemetry(): Promise<void> {
       .then((stored) => {
         consent = stored;
         if (stored === 'granted') {
-          startSentry();
-          startPosthog();
+          startAll();
         }
       })
       .catch(() => {}); // telemetry must never break startup
@@ -41,16 +59,15 @@ export async function setConsent(granted: boolean): Promise<void> {
   const previous = consent;
   consent = next;
   await saveConsent(next);
+  if (consent !== next) return; // a newer setConsent call superseded this one mid-await
   if (granted) {
-    startSentry();
-    startPosthog();
+    startAll();
     // Only a CHANGE after an initial choice is an event; the initial choice is
     // carried by onboarding_completed. Revocation sends nothing — no byte may
     // leave the device after withdrawal.
     if (previous === 'denied') track('consent_changed', { granted: true });
   } else {
-    stopPosthog();
-    stopSentry();
+    stopAll();
   }
 }
 

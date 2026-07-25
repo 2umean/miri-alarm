@@ -4,23 +4,31 @@ const SENTRY_DSN =
   'https://a08534baf94f16a2c9c825c52301e319@o4511783754727424.ingest.de.sentry.io/4511783770521680'; // EU ingest
 
 let isStarted = false;
+let pendingClose: Promise<void> = Promise.resolve();
 
-/** Idempotent. Called only after consent — Sentry.init installs the global
- * crash handlers, so before this runs nothing is captured or sent. */
+/** Idempotent. Init is deferred past any in-flight close() so a quick
+ * revoke→re-grant cannot shut down the freshly re-inited client. */
 export function startSentry(): void {
   if (isStarted) return;
   isStarted = true;
-  Sentry.init({
-    dsn: SENTRY_DSN,
-    // Crashes + unhandled JS errors only: tracesSampleRate omitted (no tracing),
-    // replay options omitted (no replay), sendDefaultPii omitted (defaults false).
-    enableAutoSessionTracking: false, // no release-health session pings
-  });
+  void pendingClose
+    .then(() => {
+      if (!isStarted) return; // revoked again while the old close was in flight
+      Sentry.init({
+        dsn: SENTRY_DSN,
+        // Crashes + unhandled JS errors only: tracesSampleRate omitted (no tracing),
+        // replay options omitted (no replay), sendDefaultPii omitted (defaults false).
+        enableAutoSessionTracking: false, // no release-health session pings
+      });
+    })
+    .catch(() => {});
 }
 
-/** Stops capture AND transport (revocation). Re-grant calls startSentry again. */
+/** Flushes buffered events then stops transport (Sentry.close semantics —
+ * the small pre-revocation buffer may drain during close; accepted trade-off,
+ * nothing NEW is captured from this point). */
 export function stopSentry(): void {
   if (!isStarted) return;
   isStarted = false;
-  void Sentry.close(); // no args; Promise<void> — fire-and-forget by design
+  pendingClose = Sentry.close().then(() => {}).catch(() => {});
 }

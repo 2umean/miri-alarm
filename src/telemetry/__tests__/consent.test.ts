@@ -25,3 +25,12 @@ test('garbage value degrades to unset', async () => {
   await AsyncStorage.setItem('schedularm.telemetryConsent.v1', 'maybe');
   expect(await loadConsent()).toBe('unset');
 });
+
+test('AsyncStorage.getItem rejecting degrades to unset', async () => {
+  const spy = jest.spyOn(AsyncStorage, 'getItem').mockRejectedValueOnce(new Error('disk'));
+  try {
+    expect(await loadConsent()).toBe('unset');
+  } finally {
+    spy.mockRestore();
+  }
+});
