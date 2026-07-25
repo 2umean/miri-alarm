@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AlarmService } from '../../alarm/AlarmService';
 import { AlarmHealth } from '../../alarm/alarmHealth';
 import { t } from '../../i18n';
+import { getConsent, setConsent, track } from '../../telemetry';
 import { colors, fonts, radii, shadows, spacing } from '../theme';
 
 type Props = { onDone: () => void };
@@ -51,6 +52,13 @@ export function OnboardingScreen({ onDone }: Props) {
   const [health, setHealth] = useState<AlarmHealth>(() => AlarmService.getHealth());
   const refresh = () => setHealth(AlarmService.getHealth());
   const insets = useSafeAreaInsets();
+  const [shareTelemetry, setShareTelemetry] = useState(false);
+
+  // Prefill for RE-onboarding (existing user pushed back here by a lost
+  // permission): reflect their earlier choice instead of resetting to off.
+  useEffect(() => {
+    void getConsent().then((c) => setShareTelemetry(c === 'granted'));
+  }, []);
 
   const has = (r: AlarmHealth['reasons'][number]) => !health.reasons.includes(r);
   const isIos = Platform.OS === 'ios';
@@ -125,8 +133,27 @@ export function OnboardingScreen({ onDone }: Props) {
         </>
       )}
 
+      <View style={styles.step}>
+        <Text style={styles.stepTitle}>{t('consent.onboardingTitle')}</Text>
+        <Text style={styles.stepDesc}>{t('consent.body')}</Text>
+        <Pressable
+          accessibilityRole="switch"
+          accessibilityState={{ checked: shareTelemetry }}
+          onPress={() => setShareTelemetry((v) => !v)}
+          style={[styles.consentToggle, shareTelemetry && styles.consentToggleOn]}
+        >
+          <Text style={[styles.consentToggleText, shareTelemetry && styles.consentToggleTextOn]}>
+            {shareTelemetry ? `✓ ${t('consent.toggleOn')}` : `○ ${t('consent.toggleOff')}`}
+          </Text>
+        </Pressable>
+      </View>
+
       <Pressable
-        onPress={onDone}
+        onPress={async () => {
+          await setConsent(shareTelemetry);
+          track('onboarding_completed', { consentGranted: shareTelemetry });
+          onDone();
+        }}
         disabled={!health.isArmReliable}
         style={[styles.continue, health.isArmReliable ? styles.continueOn : styles.continueOff]}
       >
@@ -201,4 +228,17 @@ const styles = StyleSheet.create({
   continueTextOn: { color: colors.white },
   continueTextOff: { color: colors.disabledText },
   recheck: { color: colors.sky500, textAlign: 'center', padding: spacing.m, fontSize: 12, fontFamily: fonts.bold },
+  consentToggle: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.skyBg,
+    borderWidth: 1.5,
+    borderColor: colors.line,
+    borderRadius: radii.pill,
+    paddingVertical: spacing.s - 1,
+    paddingHorizontal: spacing.xl - 2,
+    marginTop: spacing.s + 1,
+  },
+  consentToggleOn: { backgroundColor: colors.mintBg, borderColor: colors.green },
+  consentToggleText: { color: colors.ink2, fontSize: 12, fontFamily: fonts.extra },
+  consentToggleTextOn: { color: colors.green },
 });
