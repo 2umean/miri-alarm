@@ -32,7 +32,12 @@ Apple). Sentry/PostHog are service providers → "collected", NOT "shared".
 - Device or other IDs: **Collected, optional, Analytics**
 - Everything else: not collected. Nothing is "shared".
 
-## Reminder
+## ⚠️ v0.7.0 (ads) — forms change AGAIN
 
-When release 2 (AdMob) ships, BOTH forms change again materially (tracking =
-Yes on Apple + ATT prompt; "shared" categories on Play).
+When the AdMob release ships, BOTH forms change materially and must be updated
+the SAME DAY the release goes live:
+
+- Apple App Privacy: **Used for tracking = Yes** (ad identifiers leave the app
+  for Google's ad network) → the in-app **ATT prompt is required**.
+- Play Data safety: add the **advertising data categories** (device/ad IDs and
+  ad-related data, with Advertising or marketing as a purpose).

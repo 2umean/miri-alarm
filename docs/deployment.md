@@ -98,3 +98,10 @@ eas submit -p android --profile production --path build-*.aab --non-interactive
 - **False privacy declarations can ban the account** — if an analytics/crash SDK is ever added, update the data forms accordingly.
 - **SDK currency:** App Store Connect uploads must use the iOS 26 SDK (EAS handles this if the Expo SDK is current).
 - **Release builds now need `SENTRY_AUTH_TOKEN`:** release builds run Sentry's source-map upload; without `SENTRY_AUTH_TOKEN` a local release build (`expo run:android --variant release`, or `eas build --local` without the env delivered) FAILS at the upload step. EAS cloud builds get the token from the project's env vars automatically. Escape hatches for tokenless local release builds: `SENTRY_DISABLE_AUTO_UPLOAD=true` (both platforms) or `SENTRY_ALLOW_FAILURE=true` (iOS). Debug/dev builds are unaffected.
+
+## Ads (AdMob)
+
+- **`react-native-google-mobile-ads` is exact-pinned to 16.3.4** (no `^`): 16.4.0 bundles Android GMA SDK 25.4.0, whose Kotlin 2.3.0 metadata fails to compile against RN 0.85's Kotlin 2.1.20 (invertase/react-native-google-mobile-ads#863). Before ANY upgrade, check that invertase PR #866 (or a release containing it) has shipped.
+- **Never `npx expo install` this package** — it is not in Expo SDK 56's `bundledNativeModules`, so `expo install` resolves the broken latest instead of respecting the pin.
+- **Adding this native module invalidated all previous dev clients** — builds made before the ads release lack the native code; build fresh dev clients.
+- **Dev builds serve Google test ads** (`TestIds.ADAPTIVE_BANNER`); release builds serve the live units. Register physical QA devices in AdMob (**Settings → Test devices**) BEFORE running release builds on them.
