@@ -1,3 +1,4 @@
+import { withSentry } from '@sentry/react-native/expo';
 import { ExpoConfig } from 'expo/config';
 
 // Single source of truth for the marketing version — bump with `npm version`
@@ -64,4 +65,11 @@ const config: ExpoConfig = {
   },
 };
 
-export default config;
+export default withSentry(config, {
+  url: 'https://sentry.io/',
+  organization: '2umean',
+  // Slug renamed from the default 'react-native' in the Sentry console 2026-07-27.
+  // The DSN in src/telemetry/sentryClient.ts is ID-keyed and unaffected.
+  project: 'miri',
+  // Auth comes from SENTRY_AUTH_TOKEN (EAS env var, sensitive) at build time.
+});

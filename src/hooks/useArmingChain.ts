@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { AlarmService } from '../alarm/AlarmService';
 import { AlarmHealth } from '../alarm/alarmHealth';
 import { Chain, latestAlarmInstant } from '../domain';
 import { clearArmedChain, loadArmedChain, saveArmedChain } from '../storage/armedChain';
 import { loadPresets } from '../storage/presets';
+import { track } from '../telemetry';
 import { chainStartLabel } from '../ui/format';
 
 import type { MissedAlarm } from '../../modules/schedularm-alarm';
@@ -26,11 +27,25 @@ export function useArmingChain() {
 
   useEffect(() => {
     let cancelled = false;
-    refreshHealth();
+    const snapshot = AlarmService.getHealth();
+    setHealth(snapshot);
     // BEFORE the re-arm below: re-arming replaces the native store, which would
     // erase the "this alarm never rang" evidence.
     const misses = AlarmService.consumeMissed();
-    if (misses.length) setMissed(misses[misses.length - 1]);
+    if (misses.length) {
+      setMissed(misses[misses.length - 1]);
+      track('alarm_missed', {
+        count: misses.length,
+        maxMinutesSinceScheduled: Math.round(
+          misses.reduce((max, m) => Math.max(max, Date.now() - m.at), 0) / 60000,
+        ),
+      });
+    }
+    track('alarm_health', {
+      reasons: snapshot.reasons.join('+') || 'none',
+      isArmReliable: snapshot.isArmReliable,
+      isAggressiveOEM: snapshot.isAggressiveOEM,
+    });
     // Kicked off in PARALLEL with the armed-chain read: the label lookup must
     // never sit between "snapshot is live" and "native alarms re-scheduled".
     // Both stores share in-flight guards, so the concurrent read is safe.
@@ -57,20 +72,31 @@ export function useArmingChain() {
     return () => {
       cancelled = true;
     };
-  }, [refreshHealth]);
+  }, []);
+
+  const armInFlight = useRef(false);
 
   const arm = useCallback(
-    async (chain: Chain, startLabel: string) => {
+    async (chain: Chain, startLabel: string): Promise<boolean> => {
+      // Concurrent arms would interleave native scheduleAlarms (iOS persists its
+      // scheduled-id list per call — an overlap orphans live AlarmKit alarms).
+      if (armInFlight.current) return false;
+      armInFlight.current = true;
       try {
         // Arm native FIRST and await it — only persist + mark armed if the OS
         // actually scheduled the alarms (else a silent oversleep would look armed).
         await AlarmService.armChain(chain, startLabel);
         await saveArmedChain(chain);
         setArmed(chain);
+        refreshHealth();
+        return true;
       } catch (e) {
         console.warn('[useArmingChain] arm failed; leaving un-armed:', e);
+        refreshHealth();
+        return false;
+      } finally {
+        armInFlight.current = false;
       }
-      refreshHealth();
     },
     [refreshHealth],
   );

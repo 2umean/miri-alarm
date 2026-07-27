@@ -12,6 +12,7 @@ import {
   labelSourceFor,
   resolveArrivalInstant,
   toLocalClock,
+  totalSpanMinutes,
   upcomingAlarmItem,
 } from '../../domain';
 import { useArmingChain } from '../../hooks/useArmingChain';
@@ -19,18 +20,16 @@ import { useChain } from '../../hooks/useChain';
 import { usePresets } from '../../hooks/usePresets';
 import { t } from '../../i18n';
 import { firstRemaining } from '../../state/presetsReducer';
+import { getConsent, setConsent, track } from '../../telemetry';
 import { ArrivalDate, ArrivalPickerSheet } from '../components/ArrivalPickerSheet';
 import { ChainList } from '../components/ChainList';
+import { ConsentSheet } from '../components/ConsentSheet';
 import { PillDraft, PillEditorSheet } from '../components/PillEditorSheet';
 import { PresetListSheet } from '../components/PresetListSheet';
 import { ReorderView } from '../components/ReorderView';
 import { chainStartLabel, formatAlarmDate } from '../format';
+import { PRIVACY_POLICY_URL } from '../legal';
 import { colors, fonts, radii, shadows, spacing } from '../theme';
-
-// Also registered as the privacy-policy URL in both store consoles — the
-// stores additionally require it to be reachable from INSIDE the app
-// (Apple 5.1.1(i), Play User Data policy).
-const PRIVACY_POLICY_URL = 'https://2umean.github.io/miri-alarm/privacy.html';
 
 const issueText = (i: ChainValidationIssue): string => t(`chainIssue.${i.kind}`);
 
@@ -56,7 +55,17 @@ export function ChainScreen() {
   const [editor, setEditor] = useState<EditorState>(null);
   const [reorderOpen, setReorderOpen] = useState(false);
   const [presetListOpen, setPresetListOpen] = useState(false);
+  // 'migration' = the one-time prompt for users who onboarded before v0.6.0.
+  const [consentSheet, setConsentSheet] = useState<'closed' | 'migration' | 'settings'>('closed');
+  const [consentGranted, setConsentGranted] = useState(false);
   const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    void getConsent().then((c) => {
+      setConsentGranted(c === 'granted');
+      if (c === 'unset') setConsentSheet('migration');
+    });
+  }, []);
 
   const atRisk = !health.isArmReliable || health.reasons.length > 0;
 
@@ -122,6 +131,7 @@ export function ChainScreen() {
     disarmForEdit();
     replacePills(preset.pills);
     applyPreset(preset.id);
+    track('preset_applied', { presetCount: presets.length });
   };
 
   // Create snapshots the CURRENT working pills and activates the new preset
@@ -131,6 +141,7 @@ export function ChainScreen() {
     // chain.pills === state.pills by construction (rollChainToFuture only ever
     // spreads arrival; the pills array reference is preserved).
     createPreset(name, chain.pills);
+    track('preset_saved', { presetCount: presets.length + 1 });
     setPresetListOpen(false);
   };
 
@@ -278,7 +289,21 @@ export function ChainScreen() {
 
         {chain.arrival != null ? (
           <Pressable
-            onPress={armed ? disarm : () => armable && arm(chain, startLabel)}
+            onPress={
+              armed
+                ? disarm
+                : async () => {
+                    if (!armable) return;
+                    const ok = await arm(chain, startLabel);
+                    if (!ok) return;
+                    track('chain_armed', {
+                      alarmCount: chain.pills.filter((p) => p.type === 'alarm').length,
+                      pillCount: chain.pills.length,
+                      chainDurationMin: totalSpanMinutes(chain),
+                      usedPreset: activePreset != null,
+                    });
+                  }
+            }
             disabled={!armed && !armable}
             style={styles.armWrap}
           >
@@ -303,13 +328,23 @@ export function ChainScreen() {
           </Pressable>
         ) : null}
 
-        <Pressable
-          accessibilityRole="link"
-          onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}
-          style={styles.privacyLink}
-        >
-          <Text style={styles.privacyLinkText}>{t('legal.privacyPolicy')}</Text>
-        </Pressable>
+        <View style={styles.footerLinks}>
+          <Pressable
+            accessibilityRole="link"
+            onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}
+            style={styles.privacyLink}
+          >
+            <Text style={styles.privacyLinkText}>{t('legal.privacyPolicy')}</Text>
+          </Pressable>
+          <Text style={styles.privacyLinkText}>·</Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setConsentSheet('settings')}
+            style={styles.privacyLink}
+          >
+            <Text style={styles.privacyLinkText}>{t('consent.dataSettings')}</Text>
+          </Pressable>
+        </View>
       </ScrollView>
 
       <ArrivalPickerSheet
@@ -361,6 +396,26 @@ export function ChainScreen() {
         onRename={renamePreset}
         onDelete={onDeletePreset}
       />
+
+      {consentSheet !== 'closed' ? (
+        <ConsentSheet
+          visible
+          initialGranted={consentGranted}
+          onCancel={() => {
+            if (consentSheet === 'migration') {
+              // Dismissing the one-time prompt = no consent; record it so it never reshows.
+              void setConsent(false);
+              setConsentGranted(false);
+            }
+            setConsentSheet('closed');
+          }}
+          onSave={(granted) => {
+            void setConsent(granted);
+            setConsentGranted(granted);
+            setConsentSheet('closed');
+          }}
+        />
+      ) : null}
     </LinearGradient>
   );
 }
@@ -438,6 +493,7 @@ const styles = StyleSheet.create({
   armText: { color: colors.white, fontSize: 15, fontFamily: fonts.extra },
   armTextDisabled: { color: colors.disabledText },
 
-  privacyLink: { alignSelf: 'center', marginTop: spacing.xl, padding: spacing.m },
+  footerLinks: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: spacing.xl },
+  privacyLink: { padding: spacing.m },
   privacyLinkText: { color: colors.faint, fontSize: 11, fontFamily: fonts.bold },
 });

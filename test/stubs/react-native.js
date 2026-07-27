@@ -7,7 +7,9 @@ module.exports = {
   TextInput: 'TextInput',
   Pressable: 'Pressable',
   ScrollView: 'ScrollView',
+  Modal: ({ visible, children }) => (visible ? children : null),
   StyleSheet: { create: (styles) => styles, flatten: (style) => style, hairlineWidth: 1 },
   Platform: { OS: 'ios', select: (spec) => ('ios' in spec ? spec.ios : spec.default) },
   Keyboard: { dismiss: () => {}, addListener: () => ({ remove: () => {} }) },
+  Linking: { openURL: () => Promise.resolve() },
 };

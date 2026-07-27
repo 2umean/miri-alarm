@@ -32,6 +32,15 @@ export const ko: typeof en = {
   },
   editor: { cancel: '취소', set: '설정' },
   legal: { privacyPolicy: '개인정보 처리방침' },
+  consent: {
+    onboardingTitle: 'MIRI 개선에 참여할까요?',
+    title: '익명 사용 통계·오류 보고',
+    body: '익명 사용 통계와 오류 보고를 공유해 MIRI 알람의 신뢰성 개선을 도와주세요. 일정 내용(이름·이모지·시간)은 절대 기기를 떠나지 않습니다. 데이터는 EU 리전에서 처리되며(Sentry, PostHog), 언제든 하단 데이터 설정에서 변경할 수 있습니다.',
+    toggleOn: '공유 켜짐',
+    toggleOff: '공유 꺼짐',
+    save: '저장',
+    dataSettings: '데이터 설정',
+  },
   onboarding: {
     title: '알람이 꼭 울리도록 설정할게요',
     subtitle: 'MIRI는 안전 알람이에요. 휴대폰이 알람을 조용히 종료하지 못하도록 설정해 주세요.',
