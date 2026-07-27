@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
   armText: { color: colors.white, fontSize: 15, fontFamily: fonts.extra },
   armTextDisabled: { color: colors.disabledText },
 
-  footerLinks: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: spacing.xl },
+  footerLinks: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', marginTop: spacing.xl },
   privacyLink: { padding: spacing.m },
   privacyLinkText: { color: colors.faint, fontSize: 11, fontFamily: fonts.bold },
 });
