@@ -37,10 +37,14 @@ surface.
 
 ## Library
 
-`react-native-google-mobile-ads` (~16.4.x at research time) + its Expo config
-plugin. **Verify the actual version `npx expo install` resolves for SDK 56**
-(same lesson as Sentry resolving 7.11 instead of 8.x) and read the Expo v56
-docs before writing code (AGENTS.md rule).
+`react-native-google-mobile-ads` — **exact-pin 16.3.4** (verified 2026-07-27):
+npm latest 16.4.0 breaks Android builds on Expo SDK 56 / RN 0.85 because its
+Android GMA SDK 25.4.0 ships Kotlin 2.3.0 metadata vs RN's Kotlin 2.1.20
+(invertase issue #863; fix PR #866 unmerged). 16.3.4's JS API surface is
+byte-identical to 16.4.0 (tarball diff). Do NOT use `npx expo install` — the
+package is not in bundledNativeModules, so it would resolve broken 16.4.0.
+Note: `BannerAdSize.ANCHORED_ADAPTIVE_BANNER` is deprecated in this version;
+use `BannerAdSize.LARGE_ANCHORED_ADAPTIVE_BANNER`.
 
 Config plugin options in `app.config.ts` (added to the existing `plugins`
 array):
