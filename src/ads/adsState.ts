@@ -68,7 +68,11 @@ export function initAds(): Promise<void> {
 export function showAdsPrivacyOptions(): void {
   AdsConsent.showPrivacyOptionsForm()
     .then(() => syncFromConsentInfo())
-    .catch(() => {});
+    .catch(() => {
+      // Same failure telemetry as the launch path; banner stays hidden
+      // until the next successful sync.
+      track('ads_init_failed', {});
+    });
 }
 
 export function getAdsState(): AdsState {

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BannerAd, BannerAdSize, useForeground } from 'react-native-google-mobile-ads';
@@ -20,6 +20,12 @@ export function AdBanner() {
   useForeground(() => {
     if (Platform.OS === 'ios') bannerRef.current?.load();
   });
+
+  // Forget the previous ad when consent hides the banner, so a later
+  // re-consent starts zero-height again instead of showing a blank strip.
+  useEffect(() => {
+    if (!canShowAds) setIsLoaded(false);
+  }, [canShowAds]);
 
   if (!canShowAds) return null;
 

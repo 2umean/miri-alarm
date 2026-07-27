@@ -136,4 +136,24 @@ describe('showAdsPrivacyOptions', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(ads.getAdsState()).toEqual({ canShowAds: false, isPrivacyOptionsRequired: true });
   });
+
+  test('tracks ads_init_failed when re-consent init fails on the privacy-form path', async () => {
+    mockGetConsentInfo.mockResolvedValue(
+      info({ canRequestAds: false, privacyOptionsRequirementStatus: 'REQUIRED' }),
+    );
+    mockGatherConsent.mockResolvedValue(info({ canRequestAds: false }));
+    const ads = freshAds();
+    await ads.initAds();
+    expect(mockInitialize).not.toHaveBeenCalled();
+
+    mockGetConsentInfo.mockResolvedValue(
+      info({ canRequestAds: true, privacyOptionsRequirementStatus: 'REQUIRED' }),
+    );
+    mockShowPrivacyOptionsForm.mockResolvedValue(info({ canRequestAds: true }));
+    mockInitialize.mockRejectedValueOnce(new Error('gma down'));
+    ads.showAdsPrivacyOptions();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(mockTrack).toHaveBeenCalledWith('ads_init_failed', {});
+    expect(ads.getAdsState().canShowAds).toBe(false);
+  });
 });

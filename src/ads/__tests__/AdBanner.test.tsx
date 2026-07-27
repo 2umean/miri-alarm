@@ -44,6 +44,27 @@ test('mounts zero-height, then reserves safe-area space once an ad loads', () =>
   expect(tree.root.findByType(View).props.style).toEqual({ paddingBottom: 34 });
 });
 
+test('forgets the loaded state across a consent withdrawal round-trip', () => {
+  mockUseAdsState.mockReturnValue({ canShowAds: true, isPrivacyOptionsRequired: false });
+  const tree = render();
+  act(() => {
+    tree.root.findByType(BannerAd).props.onAdLoaded({ width: 320, height: 50 });
+  });
+  expect(tree.root.findByType(View).props.style).toEqual({ paddingBottom: 34 });
+
+  mockUseAdsState.mockReturnValue({ canShowAds: false, isPrivacyOptionsRequired: true });
+  act(() => {
+    tree.update(<AdBanner />);
+  });
+  expect(tree.root.findAllByType(View)).toHaveLength(0);
+
+  mockUseAdsState.mockReturnValue({ canShowAds: true, isPrivacyOptionsRequired: true });
+  act(() => {
+    tree.update(<AdBanner />);
+  });
+  expect(tree.root.findByType(View).props.style).toMatchObject({ height: 0, overflow: 'hidden' });
+});
+
 test('collapses back to zero height when a later load fails', () => {
   mockUseAdsState.mockReturnValue({ canShowAds: true, isPrivacyOptionsRequired: false });
   const tree = render();
