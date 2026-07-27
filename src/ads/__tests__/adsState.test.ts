@@ -1,4 +1,4 @@
-const mockInitialize = jest.fn(() => Promise.resolve([]));
+const mockInitialize = jest.fn();
 const mockGetConsentInfo = jest.fn();
 const mockGatherConsent = jest.fn();
 const mockShowPrivacyOptionsForm = jest.fn();
@@ -41,6 +41,9 @@ function info(over: Partial<{ canRequestAds: boolean; privacyOptionsRequirementS
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // clearAllMocks keeps implementations, so a persistent mockRejectedValue
+  // set by one test would leak into the next — re-set the default here.
+  mockInitialize.mockResolvedValue([]);
 });
 
 describe('initAds', () => {
@@ -93,6 +96,27 @@ describe('initAds', () => {
     await ads.initAds();
     expect(mockGatherConsent).toHaveBeenCalledTimes(1);
     expect(mockInitialize).toHaveBeenCalledTimes(1);
+  });
+
+  test('retries SDK init after a fast-path initialize failure', async () => {
+    mockGetConsentInfo.mockResolvedValue(info({ canRequestAds: true }));
+    mockGatherConsent.mockResolvedValue(info({ canRequestAds: true }));
+    mockInitialize.mockRejectedValueOnce(new Error('gma down'));
+    const ads = freshAds();
+    await ads.initAds();
+    expect(mockInitialize).toHaveBeenCalledTimes(2);
+    expect(ads.getAdsState().canShowAds).toBe(true);
+    expect(mockTrack).not.toHaveBeenCalled();
+  });
+
+  test('tracks ads_init_failed and stays hidden when SDK init keeps failing', async () => {
+    mockGetConsentInfo.mockResolvedValue(info({ canRequestAds: true }));
+    mockGatherConsent.mockResolvedValue(info({ canRequestAds: true }));
+    mockInitialize.mockRejectedValue(new Error('gma down'));
+    const ads = freshAds();
+    await expect(ads.initAds()).resolves.toBeUndefined();
+    expect(ads.getAdsState().canShowAds).toBe(false);
+    expect(mockTrack).toHaveBeenCalledWith('ads_init_failed', {});
   });
 });
 

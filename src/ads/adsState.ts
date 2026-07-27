@@ -38,8 +38,12 @@ async function syncFromConsentInfo(): Promise<void> {
     return;
   }
   if (!isSdkStarted) {
-    isSdkStarted = true;
+    // Latch only after success: if initialize() rejects on the fast path,
+    // the post-gatherConsent sync must retry instead of skipping init and
+    // reporting canShowAds for an uninitialized SDK. GMA initialize() is
+    // idempotent, so a rare double call is safe.
     await mobileAds().initialize();
+    isSdkStarted = true;
   }
   emit({ canShowAds: true, isPrivacyOptionsRequired });
 }
