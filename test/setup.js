@@ -5,3 +5,6 @@
 // tests (see test/stubs/react-native.js).
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 globalThis.IS_REACT_NATIVE_TEST_ENVIRONMENT = true;
+
+// React Native's global; plain ts-jest doesn't define it (jest-expo would).
+globalThis.__DEV__ = true;

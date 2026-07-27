@@ -32,7 +32,7 @@
 
 | File | Responsibility |
 |---|---|
-| `skAdNetworkItems.ts` (repo root, new) | The 50 SKAdNetwork IDs, imported by app.config.ts |
+| `skAdNetworkItems.js` (repo root, new) | The 50 SKAdNetwork IDs, imported by app.config.ts. (Shipped as CJS `.js`, not the originally planned `.ts`: Expo SDK 56 transpiles only the entry app.config.ts, so nested extensionless `.ts` imports fail under Node 22 require — verified during Task 2.) |
 | `app.config.ts` (modify) | Add the RNGMA config plugin entry |
 | `locales/ko.json` (modify) | Korean ATT usage description |
 | `src/ads/adsState.ts` (new) | Facade: initAds / consent sync / SDK init guard / useAdsState / showAdsPrivacyOptions |
@@ -472,6 +472,8 @@ git commit -m "feat(ads): consent-gated ads facade with UMP flow and useAdsState
 
 ### Task 4: Unit-ID resolver + AdBanner component (TDD)
 
+> **Amendment (Task 3 quality review):** Task 4 begins with a hardening step in `adsState.ts` — set `isSdkStarted = true` only AFTER `await mobileAds().initialize()` resolves, with two regression tests (fast-path init failure retries after gatherConsent; persistent failure tracks `ads_init_failed` and keeps `canShowAds` false). GMA `initialize()` is idempotent, so the rare double call is safe.
+
 **Files:**
 - Create: `src/ads/unitId.ts`, `src/ads/AdBanner.tsx`, `src/ads/index.ts`
 - Modify: `test/setup.js` (define `__DEV__`)
@@ -772,6 +774,8 @@ git commit -m "feat(ads): banner on chain screen, ad-privacy footer entry, init 
 
 ### Task 6: Docs
 
+> **Amendment (Task 5 quality review):** Task 6 begins with a one-line UI hardening — add `flexWrap: 'wrap'` to `styles.footerLinks` in ChainScreen so the three-link footer (privacy policy · data settings · ad privacy) cannot clip on narrow ko-locale screens when the EEA-only ad-privacy row is visible.
+
 **Files:**
 - Modify: `docs/deployment.md`
 - Modify: `docs/store-privacy-answers.md`
@@ -799,6 +803,10 @@ git commit -m "docs(ads): 16.3.4 pin rationale, dev-client invalidation, store-f
 ---
 
 ### Task 7: Simulator/emulator QA (fresh builds required)
+
+> **Android results (2026-07-27, `miri-qa` emulator, debug build):** Q1 ✅ (test banner renders bottom-anchored after console messages published); Q2 ✅ (zero-height/no-layout-shift observed live — including the pre-publish state where UMP config was missing and the app degraded exactly as designed, banner hidden, no crash); Q4 ✅ with corrected expectation — after "Do not consent" UMP keeps `canRequestAds` true and Google serves *limited ads*, so the banner legitimately stays (spec's "obey the flag" clause; the original "declining hides the banner" wording was wrong); the "Ad Privacy" footer row appears on decline-required geography, reopens the form, and re-consent works without restart; Q6 ✅ for fresh users (UNKNOWN status → no ad request; returning users may see ads pre-form via UMP's previous-session consent, per Google's documented pattern). Q3/Q5 + the iOS pass remain.
+
+> **iOS results (2026-07-27, iPhone 17 Pro sim, ko locale, debug build):** Q1 ✅ (Korean "Test mode" banner bottom-anchored on chain screen; footer intact, no ad-privacy row outside EEA); Q3 ✅ (UMP auto-presented the console-published Korean IDFA explainer, then Apple's native ATT alert showing the localized `locales/ko.json` usage string "맞춤형 광고를 제공하기 위해 광고 식별자를 사용합니다"; Allow → test ad loads); ko copy correct throughout. Q5 closed by equivalent observation: the UMP/ATT forms are native VCs that present above all RN content (observed over ChainScreen on both platforms) and RN modals stay answerable beneath — no deadlock path exists; the rare pre-v0.6.0-upgrader-in-EEA combo was not separately staged. Ring-screen-ad-free is structurally guaranteed (final review verified AdBanner mounts in exactly one place). **Build note:** the first iOS build failed at link, then crashed at runtime — BOTH from a pre-existing local Pods wedge (prebuilt React core stuck on its Release flavor with the `.last_build_configuration` marker lost, then stale mixed-ABI pod objects), NOT from this branch's code; `npx expo prebuild -p ios --clean` + fresh build resolved everything (troubleshooting entry added to docs/deployment.md, commit 9e7ee76). EAS/cloud builds are unaffected (always clean). Console prerequisite discovered: UMP hard-fails with "Publisher misconfiguration" until the GDPR + IDFA messages are published in Privacy & messaging — published by the user mid-QA, after which everything worked. Note for the user: `LARGE_ANCHORED_ADAPTIVE_BANNER` is ~13% of screen height; classic 320×50 `BANNER` is a one-line swap if preferred.
 
 No code. Existing recipes: Android debug APK = `npx expo prebuild -p android && cd android && SENTRY_DISABLE_AUTO_UPLOAD=true ./gradlew assembleDebug` with `ANDROID_HOME=/opt/homebrew/share/android-commandlinetools`, AVD `miri-qa` (`emulator -avd miri-qa`). iOS = `npx expo run:ios` on the iPhone 17 Pro simulator.
 

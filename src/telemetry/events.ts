@@ -12,6 +12,8 @@ export type TelemetryEvents = {
   preset_saved: { presetCount: number };
   onboarding_completed: { consentGranted: boolean };
   consent_changed: { granted: boolean };
+  /** UMP consent flow or GMA SDK init threw (launch or privacy-form path); ads stay hidden until a later retry succeeds. */
+  ads_init_failed: Record<string, never>;
 };
 
 export type TelemetryEventName = keyof TelemetryEvents;

@@ -42,6 +42,9 @@ export const en = {
     save: 'Save',
     dataSettings: 'Data Settings',
   },
+  ads: {
+    privacyOptions: 'Ad Privacy',
+  },
   onboarding: {
     title: 'Let’s make sure your alarm can wake you',
     subtitle: 'MIRI is a safety alarm. These settings stop your phone from silently killing it.',

@@ -4,6 +4,7 @@ import { ExpoConfig } from 'expo/config';
 // Single source of truth for the marketing version — bump with `npm version`
 // (patch/minor/major). Build numbers are auto-incremented by EAS (remote).
 import { version } from './package.json';
+import { SK_AD_NETWORK_ITEMS } from './skAdNetworkItems';
 
 const config: ExpoConfig = {
   name: 'MIRI Alarm',
@@ -53,6 +54,21 @@ const config: ExpoConfig = {
         image: './assets/splash-icon.png',
         imageWidth: 160,
         backgroundColor: '#F2F8FF',
+      },
+    ],
+    [
+      'react-native-google-mobile-ads',
+      {
+        // Both App IDs are mandatory — the native GMA SDK crashes at launch
+        // on any platform whose ID is missing from the build.
+        androidAppId: 'ca-app-pub-5599052038923907~8575489973',
+        iosAppId: 'ca-app-pub-5599052038923907~5702060414',
+        // Defer GMA app measurement until mobileAds().initialize(), which
+        // src/ads/adsState.ts only calls once UMP reports canRequestAds.
+        delayAppMeasurementInit: true,
+        userTrackingUsageDescription:
+          'This identifier will be used to deliver personalized ads to you.',
+        skAdNetworkItems: SK_AD_NETWORK_ITEMS,
       },
     ],
   ],

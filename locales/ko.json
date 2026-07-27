@@ -1,7 +1,8 @@
 {
   "ios": {
     "CFBundleDisplayName": "미리",
-    "NSAlarmKitUsageDescription": "MIRI는 승무원이 제시간에 일어나 출발할 수 있도록 확실한 알람을 설정해요."
+    "NSAlarmKitUsageDescription": "MIRI는 승무원이 제시간에 일어나 출발할 수 있도록 확실한 알람을 설정해요.",
+    "NSUserTrackingUsageDescription": "맞춤형 광고를 제공하기 위해 광고 식별자를 사용합니다."
   },
   "android": { "app_name": "미리" }
 }

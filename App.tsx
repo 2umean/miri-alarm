@@ -7,6 +7,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { initAds } from './src/ads';
 import { AlarmService } from './src/alarm/AlarmService';
 import { isOnboarded, markOnboarded } from './src/storage/onboarding';
 import { initTelemetry } from './src/telemetry';
@@ -31,6 +32,7 @@ export default function App() {
 
   useEffect(() => {
     void initTelemetry(); // idempotent; starts SDKs iff consent was granted earlier
+    void initAds(); // idempotent; shows the UMP consent form only where required
   }, []);
 
   useEffect(() => {

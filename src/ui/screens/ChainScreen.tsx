@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, ToastAndroid, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AdBanner, showAdsPrivacyOptions, useAdsState } from '../../ads';
 import { AlarmService } from '../../alarm/AlarmService';
 import {
   ChainValidationIssue,
@@ -58,6 +59,7 @@ export function ChainScreen() {
   // 'migration' = the one-time prompt for users who onboarded before v0.6.0.
   const [consentSheet, setConsentSheet] = useState<'closed' | 'migration' | 'settings'>('closed');
   const [consentGranted, setConsentGranted] = useState(false);
+  const { isPrivacyOptionsRequired: isAdPrivacyRequired } = useAdsState();
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -344,8 +346,22 @@ export function ChainScreen() {
           >
             <Text style={styles.privacyLinkText}>{t('consent.dataSettings')}</Text>
           </Pressable>
+          {isAdPrivacyRequired ? (
+            <>
+              <Text style={styles.privacyLinkText}>·</Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={showAdsPrivacyOptions}
+                style={styles.privacyLink}
+              >
+                <Text style={styles.privacyLinkText}>{t('ads.privacyOptions')}</Text>
+              </Pressable>
+            </>
+          ) : null}
         </View>
       </ScrollView>
+
+      <AdBanner />
 
       <ArrivalPickerSheet
         visible={pickerOpen}
@@ -493,7 +509,7 @@ const styles = StyleSheet.create({
   armText: { color: colors.white, fontSize: 15, fontFamily: fonts.extra },
   armTextDisabled: { color: colors.disabledText },
 
-  footerLinks: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: spacing.xl },
+  footerLinks: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', marginTop: spacing.xl },
   privacyLink: { padding: spacing.m },
   privacyLinkText: { color: colors.faint, fontSize: 11, fontFamily: fonts.bold },
 });

@@ -41,6 +41,9 @@ export const ko: typeof en = {
     save: '저장',
     dataSettings: '데이터 설정',
   },
+  ads: {
+    privacyOptions: '광고 개인정보 설정',
+  },
   onboarding: {
     title: '알람이 꼭 울리도록 설정할게요',
     subtitle: 'MIRI는 안전 알람이에요. 휴대폰이 알람을 조용히 종료하지 못하도록 설정해 주세요.',
