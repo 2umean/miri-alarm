@@ -39,5 +39,8 @@ the SAME DAY the release goes live:
 
 - Apple App Privacy: **Used for tracking = Yes** (ad identifiers leave the app
   for Google's ad network) → the in-app **ATT prompt is required**.
-- Play Data safety: add the **advertising data categories** (device/ad IDs and
-  ad-related data, with Advertising or marketing as a purpose).
+- Play Data safety: add the **advertising data categories as SHARED** — not
+  merely collected (device/ad IDs and ad-related data go to Google's ad
+  network, a third party; purpose Advertising or marketing). Play treats
+  ad-network transfers as "shared", unlike the Sentry/PostHog
+  service-provider case above.

@@ -32,7 +32,7 @@
 
 | File | Responsibility |
 |---|---|
-| `skAdNetworkItems.ts` (repo root, new) | The 50 SKAdNetwork IDs, imported by app.config.ts |
+| `skAdNetworkItems.js` (repo root, new) | The 50 SKAdNetwork IDs, imported by app.config.ts. (Shipped as CJS `.js`, not the originally planned `.ts`: Expo SDK 56 transpiles only the entry app.config.ts, so nested extensionless `.ts` imports fail under Node 22 require — verified during Task 2.) |
 | `app.config.ts` (modify) | Add the RNGMA config plugin entry |
 | `locales/ko.json` (modify) | Korean ATT usage description |
 | `src/ads/adsState.ts` (new) | Facade: initAds / consent sync / SDK init guard / useAdsState / showAdsPrivacyOptions |
@@ -472,6 +472,8 @@ git commit -m "feat(ads): consent-gated ads facade with UMP flow and useAdsState
 
 ### Task 4: Unit-ID resolver + AdBanner component (TDD)
 
+> **Amendment (Task 3 quality review):** Task 4 begins with a hardening step in `adsState.ts` — set `isSdkStarted = true` only AFTER `await mobileAds().initialize()` resolves, with two regression tests (fast-path init failure retries after gatherConsent; persistent failure tracks `ads_init_failed` and keeps `canShowAds` false). GMA `initialize()` is idempotent, so the rare double call is safe.
+
 **Files:**
 - Create: `src/ads/unitId.ts`, `src/ads/AdBanner.tsx`, `src/ads/index.ts`
 - Modify: `test/setup.js` (define `__DEV__`)
@@ -771,6 +773,8 @@ git commit -m "feat(ads): banner on chain screen, ad-privacy footer entry, init 
 ---
 
 ### Task 6: Docs
+
+> **Amendment (Task 5 quality review):** Task 6 begins with a one-line UI hardening — add `flexWrap: 'wrap'` to `styles.footerLinks` in ChainScreen so the three-link footer (privacy policy · data settings · ad privacy) cannot clip on narrow ko-locale screens when the EEA-only ad-privacy row is visible.
 
 **Files:**
 - Modify: `docs/deployment.md`
