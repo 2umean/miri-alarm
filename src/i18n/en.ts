@@ -61,6 +61,9 @@ export const en = {
     alarmAuth: { title: 'Allow alarms', desc: 'MIRI needs permission to set alarms that wake you through silent mode and Focus.' },
   },
   alerts: {
+    // Android channel name, shown in system notification settings. Re-registered
+    // on every arm, which also renames it — so it tracks locale changes lazily.
+    channelName: 'Schedule alerts',
     fallAsleep: { title: '🌙 Time to fall asleep', body: 'Sleep now to be rested for your {{wake}} wake-up.' },
     leaveHome: { title: '🚪 Leave home now', body: 'Leave by {{leave}} to arrive on time.' },
     // v2: a push marker fires this — {{label}} is derived from position, {{arrival}} is the anchor.

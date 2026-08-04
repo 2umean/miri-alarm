@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 
 import * as native from '../../modules/schedularm-alarm';
 import { Chain, computeChain } from '../domain';
@@ -42,6 +42,13 @@ export const AlarmService = {
     const computed = computeChain(chain);
     if (!computed) return;
     const alarms = planNativeAlarms(computed, Date.now(), startLabel);
+    // Alarm pills present but nothing plannable = every alarm instant already
+    // passed (the UI's arm gate ticks on a 60s-stale nowMs, so a boundary tap
+    // can slip through). Proceeding would mark the chain "armed" while nothing
+    // will ever ring — reject instead; the caller leaves it un-armed.
+    if (!alarms.length && chain.pills.some((p) => p.type === 'alarm')) {
+      throw new Error('every alarm instant has already passed');
+    }
     // Await native FIRST — if it throws, the caller leaves the chain un-armed.
     if (alarms.length) await native.scheduleAlarms(alarms);
     if (isIos) ensureIosNotificationPermission();
@@ -80,6 +87,13 @@ export const AlarmService = {
   /** Route the user to grant the critical permission (Android gates / iOS AlarmKit auth). */
   async requestCritical(): Promise<void> {
     if (!isAndroid && !isIos) return;
+    // iOS never re-shows a denied AlarmKit prompt (requestAuthorization resolves
+    // instantly) — Settings is the only way back, so route there instead of
+    // leaving the onboarding button a dead-end.
+    if (isIos && native.getAuthorizationState() === 'denied') {
+      await Linking.openSettings();
+      return;
+    }
     await native.requestPermissions();
   },
 

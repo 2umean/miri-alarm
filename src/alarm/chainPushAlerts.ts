@@ -29,7 +29,7 @@ export async function scheduleChainPush(
     });
 
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-      name: 'Schedule alerts',
+      name: t('alerts.channelName'),
       importance: Notifications.AndroidImportance.HIGH,
     });
 

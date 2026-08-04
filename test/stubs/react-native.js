@@ -11,5 +11,18 @@ module.exports = {
   StyleSheet: { create: (styles) => styles, flatten: (style) => style, hairlineWidth: 1 },
   Platform: { OS: 'ios', select: (spec) => ('ios' in spec ? spec.ios : spec.default) },
   Keyboard: { dismiss: () => {}, addListener: () => ({ remove: () => {} }) },
-  Linking: { openURL: () => Promise.resolve() },
+  AppState: {
+    currentState: 'active',
+    _listeners: new Set(),
+    addEventListener(type, fn) {
+      if (type !== 'change') return { remove: () => {} };
+      this._listeners.add(fn);
+      return { remove: () => this._listeners.delete(fn) };
+    },
+    /** Test hook: fire a state change into every registered listener. */
+    __emit(state) {
+      this._listeners.forEach((fn) => fn(state));
+    },
+  },
+  Linking: { openURL: () => Promise.resolve(), openSettings: () => Promise.resolve() },
 };
