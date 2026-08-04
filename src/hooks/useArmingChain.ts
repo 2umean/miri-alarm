@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 
 import { AlarmService } from '../alarm/AlarmService';
 import { AlarmHealth } from '../alarm/alarmHealth';
@@ -24,6 +25,16 @@ export function useArmingChain() {
 
   const refreshHealth = useCallback(() => setHealth(AlarmService.getHealth()), []);
   const clearMissed = useCallback(() => setMissed(null), []);
+
+  // Permission gates are granted in the system Settings app (and the iOS
+  // denied path routes there) — re-derive health on return so the at-risk
+  // banner clears without another tap.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refreshHealth();
+    });
+    return () => sub.remove();
+  }, [refreshHealth]);
 
   useEffect(() => {
     let cancelled = false;

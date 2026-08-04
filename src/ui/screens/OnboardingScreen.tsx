@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AppState, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AlarmService } from '../../alarm/AlarmService';
@@ -63,6 +63,16 @@ export function OnboardingScreen({ onDone }: Props) {
     void getConsent().then((c) => {
       if (!hasUserTouched.current) setShareTelemetry(c === 'granted');
     });
+  }, []);
+
+  // Most gates are granted in the system Settings app; re-derive health when
+  // the user comes back so the steps tick themselves off without a manual
+  // "Re-check" tap (the link stays as a fallback).
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') setHealth(AlarmService.getHealth());
+    });
+    return () => sub.remove();
   }, []);
 
   const has = (r: AlarmHealth['reasons'][number]) => !health.reasons.includes(r);
