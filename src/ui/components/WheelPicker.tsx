@@ -104,6 +104,11 @@ export function WheelPicker({ items, index, overrideLabel, onChange, max, onSubm
         decelerationRate="fast"
         showsVerticalScrollIndicator={false}
         nestedScrollEnabled
+        // Default 'never' swallows the first tap while a keypad is up (it only
+        // dismisses the keyboard), so hour→minute typing took two taps with a
+        // jarring hide/show. 'handled' lets row taps through — focus hops to
+        // the next field, keypad stays; empty-space taps still dismiss.
+        keyboardShouldPersistTaps="handled"
         onMomentumScrollEnd={settle}
         // A drag that ends dead-on a snap point emits no momentum phase (Android);
         // settle() is idempotent so handling both events is safe.
@@ -120,6 +125,11 @@ export function WheelPicker({ items, index, overrideLabel, onChange, max, onSubm
                 setText('');
                 setIsEditing(true); // tap the centred number → type an exact value
               } else {
+                // Persisted taps reach the wheel mid-edit; the tapped row takes
+                // over exactly like a scroll (see settle), else the field keeps
+                // showing typed digits while this row is what gets committed.
+                setIsEditing(false);
+                setText('');
                 onChange(i); // tap any other row → select it (the effect scrolls to it)
               }
             }}

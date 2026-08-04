@@ -169,3 +169,30 @@ test('tapping a NON-centred row selects it instead of opening the editor', () =>
   expect(props.onChange).toHaveBeenCalledWith(3);
   expect(renderer.root.findAllByType(TextInput)).toHaveLength(0);
 });
+
+// The hour→minute bug: with the ScrollView default ('never'), the first tap on
+// the minute wheel while the hour keypad is up only DISMISSES the keyboard —
+// the tap never reaches the row, so moving to the minute field took two taps
+// with a jarring keyboard hide/show. 'handled' delivers row taps (focus hops
+// straight to the next field, keypad stays); empty-space taps still dismiss.
+test("row taps stay live while the keypad is up (keyboardShouldPersistTaps='handled')", () => {
+  const { renderer } = mountWheel();
+
+  expect(renderer.root.findByType(ScrollView).props.keyboardShouldPersistTaps).toBe('handled');
+});
+
+// Reachable once row taps persist the keypad: tapping ANOTHER row while the
+// editor is open must take over exactly like a scroll does — otherwise the
+// field keeps showing typed digits while the tapped row is what gets committed.
+test('tapping another row while editing closes the editor — the tapped row wins', () => {
+  const { renderer, props } = mountWheel();
+  const input = openEditor(renderer, 9);
+
+  act(() => input.props.onChangeText('4'));
+  act(() => {
+    renderer.root.findAllByType(Pressable)[3].props.onPress();
+  });
+
+  expect(props.onChange).toHaveBeenLastCalledWith(3);
+  expect(renderer.root.findAllByType(TextInput)).toHaveLength(0);
+});
