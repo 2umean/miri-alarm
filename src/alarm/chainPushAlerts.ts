@@ -1,4 +1,4 @@
-import { Chain, ChainComputed, isMarkerPill, labelSourceFor, toLocalClock } from '../domain';
+import { ChainComputed, isMarkerPill, labelSourceFor } from '../domain';
 import { t } from '../i18n';
 
 /**
@@ -11,7 +11,6 @@ import { t } from '../i18n';
 const CHANNEL_ID = 'chain-alerts';
 
 export async function scheduleChainPush(
-  chain: Chain,
   computed: ChainComputed,
   excludePillIds?: Set<string>,
   startLabel?: string,
@@ -36,8 +35,6 @@ export async function scheduleChainPush(
     // Single active schedule — re-arming replaces any previous chain alerts.
     await Notifications.cancelAllScheduledNotificationsAsync();
 
-    const arrival = toLocalClock(computed.arrival, chain.zone);
-
     const pills = computed.items.map((it) => it.pill);
     for (let index = 0; index < computed.items.length; index += 1) {
       const it = computed.items[index];
@@ -49,7 +46,6 @@ export async function scheduleChainPush(
       await Notifications.scheduleNotificationAsync({
         content: {
           title: t('alerts.pill.title', { label }),
-          body: t('alerts.pill.body', { time: toLocalClock(it.endAt, chain.zone), arrival }),
           sound: 'default',
         },
         // Keyed by stable pill id — endAt is not unique (duplicate markers share one).

@@ -53,7 +53,7 @@ export const AlarmService = {
     if (alarms.length) await native.scheduleAlarms(alarms);
     if (isIos) ensureIosNotificationPermission();
     // Push markers only; alarm marker ids are excluded (they ring natively).
-    void scheduleChainPush(chain, computed, new Set(alarms.map((a) => a.id)), startLabel);
+    void scheduleChainPush(computed, new Set(alarms.map((a) => a.id)), startLabel);
   },
 
   /**

@@ -25,6 +25,26 @@ const chain: Chain = {
   pills: [event('sleep', 60), marker('leave', 'push')],
 };
 
+// The push is a bare "which event just ended" announcement (🔔 밥 종료). A body
+// like "13:20에 나가면 …" reads as a departure order, which is wrong for
+// mid-chain markers — and the OS shows the delivery time anyway, so no body.
+test('the push announces only which event ended — no departure body', async () => {
+  const prevLocale = i18n.locale;
+  i18n.locale = 'ko';
+  try {
+    const computed = computeChain(chain)!;
+    await scheduleChainPush(computed);
+
+    expect(mockNotifications.scheduleNotificationAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: { title: '🔔 sleep 종료', sound: 'default' },
+      }),
+    );
+  } finally {
+    i18n.locale = prevLocale;
+  }
+});
+
 // The channel name is user-visible in Android's system notification settings.
 // It must come from the catalog: re-registration on every arm renames the
 // channel, so Korean users see 일정 알림 instead of hardcoded English.
@@ -33,7 +53,7 @@ test('the notification channel name is localized, not hardcoded English', async 
   i18n.locale = 'ko';
   try {
     const computed = computeChain(chain)!;
-    await scheduleChainPush(chain, computed);
+    await scheduleChainPush(computed);
 
     expect(mockNotifications.setNotificationChannelAsync).toHaveBeenCalledWith(
       'chain-alerts',

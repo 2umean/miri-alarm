@@ -66,8 +66,10 @@ export const en = {
     channelName: 'Schedule alerts',
     fallAsleep: { title: '🌙 Time to fall asleep', body: 'Sleep now to be rested for your {{wake}} wake-up.' },
     leaveHome: { title: '🚪 Leave home now', body: 'Leave by {{leave}} to arrive on time.' },
-    // v2: a push marker fires this — {{label}} is derived from position, {{arrival}} is the anchor.
-    pill: { title: '🔔 {{label}}', body: 'Head out at {{time}} to arrive by {{arrival}}.' },
+    // v2: a push marker fires this — {{label}} is derived from position (e.g. 밥 종료).
+    // Title-only by design: a body ("head out at…") reads as a departure order,
+    // which is wrong for mid-chain markers; the OS shows the delivery time itself.
+    pill: { title: '🔔 {{label}}' },
   },
 
   // ----- v2 (Schedularm UI v2 — pill chain) -----
