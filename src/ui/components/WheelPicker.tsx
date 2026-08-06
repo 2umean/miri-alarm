@@ -1,5 +1,5 @@
 // src/ui/components/WheelPicker.tsx
-import { useEffect, useRef, useState } from 'react';
+import { Ref, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -31,7 +31,14 @@ type Props = {
   max: number;
   /** Centre-TextInput commit (clamped digits), fired on EVERY keystroke. Parent parses. */
   onSubmitText: (text: string) => void;
+  /** The typed entry can't accept another digit (two digits, or one whose tens
+      already pass max) — the parent may hop focus to the next wheel. */
+  onFilled?: () => void;
+  /** Exposes startEditing() so a sibling wheel's onFilled can open this editor. */
+  ref?: Ref<WheelPickerHandle>;
 };
+
+export type WheelPickerHandle = { startEditing: () => void };
 
 /**
  * One wheel column, "scroll + tap" (spec): scroll snaps to the grid; tapping a
@@ -41,7 +48,7 @@ type Props = {
  * stolen by the scroll as usual; a sibling overlay would dead-zone it). An
  * off-grid override is display-only until the next scroll snaps back.
  */
-export function WheelPicker({ items, index, overrideLabel, onChange, max, onSubmitText }: Props) {
+export function WheelPicker({ items, index, overrideLabel, onChange, max, onSubmitText, onFilled, ref }: Props) {
   const scrollRef = useRef<ScrollView>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState('');
@@ -90,9 +97,24 @@ export function WheelPicker({ items, index, overrideLabel, onChange, max, onSubm
     const shown = Number(digits) > max ? String(max) : digits;
     setText(shown);
     onSubmitText(shown || preEdit.current);
+    // Typed-complete: no further digit could keep the entry ≤ max — either two
+    // digits, or a lone digit whose tens already pass max (hour '3'…'9'). The
+    // empty-field revert never lands here (0 · 10 fails), so a backspace
+    // mid-correction can't yank focus away.
+    if (shown.length === 2 || Number(shown) * 10 > max) onFilled?.();
   };
 
   const stopEditing = () => setIsEditing(false);
+
+  // One editor-open path for the centre tap AND the imperative hop, so both get
+  // identical revert-on-empty semantics.
+  const beginEditing = () => {
+    preEdit.current = (overrideLabel ?? items[index]).replace(/[^0-9]/g, '');
+    setText('');
+    setIsEditing(true);
+  };
+
+  useImperativeHandle(ref, () => ({ startEditing: beginEditing }));
 
   return (
     <View style={styles.column}>
@@ -121,9 +143,7 @@ export function WheelPicker({ items, index, overrideLabel, onChange, max, onSubm
             style={styles.item}
             onPress={() => {
               if (i === index) {
-                preEdit.current = (overrideLabel ?? items[i]).replace(/[^0-9]/g, '');
-                setText('');
-                setIsEditing(true); // tap the centred number → type an exact value
+                beginEditing(); // tap the centred number → type an exact value
               } else {
                 // Persisted taps reach the wheel mid-edit; the tapped row takes
                 // over exactly like a scroll (see settle), else the field keeps

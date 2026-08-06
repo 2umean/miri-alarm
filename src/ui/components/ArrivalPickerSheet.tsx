@@ -3,7 +3,7 @@ import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -20,7 +20,7 @@ import { YMD, instantToYMD } from '../../domain';
 import { i18n, t } from '../../i18n';
 import { colors, fonts, radii, shadows, spacing } from '../theme';
 import { useIsKeyboardShown } from '../keyboard';
-import { WheelPicker } from './WheelPicker';
+import { WheelPicker, WheelPickerHandle } from './WheelPicker';
 
 export type ArrivalDate = YMD;
 
@@ -68,6 +68,10 @@ export function ArrivalPickerSheet({ visible, initialInstant, zone, onCancel, on
   const [hour, setHour] = useState(() => DateTime.fromMillis(initialInstant, { zone }).hour);
   const [minute, setMinute] = useState(() => DateTime.fromMillis(initialInstant, { zone }).minute);
   const [iosDateOpen, setIosDateOpen] = useState(false);
+  // Auto-hop target: when the typed hour is complete (onFilled), the minute
+  // editor opens and its autoFocus moves the caret — keypad stays up, same
+  // mechanism as the tap hop (keyboardShouldPersistTaps recipe).
+  const minuteWheel = useRef<WheelPickerHandle>(null);
   const insets = useSafeAreaInsets();
   const isKeyboardShown = useIsKeyboardShown();
 
@@ -158,9 +162,11 @@ export function ArrivalPickerSheet({ visible, initialInstant, zone, onCancel, on
               max={MAX_HOUR}
               onChange={setHour}
               onSubmitText={submitHourText}
+              onFilled={() => minuteWheel.current?.startEditing()}
             />
             <Text style={styles.wheelColon}>:</Text>
             <WheelPicker
+              ref={minuteWheel}
               items={MINUTES}
               index={minuteIndex}
               max={MAX_MINUTE}

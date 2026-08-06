@@ -1,7 +1,8 @@
+import { createRef } from 'react';
 import { Pressable, ScrollView, TextInput } from 'react-native';
 import { act, create, ReactTestRenderer } from 'react-test-renderer';
 
-import { WheelPicker } from '../components/WheelPicker';
+import { WheelPicker, WheelPickerHandle } from '../components/WheelPicker';
 
 // The grids the arrival picker passes in.
 const MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
@@ -168,6 +169,92 @@ test('tapping a NON-centred row selects it instead of opening the editor', () =>
 
   expect(props.onChange).toHaveBeenCalledWith(3);
   expect(renderer.root.findAllByType(TextInput)).toHaveLength(0);
+});
+
+// Auto-advance (typed-complete): once the typed entry can't accept another
+// digit, onFilled tells the parent to hop focus to the next wheel. Two digits
+// always complete the entry; a lone first digit of 3-9 completes an hour
+// immediately (a second digit would push past 23), while 0-2 must wait —
+// 0X/1X/2X are all still reachable.
+test('onFilled fires once a second digit completes the hour', () => {
+  const onFilled = jest.fn();
+  const { renderer } = mountWheel({ items: HOURS, index: 8, max: 23, onFilled });
+  const input = openEditor(renderer, 8);
+
+  act(() => input.props.onChangeText('1'));
+  expect(onFilled).not.toHaveBeenCalled();
+
+  act(() => input.props.onChangeText('13'));
+  expect(onFilled).toHaveBeenCalledTimes(1);
+});
+
+test('a lone first digit of 3-9 completes the hour immediately', () => {
+  const onFilled = jest.fn();
+  const { renderer } = mountWheel({ items: HOURS, index: 8, max: 23, onFilled });
+  const input = openEditor(renderer, 8);
+
+  act(() => input.props.onChangeText('3'));
+
+  expect(onFilled).toHaveBeenCalledTimes(1);
+});
+
+test('a lone first digit of 0-2 waits — a two-digit hour may follow', () => {
+  const onFilled = jest.fn();
+  const { renderer } = mountWheel({ items: HOURS, index: 8, max: 23, onFilled });
+  const input = openEditor(renderer, 8);
+
+  for (const digit of ['0', '1', '2']) {
+    act(() => input.props.onChangeText(digit));
+    expect(onFilled).not.toHaveBeenCalled();
+  }
+});
+
+test("a clamping second keystroke still completes — '29' commits '23' and fires", () => {
+  const onFilled = jest.fn();
+  const { renderer, props } = mountWheel({ items: HOURS, index: 8, max: 23, onFilled });
+  const input = openEditor(renderer, 8);
+
+  act(() => input.props.onChangeText('2'));
+  act(() => input.props.onChangeText('29'));
+
+  expect(props.onSubmitText).toHaveBeenLastCalledWith('23');
+  expect(onFilled).toHaveBeenCalledTimes(1);
+});
+
+// Backspacing to empty reverts to the pre-edit value — that revert commit must
+// never read as "entry complete" and yank focus away mid-correction.
+test('emptying the field never fires onFilled', () => {
+  const onFilled = jest.fn();
+  const { renderer } = mountWheel({ items: HOURS, index: 8, max: 23, onFilled });
+  const input = openEditor(renderer, 8);
+
+  act(() => input.props.onChangeText('1'));
+  act(() => input.props.onChangeText(''));
+
+  expect(onFilled).not.toHaveBeenCalled();
+});
+
+// The hop target: the parent opens the NEXT wheel's editor imperatively; its
+// TextInput mounts with autoFocus, so focus (and the keypad) move there.
+test('startEditing() opens the editor imperatively', () => {
+  const ref = createRef<WheelPickerHandle>();
+  const { renderer } = mountWheel({ ref });
+
+  act(() => ref.current!.startEditing());
+
+  expect(renderer.root.findAllByType(TextInput)).toHaveLength(1);
+});
+
+test('the ref-opened editor reverts an emptied field to the wheel value, like a tap', () => {
+  const ref = createRef<WheelPickerHandle>();
+  const { renderer, props } = mountWheel({ ref }); // minutes grid, index 9 → '45'
+  act(() => ref.current!.startEditing());
+  const input = renderer.root.findByType(TextInput);
+
+  act(() => input.props.onChangeText('3'));
+  act(() => input.props.onChangeText(''));
+
+  expect(props.onSubmitText).toHaveBeenLastCalledWith('45');
 });
 
 // The hour→minute bug: with the ScrollView default ('never'), the first tap on
