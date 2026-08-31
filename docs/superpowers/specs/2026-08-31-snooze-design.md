@@ -45,7 +45,10 @@ disarms as today.
 
 **Copy** — key `ring_snooze`, en `Snooze 5 min`, ko `5분 뒤 다시 알림`, in
 `android/src/main/res/values{,-ko}/strings.xml` and
-`ios/{en,ko}.lproj/SchedularmAlarm.strings`.
+`ios/{en,ko}.lproj/SchedularmAlarm.strings`. The iOS podspec must ship the
+`.lproj` directories (`s.resources = "**/*.lproj"`), not the `.strings` files:
+listing the files flattened both locales into one root-level table and made
+every module string Korean (plan Task 7).
 
 ## 2. Invariant: a pending snooze survives a re-arm
 

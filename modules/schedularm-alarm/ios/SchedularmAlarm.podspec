@@ -19,5 +19,11 @@ Pod::Spec.new do |s|
   }
 
   s.source_files = "**/*.{h,m,mm,swift,hpp,cpp}"
-  s.resources = "**/*.lproj/*.strings"
+  # Ship the .lproj DIRECTORIES, not the .strings files inside them: the Pods
+  # resources script rsyncs listed paths by basename (--no-relative), so listing
+  # the files flattened both locales into one root-level SchedularmAlarm.strings
+  # (the last copy — ko — won for every language). Directories keep
+  # en.lproj/ and ko.lproj/ intact, so LocalizedStringResource(table:) resolves
+  # per the device language.
+  s.resources = "**/*.lproj"
 end
