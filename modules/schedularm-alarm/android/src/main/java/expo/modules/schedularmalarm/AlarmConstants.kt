@@ -9,6 +9,11 @@ object AlarmConstants {
   const val ACTION_ALARM_DISMISS = "expo.modules.schedularmalarm.ACTION_ALARM_DISMISS"
   const val ACTION_ALARM_SNOOZE = "expo.modules.schedularmalarm.ACTION_ALARM_SNOOZE"
 
+  // In-app broadcast (setPackage + RECEIVER_NOT_EXPORTED) telling the ring
+  // Activity that the ring ended from outside it (notification Snooze/Dismiss,
+  // Disarm). EXTRA_ALARM_ID = which alarm; null = every ring.
+  const val ACTION_RING_ENDED = "expo.modules.schedularmalarm.ACTION_RING_ENDED"
+
   // Snooze length for every alarm (plain, unlimited). Mirrors the iOS module's
   // snoozeSeconds — change both together.
   const val SNOOZE_MINUTES = 5

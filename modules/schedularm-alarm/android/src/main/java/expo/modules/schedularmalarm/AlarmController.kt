@@ -100,7 +100,7 @@ object AlarmController {
   /** Dismiss only the alarm that just rang, leaving any later alarms armed (ring "dismiss"). */
   @Synchronized
   fun dismissOne(context: Context, id: String) {
-    stopRinging(context)
+    stopRinging(context, id)
     val remaining = loadAll(context).toMutableList()
     val fired = remaining.firstOrNull { it.id == id }
     if (fired != null) {
@@ -121,7 +121,7 @@ object AlarmController {
    */
   @Synchronized
   fun snooze(context: Context, id: String?) {
-    stopRinging(context)
+    stopRinging(context, id)
     if (id == null) return
     val all = loadAll(context)
     val entry = all.firstOrNull { it.id == id }
@@ -207,10 +207,18 @@ object AlarmController {
     return true
   }
 
-  /** Stop the ringing foreground service (audio + notification) and any fallback ring. */
-  fun stopRinging(context: Context) {
+  /** Stop the ringing foreground service (audio + notification) and any fallback
+   *  ring, and tell the ring Activity — if one is showing — that the ring for `id`
+   *  (null = every ring) is over, so it closes instead of lingering with a Dismiss
+   *  that would cancel a snooze just taken from the notification. */
+  fun stopRinging(context: Context, id: String? = null) {
     context.stopService(Intent(context, AlarmForegroundService::class.java))
     AlarmNotifications.cancelFallbackRing(context)
+    context.sendBroadcast(
+      Intent(AlarmConstants.ACTION_RING_ENDED)
+        .setPackage(context.packageName)
+        .putExtra(AlarmConstants.EXTRA_ALARM_ID, id),
+    )
   }
 
   /** All currently-persisted alarms (for boot re-arm and lookups). */

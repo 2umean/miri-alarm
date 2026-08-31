@@ -2,6 +2,10 @@ package expo.modules.schedularmalarm
 
 import android.app.Activity
 import android.app.KeyguardManager
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -13,6 +17,7 @@ import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.TextClock
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import java.util.Date
 
 /**
@@ -26,11 +31,30 @@ import java.util.Date
 class AlarmActivity : Activity() {
   private var firingId: String? = null
 
+  // Closes this screen when the ring ends from outside it (notification
+  // Snooze/Dismiss, Disarm): a lingering screen's Dismiss would otherwise cancel
+  // a snooze the user just took from the shade. Only our own alarm (or a
+  // ring-wide end) counts, so a late broadcast for alarm A can't close B's screen.
+  private val ringEnded = object : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+      val endedId = intent.getStringExtra(AlarmConstants.EXTRA_ALARM_ID)
+      if (endedId == null || endedId == firingId) finish()
+    }
+  }
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     firingId = intent?.getStringExtra(AlarmConstants.EXTRA_ALARM_ID)
     showOverLockScreen()
     setContentView(buildView())
+    ContextCompat.registerReceiver(
+      this, ringEnded, IntentFilter(AlarmConstants.ACTION_RING_ENDED), ContextCompat.RECEIVER_NOT_EXPORTED
+    )
+  }
+
+  override fun onDestroy() {
+    unregisterReceiver(ringEnded)
+    super.onDestroy()
   }
 
   private fun showOverLockScreen() {
@@ -49,6 +73,8 @@ class AlarmActivity : Activity() {
     }
     window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
   }
+
+  private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
   private fun buildView(): LinearLayout {
     val match = ViewGroup.LayoutParams.MATCH_PARENT
@@ -130,11 +156,12 @@ class AlarmActivity : Activity() {
         background = GradientDrawable().apply {
           cornerRadius = 999f
           setColor(0x2EFFFFFF)
+          setStroke(dp(1), 0x66FFFFFF)
         }
         setOnClickListener { snoozeAlarm() }
       }
       val snoozeParams = LinearLayout.LayoutParams(match, ViewGroup.LayoutParams.WRAP_CONTENT)
-        .apply { bottomMargin = 20 }
+        .apply { bottomMargin = dp(16) }
       root.addView(snooze, snoozeParams)
     }
 

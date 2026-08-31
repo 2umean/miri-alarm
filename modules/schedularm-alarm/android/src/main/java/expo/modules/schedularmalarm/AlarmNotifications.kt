@@ -40,10 +40,21 @@ object AlarmNotifications {
     post(context, AlarmConstants.NOTIFICATION_ID_MISSED, notification)
   }
 
+  /** Broadcast PendingIntent for a ring action (Dismiss/Snooze) aimed at
+   *  AlarmReceiver. Request codes are per surface AND per action so the FGS ring
+   *  notification and the fallback ring never rewrite each other's extras. */
+  fun ringActionIntent(context: Context, action: String, alarmId: String?, reqCode: Int): PendingIntent {
+    val intent = Intent(context, AlarmReceiver::class.java).apply {
+      this.action = action
+      putExtra(AlarmConstants.EXTRA_ALARM_ID, alarmId)
+    }
+    return PendingIntent.getBroadcast(context, reqCode, intent, piFlags())
+  }
+
   /**
    * Best-effort ring when the FGS could not start: an insistent alarm-category
    * notification whose CHANNEL carries the alarm sound (FLAG_INSISTENT loops it),
-   * with the same full-screen intent + dismiss action the real ring uses.
+   * with the same full-screen intent + Snooze/Dismiss actions the real ring uses.
    */
   fun notifyFallbackRing(context: Context, alarmId: String?) {
     val fullScreen = Intent(context, AlarmActivity::class.java).apply {
@@ -53,26 +64,14 @@ object AlarmNotifications {
     val fullScreenPi = PendingIntent.getActivity(
       context, AlarmConstants.REQ_FALLBACK_FULLSCREEN, fullScreen, piFlags()
     )
-    val dismiss = Intent(context, AlarmReceiver::class.java).apply {
-      action = AlarmConstants.ACTION_ALARM_DISMISS
-      putExtra(AlarmConstants.EXTRA_ALARM_ID, alarmId)
-    }
-    // NOT REQ_DISMISS: the FGS ring notification can be visible at the same time,
-    // and a shared request code would rewrite its dismiss target's alarm id.
-    val dismissPi = PendingIntent.getBroadcast(
-      context, AlarmConstants.REQ_DISMISS_FALLBACK, dismiss, piFlags()
-    )
-    val snooze = Intent(context, AlarmReceiver::class.java).apply {
-      action = AlarmConstants.ACTION_ALARM_SNOOZE
-      putExtra(AlarmConstants.EXTRA_ALARM_ID, alarmId)
-    }
-    val snoozePi = PendingIntent.getBroadcast(
-      context, AlarmConstants.REQ_SNOOZE_FALLBACK, snooze, piFlags()
-    )
+    // NOT REQ_DISMISS / REQ_SNOOZE: the FGS ring notification can be visible at the
+    // same time, and a shared request code would rewrite its actions' alarm id.
+    val dismissPi = ringActionIntent(context, AlarmConstants.ACTION_ALARM_DISMISS, alarmId, AlarmConstants.REQ_DISMISS_FALLBACK)
+    val snoozePi = ringActionIntent(context, AlarmConstants.ACTION_ALARM_SNOOZE, alarmId, AlarmConstants.REQ_SNOOZE_FALLBACK)
     // Same title convention as the FGS ring notification: the alarm's label leads.
     val entry = alarmId?.let { AlarmController.findAlarm(context, it) }
     val label = entry?.label.orEmpty()
-    val notification = baseBuilder(context)
+    val builder = baseBuilder(context)
       .setContentTitle(label.ifBlank { context.getString(R.string.fallback_ring_title) })
       .setContentText(context.getString(R.string.fallback_ring_text))
       .setOngoing(true)
@@ -81,18 +80,12 @@ object AlarmNotifications {
       // Android 14+ lets users swipe away even ongoing notifications — count
       // that as a dismiss so the entry doesn't resurface as a false "missed".
       .setDeleteIntent(dismissPi)
-      .apply {
-        if (entry != null) {
-          addAction(android.R.drawable.ic_lock_idle_alarm, context.getString(R.string.ring_snooze), snoozePi)
-        }
-      }
-      .addAction(
-        android.R.drawable.ic_lock_idle_alarm,
-        context.getString(R.string.ring_dismiss),
-        dismissPi
-      )
-      .build()
-      .apply { flags = flags or Notification.FLAG_INSISTENT }
+    // Snooze needs a KNOWN entry to re-arm; otherwise only Dismiss makes sense.
+    if (entry != null) {
+      builder.addAction(android.R.drawable.ic_lock_idle_alarm, context.getString(R.string.ring_snooze), snoozePi)
+    }
+    builder.addAction(android.R.drawable.ic_lock_idle_alarm, context.getString(R.string.ring_dismiss), dismissPi)
+    val notification = builder.build().apply { flags = flags or Notification.FLAG_INSISTENT }
     post(context, AlarmConstants.NOTIFICATION_ID_FALLBACK, notification)
   }
 
