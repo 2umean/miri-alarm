@@ -192,6 +192,10 @@ keeps its signature and its replace semantics from JS's point of view.
 - **Opening the app while an alarm rings (Android, multi-alarm chain):** the
   launch re-arm keeps the ringing entry (grace window), so Snooze and Dismiss
   on the ring screen / notification keep working afterwards.
+- **Ring left unattended past `RING_GRACE_MS` (10 min), then a cold launch
+  (Android, accepted):** the replace evicts the fired entry; the still-posted
+  ring notification's Snooze then degrades to silence-only (logged `Snooze for
+  unknown alarm`), Dismiss still silences. Self-limiting and rare.
 - **Snooze after arrival / repeatedly:** allowed — plain snooze by decision.
 - **Snooze then Disarm:** silence, nothing rings later (both platforms).
 - **Snooze then reboot (Android):** the snoozed entry is a future persisted
