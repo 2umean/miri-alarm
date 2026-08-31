@@ -31,6 +31,11 @@ import java.util.Date
 class AlarmActivity : Activity() {
   private var firingId: String? = null
 
+  // The persisted entry for firingId, looked up once in onCreate (title, leave
+  // chip and snooze pill all read it).
+  private var entry: AlarmEntry? = null
+  private var ringEndedRegistered = false
+
   // Closes this screen when the ring ends from outside it (notification
   // Snooze/Dismiss, Disarm): a lingering screen's Dismiss would otherwise cancel
   // a snooze the user just took from the shade. Only our own alarm (or a
@@ -45,15 +50,25 @@ class AlarmActivity : Activity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     firingId = intent?.getStringExtra(AlarmConstants.EXTRA_ALARM_ID)
+    entry = firingId?.let { AlarmController.findAlarm(applicationContext, it) }
+    // Every path here runs markFired first, so a live ring has fired == true. A
+    // known entry that is NOT fired was snoozed (or otherwise handled) in the
+    // sliver between the launch and this point — the ring is already over, so
+    // don't show a stale screen whose Dismiss would cancel that snooze.
+    if (entry?.fired == false) {
+      finish()
+      return
+    }
     showOverLockScreen()
     setContentView(buildView())
     ContextCompat.registerReceiver(
       this, ringEnded, IntentFilter(AlarmConstants.ACTION_RING_ENDED), ContextCompat.RECEIVER_NOT_EXPORTED
     )
+    ringEndedRegistered = true
   }
 
   override fun onDestroy() {
-    unregisterReceiver(ringEnded)
+    if (ringEndedRegistered) unregisterReceiver(ringEnded)
     super.onDestroy()
   }
 
@@ -91,7 +106,6 @@ class AlarmActivity : Activity() {
 
     // Which alarm fired — the pill label (event emoji + name) is the title, the
     // way the platform's default alarm screen leads with the alarm's own label.
-    val entry = firingId?.let { AlarmController.findAlarm(applicationContext, it) }
     val label = entry?.label.orEmpty()
     val title = TextView(this).apply {
       text = label.ifBlank { getString(R.string.fallback_ring_title) }
