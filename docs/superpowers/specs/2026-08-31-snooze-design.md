@@ -157,7 +157,9 @@ keeps its signature and its replace semantics from JS's point of view.
 - **Automated gate:** the native module has no Kotlin/Swift test harness
   (jest covers JS only) and JS does not change, so the gate is the existing
   jest suite + `npx tsc --noEmit` staying green, `npx expo prebuild` clean,
-  and an iOS Release simulator build compiling the module with 0 warnings.
+  and an iOS Release simulator build compiling the module with 0 errors
+  (deprecation warnings on the `stopButton:` alert initializer are expected —
+  it is deprecated in the 26.1 SDK, like the initializer used before).
 - **Manual QA matrix** (steps + results recorded in the plan, as for previous
   milestones):
   - Android (emulator or device): ring → Snooze from the activity / the
