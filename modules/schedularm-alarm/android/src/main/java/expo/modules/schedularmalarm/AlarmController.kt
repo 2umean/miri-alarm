@@ -45,17 +45,25 @@ object AlarmController {
    * re-arm must never drop a snooze the user is counting on. Only dismissAll
    * (Disarm) clears them. Everything is renumbered (base + index over the merged
    * list), so carried entries get fresh request codes with no collision handling.
+   * A ringing entry (fired, within RING_GRACE_MS) is kept in the store too —
+   * persisted, never re-scheduled — so a Snooze/Dismiss after the re-arm still
+   * finds it.
    */
   fun scheduleAlarms(context: Context, alarms: List<AlarmEntry>) {
     val now = System.currentTimeMillis()
     val incomingIds = alarms.map { it.id }.toSet()
-    val pendingSnoozes = loadAll(context).filter { it.snoozed && it.at > now && it.id !in incomingIds }
+    val leftovers = loadAll(context).filter { it.id !in incomingIds }
+    val pendingSnoozes = leftovers.filter { it.snoozed && it.at > now }
+    // Ringing right now: keep for snooze/dismiss, but its alarm already fired —
+    // re-scheduling a past instant would fire it again at once.
+    val ringing = leftovers.filter { it.fired && now - it.at < AlarmConstants.RING_GRACE_MS }
     cancelAllScheduled(context) // cancel PendingIntents of the previously-persisted set (snoozes are re-scheduled below)
     // Assign a stable, unique request code per alarm (base + index within this set).
-    val withCodes = (alarms + pendingSnoozes).mapIndexed { i, a -> a.copy(reqCode = AlarmConstants.REQ_FIRE_BASE + i) }
+    val withCodes = (alarms + pendingSnoozes + ringing).mapIndexed { i, a -> a.copy(reqCode = AlarmConstants.REQ_FIRE_BASE + i) }
     persistAll(context, withCodes)
     val am = alarmManager(context)
     for (e in withCodes) {
+      if (e.fired) continue // ringing entry: store-only, see above
       val info = AlarmManager.AlarmClockInfo(e.at, showPendingIntent(context, e))
       // setAlarmClock is the only API that is BOTH exact AND Doze-exempt.
       am.setAlarmClock(info, firePendingIntent(context, e))
@@ -103,7 +111,11 @@ object AlarmController {
     stopRinging(context)
     if (id == null) return
     val all = loadAll(context)
-    val entry = all.firstOrNull { it.id == id } ?: return
+    val entry = all.firstOrNull { it.id == id }
+    if (entry == null) {
+      Log.w(AlarmConstants.TAG, "Snooze for unknown alarm $id — silenced only")
+      return
+    }
     val snoozedEntry = entry.copy(
       at = System.currentTimeMillis() + AlarmConstants.SNOOZE_MS,
       fired = false,

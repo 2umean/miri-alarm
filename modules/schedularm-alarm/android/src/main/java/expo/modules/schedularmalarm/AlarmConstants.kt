@@ -14,6 +14,12 @@ object AlarmConstants {
   const val SNOOZE_MINUTES = 5
   const val SNOOZE_MS = SNOOZE_MINUTES * 60_000L
 
+  // How long after its instant a fired (ringing) entry is kept across a
+  // scheduleAlarms replace so Snooze/Dismiss can still find it. Matches the
+  // ring service's wake-lock cap; a ring that died with its process self-cleans
+  // at the first replace after this window.
+  const val RING_GRACE_MS = 10 * 60_000L
+
   // Which alarm fired/should be dismissed or snoozed (rides on the fire/dismiss/snooze intents).
   const val EXTRA_ALARM_ID = "alarm_id"
 
