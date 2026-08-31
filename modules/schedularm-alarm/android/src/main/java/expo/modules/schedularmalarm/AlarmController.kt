@@ -57,7 +57,7 @@ object AlarmController {
     val pendingSnoozes = leftovers.filter { it.snoozed && it.at > now }
     // Ringing right now: kept so Snooze/Dismiss still find it, but store-only —
     // its alarm already fired, and setAlarmClock on a past instant fires again at once.
-    val ringing = leftovers.filter { it.fired && now - it.at < AlarmConstants.RING_GRACE_MS }
+    val ringing = leftovers.filter { it.fired && it.at <= now && now - it.at < AlarmConstants.RING_GRACE_MS }
     val ringingIds = ringing.map { it.id }.toSet()
     cancelAllScheduled(context) // cancel PendingIntents of the previously-persisted set (snoozes are re-armed below)
     // Assign a stable, unique request code per alarm (base + index within this set).
