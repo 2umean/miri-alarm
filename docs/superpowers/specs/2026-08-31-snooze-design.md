@@ -53,9 +53,12 @@ cold launch to self-heal native state. Without a rule, opening the app during
 the 5 minutes would cancel the snoozed alarm: multi-alarm chains re-arm, and
 the snoozed instant is already in the past so `planNativeAlarms` omits it.
 
-- **Replace (`scheduleAlarms`) keeps pending snoozes.** Android: persisted
-  entries flagged `snoozed` with `at > now` whose id is not in the incoming set
-  are carried into the new set. iOS: persisted ids whose live state (via
+- **Replace (`scheduleAlarms`) keeps pending snoozes — and ringing alarms.**
+  Android: persisted entries flagged `snoozed` with `at > now` whose id is not
+  in the incoming set are carried into the new set and re-scheduled; entries
+  that are ringing right now (`fired`, within `RING_GRACE_MS` = 10 min of
+  their instant) are kept in the store without re-scheduling, so a Snooze or
+  Dismiss tap after the re-arm still finds them. iOS: persisted ids whose live state (via
   `AlarmManager.shared.alarms`) is not `.scheduled` — i.e. `.countdown`,
   `.paused` or `.alerting` — are not cancelled and stay in the persisted list.
   (Preserving `.alerting` is a small safety improvement in the same path: a
@@ -80,10 +83,22 @@ the snoozed instant is already in the past so `planNativeAlarms` omits it.
   persisted, and re-armed with `setAlarmClock` under its existing `reqCode`
   (the fired PendingIntent is spent, so re-creating it is safe).
 - `AlarmController.scheduleAlarms` (the replace): cancel the previous set's
-  PendingIntents as today, then
-  `all = incoming + persisted.filter { it.snoozed && it.at > now && it.id !in incomingIds }`,
-  renumber `reqCode = REQ_FIRE_BASE + index` over `all`, persist and schedule
-  everything. One deterministic numbering; no collision handling.
+  PendingIntents as today, then keep two kinds of persisted entries whose id
+  is not in the incoming set: **pending snoozes** (`snoozed && at > now`,
+  re-scheduled) and **ringing entries** (`fired && now − at < RING_GRACE_MS`,
+  10 min — persisted only, never passed to `setAlarmClock`, because a past
+  instant would fire again immediately). Renumber `reqCode = REQ_FIRE_BASE +
+  index` over `incoming + snoozes + ringing`, persist all, schedule the
+  non-`fired` ones. One deterministic numbering; no collision handling.
+  Why the ringing carry-over (found in code review): opening the app while an
+  alarm rings in a multi-alarm chain triggers the launch re-arm; without it
+  the ringing entry is evicted and a following Snooze tap silently degrades to
+  Dismiss (`snooze` finds no entry) — this is the Android twin of iOS keeping
+  `.alerting` alarms. The grace bound lets a ring that died with its process
+  self-clean at the next replace; a fired entry re-loaded by `BootReceiver`
+  (ring died with the reboot) may linger in the store until then — harmless.
+- `AlarmController.snooze` logs a warning when the id is unknown (the
+  silence-only path), so a degraded snooze is diagnosable in logcat.
 - `AlarmReceiver`: `ACTION_ALARM_SNOOZE → AlarmController.snooze(context, id)`.
 - `AlarmActivity`: snooze pill above the dismiss pill, built only when
   `firingId != null`; tap → `snooze` then `finish()`. Back stays a no-op.
@@ -148,6 +163,9 @@ keeps its signature and its replace semantics from JS's point of view.
 - **Second alarm fires during a snooze** (two ⏰ markers < 5 min apart):
   Android's `onStartCommand` re-entry already handles overlapping rings; the
   ring surface shows the latest firing id. iOS: independent AlarmKit alarms.
+- **Opening the app while an alarm rings (Android, multi-alarm chain):** the
+  launch re-arm keeps the ringing entry (grace window), so Snooze and Dismiss
+  on the ring screen / notification keep working afterwards.
 - **Snooze after arrival / repeatedly:** allowed — plain snooze by decision.
 - **Snooze then Disarm:** silence, nothing rings later (both platforms).
 - **Snooze then reboot (Android):** the snoozed entry is a future persisted
