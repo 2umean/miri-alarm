@@ -42,35 +42,45 @@ object AlarmController {
    * Replace the armed set: cancel any prior alarms, persist + schedule the new set.
    * Pending snoozes are carried over: a `snoozed` entry still in the future whose id
    * is not in the incoming set survives the replace — the launch-time self-heal
-   * re-arm must never drop a snooze the user is counting on. Only dismissAll
-   * (Disarm) clears them. Everything is renumbered (base + index over the merged
-   * list), so carried entries get fresh request codes with no collision handling.
-   * A ringing entry (fired, within RING_GRACE_MS) is kept in the store too —
-   * persisted, never re-scheduled — so a Snooze/Dismiss after the re-arm still
-   * finds it.
+   * re-arm must never drop a snooze the user is counting on. A ringing entry
+   * (fired, within RING_GRACE_MS) is kept in the store too — persisted, never
+   * re-scheduled — so a Snooze/Dismiss after the re-arm still finds it. Only
+   * dismissAll (Disarm) clears them. Everything is renumbered (base + index over
+   * the merged list), so carried entries get fresh request codes with no collision
+   * handling.
    */
+  @Synchronized
   fun scheduleAlarms(context: Context, alarms: List<AlarmEntry>) {
     val now = System.currentTimeMillis()
     val incomingIds = alarms.map { it.id }.toSet()
     val leftovers = loadAll(context).filter { it.id !in incomingIds }
     val pendingSnoozes = leftovers.filter { it.snoozed && it.at > now }
-    // Ringing right now: keep for snooze/dismiss, but its alarm already fired —
-    // re-scheduling a past instant would fire it again at once.
+    // Ringing right now: kept so Snooze/Dismiss still find it, but store-only —
+    // its alarm already fired, and setAlarmClock on a past instant fires again at once.
     val ringing = leftovers.filter { it.fired && now - it.at < AlarmConstants.RING_GRACE_MS }
-    cancelAllScheduled(context) // cancel PendingIntents of the previously-persisted set (snoozes are re-scheduled below)
+    val ringingIds = ringing.map { it.id }.toSet()
+    cancelAllScheduled(context) // cancel PendingIntents of the previously-persisted set (snoozes are re-armed below)
     // Assign a stable, unique request code per alarm (base + index within this set).
     val withCodes = (alarms + pendingSnoozes + ringing).mapIndexed { i, a -> a.copy(reqCode = AlarmConstants.REQ_FIRE_BASE + i) }
     persistAll(context, withCodes)
-    val am = alarmManager(context)
     for (e in withCodes) {
-      if (e.fired) continue // ringing entry: store-only, see above
-      val info = AlarmManager.AlarmClockInfo(e.at, showPendingIntent(context, e))
-      // setAlarmClock is the only API that is BOTH exact AND Doze-exempt.
-      am.setAlarmClock(info, firePendingIntent(context, e))
+      if (e.id in ringingIds) continue
+      armEntry(context, e)
+    }
+    if (pendingSnoozes.isNotEmpty() || ringing.isNotEmpty()) {
+      Log.i(AlarmConstants.TAG, "scheduleAlarms carried ${pendingSnoozes.size} pending snooze(s) and ${ringing.size} ringing entry(ies)")
     }
   }
 
+  /** Register `e` with AlarmManager under its reqCode. setAlarmClock is the only
+   *  API that is BOTH exact AND Doze-exempt. */
+  private fun armEntry(context: Context, e: AlarmEntry) {
+    val info = AlarmManager.AlarmClockInfo(e.at, showPendingIntent(context, e))
+    alarmManager(context).setAlarmClock(info, firePendingIntent(context, e))
+  }
+
   /** Full dismiss of the WHOLE set: silence the ring AND drop every schedule (app "disarm"). */
+  @Synchronized
   fun dismissAll(context: Context) {
     stopRinging(context)
     cancelAllScheduled(context)
@@ -88,6 +98,7 @@ object AlarmController {
   }
 
   /** Dismiss only the alarm that just rang, leaving any later alarms armed (ring "dismiss"). */
+  @Synchronized
   fun dismissOne(context: Context, id: String) {
     stopRinging(context)
     val remaining = loadAll(context).toMutableList()
@@ -103,10 +114,12 @@ object AlarmController {
    * Snooze the alarm that rang: silence the ring and re-arm the SAME entry
    * SNOOZE_MINUTES from now (it rings again full-screen with the same label).
    * Scope rule as dismissFired: a null/unknown id only silences and never touches
-   * the set. The entry keeps its reqCode — the fired PendingIntent is spent, so
-   * recreating it is safe — and is flagged `snoozed` so scheduleAlarms carries it
-   * over; `fired` resets so the missed-alarm detection applies to the new instant.
+   * the set. The entry keeps its reqCode — a broadcast PendingIntent without
+   * FLAG_ONE_SHOT stays valid after delivery; the alarm registered on it has simply
+   * fired — and is flagged `snoozed` so scheduleAlarms carries it over; `fired`
+   * resets so the missed-alarm detection applies to the new instant.
    */
+  @Synchronized
   fun snooze(context: Context, id: String?) {
     stopRinging(context)
     if (id == null) return
@@ -122,8 +135,7 @@ object AlarmController {
       snoozed = true,
     )
     persistAll(context, all.map { if (it.id == id) snoozedEntry else it })
-    val info = AlarmManager.AlarmClockInfo(snoozedEntry.at, showPendingIntent(context, snoozedEntry))
-    alarmManager(context).setAlarmClock(info, firePendingIntent(context, snoozedEntry))
+    armEntry(context, snoozedEntry)
     Log.i(AlarmConstants.TAG, "Snoozed alarm $id until ${snoozedEntry.at}")
   }
 
@@ -132,6 +144,7 @@ object AlarmController {
     loadAll(context).firstOrNull { it.id == id }
 
   /** Mark an entry as delivered, at broadcast time — see AlarmEntry.fired. */
+  @Synchronized
   fun markFired(context: Context, id: String?) {
     if (id == null) return
     val all = loadAll(context)
@@ -146,6 +159,7 @@ object AlarmController {
    * rang and may be ringing right now. Also drains the boot-time missed stash.
    * Must run BEFORE a re-arm replaces the set — the JS launch path calls it first.
    */
+  @Synchronized
   fun consumeMissedAlarms(context: Context): List<AlarmEntry> {
     val now = System.currentTimeMillis()
     val all = loadAll(context)
@@ -163,6 +177,7 @@ object AlarmController {
    * notification is best-effort (notifications may be blocked), and re-arming
    * consumes the entries, so without the stash the evidence would be gone.
    */
+  @Synchronized
   fun stashMissed(context: Context, missed: List<AlarmEntry>) {
     val merged = (decode(prefs(context).getString(AlarmConstants.KEY_MISSED, null)) + missed)
       .takeLast(MISSED_STASH_CAP)
