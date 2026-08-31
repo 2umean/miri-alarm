@@ -28,10 +28,11 @@ again 5 minutes later, full-screen, exactly like the first time. In between,
 the status-bar alarm icon shows (a `setAlarmClock` property) — no extra
 "snoozed" notification.
 
-**iOS** — the AlarmKit alert shows the system slide-to-stop control (iOS 26.5
-renders it regardless of any custom stop button — spike-verified 2026-08-31,
-so the module no longer passes one) and gains a secondary **"Snooze 5 min"**
-text button (Soft Sky tint; the system alert does not draw the `zzz` glyph).
+**iOS** — the AlarmKit alert shows a stop control (our localized "Dismiss
+alarm" button on iOS 26.0; from 26.1 the system renders its own slide-to-stop
+and ignores the custom button — spike-verified on 26.5) and gains a secondary
+**"Snooze 5 min"** text button (Soft Sky tint; the system alert does not draw
+the `zzz` glyph).
 Tapping it moves the alarm into AlarmKit's countdown state; it re-alerts
 5 minutes later through Silent mode and Focus like the first ring. No countdown
 UI during the 5 minutes (a Live Activity would need a widget extension —
@@ -131,12 +132,14 @@ the snoozed instant is already in the past so `planNativeAlarms` omits it.
 ## 4. iOS (`modules/schedularm-alarm/ios/SchedularmAlarmModule.swift`)
 
 - Presentation:
-  `AlarmPresentation.Alert(title:, secondaryButton: snoozeButton, secondaryButtonBehavior: .countdown)`
-  — the non-deprecated init with the system-provided stop control. (Task 1
-  first shipped the deprecated 4-argument init to keep the custom Stop label;
-  the 2026-08-31 simulator spike showed iOS 26.5 renders its own slide-to-stop
-  and never shows the custom button, so plan Task 6 drops it together with the
-  now-dead iOS `ring_dismiss` strings. Android keeps its own `ring_dismiss`.)
+  `AlarmPresentation.Alert(title:, stopButton:, secondaryButton: snoozeButton, secondaryButtonBehavior: .countdown)`
+  — the 4-argument init stays: the stop-button-less
+  `init(title:secondaryButton:secondaryButtonBehavior:)` is only available
+  from iOS 26.1, while the app's deployment target is 26.0 (compile-verified
+  2026-08-31: "only available in iOS 26.1 or newer"). On 26.0 the custom
+  "Dismiss alarm" button is what renders; on 26.1+ the system draws its own
+  slide-to-stop and ignores it (spike-verified on 26.5) — harmless. Revisit
+  only if the deployment target ever moves to 26.1+.
   `snoozeButton = AlarmButton(text: ring_snooze, textColor: .white, systemImageName: "zzz")`
   — the glyph is not rendered by the system alert; harmless.
 - Configuration: replace the `.alarm(schedule:attributes:sound:)` factory with
