@@ -96,8 +96,9 @@ the snoozed instant is already in the past so `planNativeAlarms` omits it.
   because a past instant would fire again immediately; the `at <= now` bound
   keeps the two sets disjoint and keeps a fired-but-future entry, which only a
   backwards clock change can produce, on the armed path). Renumber `reqCode = REQ_FIRE_BASE +
-  index` over `incoming + snoozes + ringing`, persist all, schedule the
-  non-`fired` ones. One deterministic numbering; no collision handling.
+  index` over `incoming + snoozes + ringing`, persist all, schedule
+  everything except the carried ringing entries. One deterministic numbering;
+  no collision handling.
   Why the ringing carry-over (found in code review): opening the app while an
   alarm rings in a multi-alarm chain triggers the launch re-arm; without it
   the ringing entry is evicted and a following Snooze tap silently degrades to
@@ -209,9 +210,10 @@ keeps its signature and its replace semantics from JS's point of view.
   chain, the old countdown survives (the rule keeps live alarms) and rings
   once more with its old label, invisible in the UI. Accepted: the user asked
   for that ring, the window is at most 5 minutes, and avoiding it would need
-  a native-contract change this spec rules out. iOS only: on Android the new
-  arm re-plans the same pill ids (the draft rolls forward), so the old snooze's
-  id is in the incoming set and is simply replaced — the better outcome.
+  a native-contract change this spec rules out. Android behaves the same when
+  the new arm uses a different preset/chain (new pill ids → the snooze is
+  carried); re-arming the same draft rolled forward re-plans the same pill
+  ids, so the snooze's id is in the incoming set and is simply replaced.
 
 ## 7. Testing and QA
 

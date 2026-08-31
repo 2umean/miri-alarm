@@ -36,7 +36,9 @@ class BootReceiver : BroadcastReceiver() {
     val all = AlarmController.loadAll(context)
     val future = all.filter { it.at > now }
     // Only never-delivered entries are misses; fired-but-undismissed ones rang
-    // (their ring died with the reboot) and are dropped without a notice.
+    // (their ring died with the reboot) and get no notice — scheduleAlarms keeps
+    // one in the store (never re-armed) while it is within RING_GRACE_MS, then
+    // the next replace drops it.
     val missed = all.filter { it.at <= now && !it.fired }
     Log.i(
       AlarmConstants.TAG,
