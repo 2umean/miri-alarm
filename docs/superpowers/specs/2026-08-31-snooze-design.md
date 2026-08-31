@@ -151,6 +151,13 @@ keeps its signature and its replace semantics from JS's point of view.
 - **Time zone change during a snooze:** entries are epoch ms; unaffected.
 - **Unknown id at snooze time (redelivered null-intent restart):** silence
   only, set untouched — the same scope rule as `dismissFired`.
+- **Old chain's snooze during a brand-new arm (accepted):** if every alarm
+  of the armed chain has passed, a cold launch clears the armed snapshot
+  without re-arming; if the user then snoozes that last ring and arms a new
+  chain, the old countdown survives (the rule keeps live alarms) and rings
+  once more with its old label, invisible in the UI. Accepted: the user asked
+  for that ring, the window is at most 5 minutes, and avoiding it would need
+  a native-contract change this spec rules out.
 
 ## 7. Testing and QA
 
