@@ -87,7 +87,7 @@ class AlarmActivity : Activity() {
     }
 
     // Spacers above and below keep the title/clock block vertically centered,
-    // with the dismiss pill pinned to the bottom.
+    // with the snooze + dismiss pills pinned to the bottom.
     root.addView(android.view.View(this), LinearLayout.LayoutParams(0, 0, 1f))
     root.addView(title)
     root.addView(clock)
@@ -117,6 +117,27 @@ class AlarmActivity : Activity() {
 
     root.addView(android.view.View(this), LinearLayout.LayoutParams(0, 0, 1f))
 
+    // Snooze pill — only for a KNOWN entry: an unknown id cannot be re-armed
+    // (AlarmController.snooze's scope rule), so that case is dismiss-only.
+    if (entry != null) {
+      val snooze = TextView(this).apply {
+        text = getString(R.string.ring_snooze)
+        textSize = 17f
+        setTextColor(Color.WHITE)
+        typeface = Typeface.DEFAULT_BOLD
+        gravity = Gravity.CENTER
+        setPadding(0, 44, 0, 44)
+        background = GradientDrawable().apply {
+          cornerRadius = 999f
+          setColor(0x2EFFFFFF)
+        }
+        setOnClickListener { snoozeAlarm() }
+      }
+      val snoozeParams = LinearLayout.LayoutParams(match, ViewGroup.LayoutParams.WRAP_CONTENT)
+        .apply { bottomMargin = 20 }
+      root.addView(snooze, snoozeParams)
+    }
+
     val dismiss = TextView(this).apply {
       text = getString(R.string.ring_dismiss)
       textSize = 17f
@@ -139,6 +160,12 @@ class AlarmActivity : Activity() {
     // Dismiss only the alarm that rang (known id) or just silence the ring
     // (unknown id) — never cancel the whole set. See AlarmController.dismissFired.
     AlarmController.dismissFired(applicationContext, firingId)
+    finish()
+  }
+
+  private fun snoozeAlarm() {
+    // Re-arms the fired entry SNOOZE_MINUTES out; later alarms stay untouched.
+    AlarmController.snooze(applicationContext, firingId)
     finish()
   }
 

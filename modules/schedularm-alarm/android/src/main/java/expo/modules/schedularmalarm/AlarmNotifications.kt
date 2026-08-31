@@ -62,8 +62,16 @@ object AlarmNotifications {
     val dismissPi = PendingIntent.getBroadcast(
       context, AlarmConstants.REQ_DISMISS_FALLBACK, dismiss, piFlags()
     )
+    val snooze = Intent(context, AlarmReceiver::class.java).apply {
+      action = AlarmConstants.ACTION_ALARM_SNOOZE
+      putExtra(AlarmConstants.EXTRA_ALARM_ID, alarmId)
+    }
+    val snoozePi = PendingIntent.getBroadcast(
+      context, AlarmConstants.REQ_SNOOZE_FALLBACK, snooze, piFlags()
+    )
     // Same title convention as the FGS ring notification: the alarm's label leads.
-    val label = alarmId?.let { AlarmController.findAlarm(context, it)?.label }.orEmpty()
+    val entry = alarmId?.let { AlarmController.findAlarm(context, it) }
+    val label = entry?.label.orEmpty()
     val notification = baseBuilder(context)
       .setContentTitle(label.ifBlank { context.getString(R.string.fallback_ring_title) })
       .setContentText(context.getString(R.string.fallback_ring_text))
@@ -73,6 +81,11 @@ object AlarmNotifications {
       // Android 14+ lets users swipe away even ongoing notifications — count
       // that as a dismiss so the entry doesn't resurface as a false "missed".
       .setDeleteIntent(dismissPi)
+      .apply {
+        if (entry != null) {
+          addAction(android.R.drawable.ic_lock_idle_alarm, context.getString(R.string.ring_snooze), snoozePi)
+        }
+      }
       .addAction(
         android.R.drawable.ic_lock_idle_alarm,
         context.getString(R.string.ring_dismiss),

@@ -140,10 +140,18 @@ class AlarmForegroundService : Service() {
     val dismissPi = PendingIntent.getBroadcast(
       this, AlarmConstants.REQ_DISMISS, dismissIntent, piFlags()
     )
+    val snoozeIntent = Intent(this, AlarmReceiver::class.java).apply {
+      action = AlarmConstants.ACTION_ALARM_SNOOZE
+      putExtra(AlarmConstants.EXTRA_ALARM_ID, firingId)
+    }
+    val snoozePi = PendingIntent.getBroadcast(
+      this, AlarmConstants.REQ_SNOOZE, snoozeIntent, piFlags()
+    )
 
     // Lead with the alarm's label (event emoji + name) — this notification is the
     // ring surface when the phone is unlocked and in use (heads-up banner).
-    val label = firingId?.let { AlarmController.findAlarm(this, it)?.label }.orEmpty()
+    val entry = firingId?.let { AlarmController.findAlarm(this, it) }
+    val label = entry?.label.orEmpty()
     return NotificationCompat.Builder(this, AlarmConstants.CHANNEL_ID)
       .setContentTitle(label.ifBlank { getString(R.string.fallback_ring_title) })
       .setContentText(getString(R.string.fallback_ring_text))
@@ -156,6 +164,12 @@ class AlarmForegroundService : Service() {
       .setSilent(true)
       .setFullScreenIntent(fullScreenPi, true)
       .setContentIntent(fullScreenPi)
+      .apply {
+        // Snooze needs a KNOWN entry to re-arm; otherwise only Dismiss makes sense.
+        if (entry != null) {
+          addAction(android.R.drawable.ic_lock_idle_alarm, getString(R.string.ring_snooze), snoozePi)
+        }
+      }
       .addAction(
         android.R.drawable.ic_lock_idle_alarm,
         getString(R.string.ring_dismiss),
