@@ -33,7 +33,9 @@ public class SchedularmAlarmModule: Module {
   private let legacyAlarmIdKey = "schedularm.alarm.id"
   /// Snooze length for every alarm: AlarmKit re-alerts this long after the
   /// secondary ("Snooze") button is tapped (countdownDuration.postAlert).
-  /// Mirrors AlarmConstants.SNOOZE_MINUTES on Android — change both together.
+  /// The value is also spelled out in the four `ring_snooze` strings (iOS
+  /// en/ko, Android en/ko) and mirrored by AlarmConstants.SNOOZE_MINUTES on
+  /// Android — change all of them together.
   private static let snoozeSeconds: TimeInterval = 5 * 60
 
   public func definition() -> ModuleDefinition {
@@ -173,10 +175,14 @@ public class SchedularmAlarmModule: Module {
   }
 
   /// UUID strings of this app's alarms that are NOT merely scheduled (the
-  /// daemon only holds this client's alarms). Empty when the query throws.
+  /// daemon only holds this client's alarms). Empty — and logged — when the query throws.
   private static func liveAlarmIds() -> Set<String> {
-    let alarms = (try? AlarmManager.shared.alarms) ?? []
-    return Set(alarms.filter { $0.state != .scheduled }.map { $0.id.uuidString })
+    do {
+      return Set(try AlarmManager.shared.alarms.filter { $0.state != .scheduled }.map { $0.id.uuidString })
+    } catch {
+      NSLog("[SchedularmAlarm] alarms query failed: %@ — treating none as live", String(describing: error))
+      return []
+    }
   }
 
   private static func stateString(_ state: AlarmManager.AuthorizationState) -> String {
