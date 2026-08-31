@@ -1,2 +1,3 @@
 "ring_alarm" = "알람";
 "ring_dismiss" = "알람 끄기";
+"ring_snooze" = "5분 뒤 다시 알림";

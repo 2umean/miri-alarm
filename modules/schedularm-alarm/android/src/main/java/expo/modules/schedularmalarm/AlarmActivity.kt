@@ -2,6 +2,10 @@ package expo.modules.schedularmalarm
 
 import android.app.Activity
 import android.app.KeyguardManager
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -13,6 +17,7 @@ import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.TextClock
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import java.util.Date
 
 /**
@@ -26,11 +31,45 @@ import java.util.Date
 class AlarmActivity : Activity() {
   private var firingId: String? = null
 
+  // The persisted entry for firingId, looked up once in onCreate (title, leave
+  // chip and snooze pill all read it).
+  private var entry: AlarmEntry? = null
+  private var ringEndedRegistered = false
+
+  // Closes this screen when the ring ends from outside it (notification
+  // Snooze/Dismiss, Disarm): a lingering screen's Dismiss would otherwise cancel
+  // a snooze the user just took from the shade. Only our own alarm (or a
+  // ring-wide end) counts, so a late broadcast for alarm A can't close B's screen.
+  private val ringEnded = object : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+      val endedId = intent.getStringExtra(AlarmConstants.EXTRA_ALARM_ID)
+      if (endedId == null || endedId == firingId) finish()
+    }
+  }
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     firingId = intent?.getStringExtra(AlarmConstants.EXTRA_ALARM_ID)
+    entry = firingId?.let { AlarmController.findAlarm(applicationContext, it) }
+    // Every path here runs markFired first, so a live ring has fired == true. A
+    // known entry that is NOT fired was snoozed (or otherwise handled) in the
+    // sliver between the launch and this point — the ring is already over, so
+    // don't show a stale screen whose Dismiss would cancel that snooze.
+    if (entry?.fired == false) {
+      finish()
+      return
+    }
     showOverLockScreen()
     setContentView(buildView())
+    ContextCompat.registerReceiver(
+      this, ringEnded, IntentFilter(AlarmConstants.ACTION_RING_ENDED), ContextCompat.RECEIVER_NOT_EXPORTED
+    )
+    ringEndedRegistered = true
+  }
+
+  override fun onDestroy() {
+    if (ringEndedRegistered) unregisterReceiver(ringEnded)
+    super.onDestroy()
   }
 
   private fun showOverLockScreen() {
@@ -50,6 +89,8 @@ class AlarmActivity : Activity() {
     window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
   }
 
+  private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+
   private fun buildView(): LinearLayout {
     val match = ViewGroup.LayoutParams.MATCH_PARENT
     // Honors the device 12/24-hour preference, unlike a fixed HH:mm pattern.
@@ -65,7 +106,6 @@ class AlarmActivity : Activity() {
 
     // Which alarm fired — the pill label (event emoji + name) is the title, the
     // way the platform's default alarm screen leads with the alarm's own label.
-    val entry = firingId?.let { AlarmController.findAlarm(applicationContext, it) }
     val label = entry?.label.orEmpty()
     val title = TextView(this).apply {
       text = label.ifBlank { getString(R.string.fallback_ring_title) }
@@ -87,7 +127,7 @@ class AlarmActivity : Activity() {
     }
 
     // Spacers above and below keep the title/clock block vertically centered,
-    // with the dismiss pill pinned to the bottom.
+    // with the snooze + dismiss pills pinned to the bottom.
     root.addView(android.view.View(this), LinearLayout.LayoutParams(0, 0, 1f))
     root.addView(title)
     root.addView(clock)
@@ -117,6 +157,28 @@ class AlarmActivity : Activity() {
 
     root.addView(android.view.View(this), LinearLayout.LayoutParams(0, 0, 1f))
 
+    // Snooze pill — only for a KNOWN entry: an unknown id cannot be re-armed
+    // (AlarmController.snooze's scope rule), so that case is dismiss-only.
+    if (entry != null) {
+      val snooze = TextView(this).apply {
+        text = getString(R.string.ring_snooze)
+        textSize = 17f
+        setTextColor(Color.WHITE)
+        typeface = Typeface.DEFAULT_BOLD
+        gravity = Gravity.CENTER
+        setPadding(0, 44, 0, 44)
+        background = GradientDrawable().apply {
+          cornerRadius = 999f
+          setColor(0x2EFFFFFF)
+          setStroke(dp(1), 0x66FFFFFF)
+        }
+        setOnClickListener { snoozeAlarm() }
+      }
+      val snoozeParams = LinearLayout.LayoutParams(match, ViewGroup.LayoutParams.WRAP_CONTENT)
+        .apply { bottomMargin = dp(16) }
+      root.addView(snooze, snoozeParams)
+    }
+
     val dismiss = TextView(this).apply {
       text = getString(R.string.ring_dismiss)
       textSize = 17f
@@ -139,6 +201,12 @@ class AlarmActivity : Activity() {
     // Dismiss only the alarm that rang (known id) or just silence the ring
     // (unknown id) — never cancel the whole set. See AlarmController.dismissFired.
     AlarmController.dismissFired(applicationContext, firingId)
+    finish()
+  }
+
+  private fun snoozeAlarm() {
+    // Re-arms the fired entry SNOOZE_MINUTES out; later alarms stay untouched.
+    AlarmController.snooze(applicationContext, firingId)
     finish()
   }
 

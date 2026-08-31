@@ -8,13 +8,14 @@ import android.util.Log
 
 /**
  * Receives the exact alarm broadcast and starts the ringing foreground service
- * for the alarm that fired, and handles the notification "Dismiss" action.
+ * for the alarm that fired, and handles the notification "Dismiss" and "Snooze" actions.
  */
 class AlarmReceiver : BroadcastReceiver() {
   override fun onReceive(context: Context, intent: Intent) {
     val id = intent.getStringExtra(AlarmConstants.EXTRA_ALARM_ID)
     when (intent.action) {
       AlarmConstants.ACTION_ALARM_DISMISS -> AlarmController.dismissFired(context, id)
+      AlarmConstants.ACTION_ALARM_SNOOZE -> AlarmController.snooze(context, id)
       else -> startRinging(context, id) // ACTION_ALARM_FIRE
     }
   }

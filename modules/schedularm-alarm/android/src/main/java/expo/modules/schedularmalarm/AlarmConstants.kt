@@ -7,12 +7,29 @@ object AlarmConstants {
   // Broadcast actions handled by AlarmReceiver.
   const val ACTION_ALARM_FIRE = "expo.modules.schedularmalarm.ACTION_ALARM_FIRE"
   const val ACTION_ALARM_DISMISS = "expo.modules.schedularmalarm.ACTION_ALARM_DISMISS"
+  const val ACTION_ALARM_SNOOZE = "expo.modules.schedularmalarm.ACTION_ALARM_SNOOZE"
 
-  // Which alarm fired/should be dismissed (rides on the fire/dismiss intents).
+  // In-app broadcast (setPackage + RECEIVER_NOT_EXPORTED) telling the ring
+  // Activity that the ring ended from outside it (notification Snooze/Dismiss,
+  // Disarm). EXTRA_ALARM_ID = which alarm; null = every ring.
+  const val ACTION_RING_ENDED = "expo.modules.schedularmalarm.ACTION_RING_ENDED"
+
+  // Snooze length for every alarm (plain, unlimited). Mirrors the iOS module's
+  // snoozeSeconds — change both together.
+  const val SNOOZE_MINUTES = 5
+  const val SNOOZE_MS = SNOOZE_MINUTES * 60_000L
+
+  // How long after its instant a fired (ringing) entry is kept across a
+  // scheduleAlarms replace so Snooze/Dismiss can still find it. Matches the
+  // ring service's wake-lock cap; a ring that died with its process self-cleans
+  // at the first replace after this window.
+  const val RING_GRACE_MS = 10 * 60_000L
+
+  // Which alarm fired/should be dismissed or snoozed (rides on the fire/dismiss/snooze intents).
   const val EXTRA_ALARM_ID = "alarm_id"
 
   // Persistence (device-protected storage so boot re-arm works pre-unlock).
-  // A JSON array of {id, at, label, leaveAt, reqCode, fired} — the whole armed set.
+  // A JSON array of {id, at, label, leaveAt, reqCode, fired, snoozed} — the whole armed set.
   const val PREFS_NAME = "schedularm_alarm_prefs"
   const val KEY_ALARMS = "alarms_json"
   // Missed alarms found at boot, kept for the in-app banner even when the boot
@@ -36,7 +53,7 @@ object AlarmConstants {
   const val NOTIFICATION_ID_FALLBACK = 4713
 
   // PendingIntent request codes. Fire/show are per-alarm (base + index) so N
-  // alarms get distinct PendingIntents; dismiss/permission are singletons.
+  // alarms get distinct PendingIntents; dismiss/snooze/permission are singletons.
   const val REQ_FIRE_BASE = 2000
   const val REQ_SHOW_BASE = 3000
   const val REQ_DISMISS = 1003
@@ -46,4 +63,7 @@ object AlarmConstants {
   // Distinct from REQ_DISMISS: the FGS notification and the fallback ring can be
   // visible at once, and a shared request code would rewrite the other's extras.
   const val REQ_DISMISS_FALLBACK = 1007
+  // Same split for the snooze actions of the two ring notifications.
+  const val REQ_SNOOZE = 1008
+  const val REQ_SNOOZE_FALLBACK = 1009
 }

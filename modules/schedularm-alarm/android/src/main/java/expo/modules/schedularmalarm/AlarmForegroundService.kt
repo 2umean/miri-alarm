@@ -133,18 +133,18 @@ class AlarmForegroundService : Service() {
     val fullScreenPi = PendingIntent.getActivity(
       this, AlarmConstants.REQ_SHOW_BASE, fullScreenIntent, piFlags()
     )
-    val dismissIntent = Intent(this, AlarmReceiver::class.java).apply {
-      action = AlarmConstants.ACTION_ALARM_DISMISS
-      putExtra(AlarmConstants.EXTRA_ALARM_ID, firingId)
-    }
-    val dismissPi = PendingIntent.getBroadcast(
-      this, AlarmConstants.REQ_DISMISS, dismissIntent, piFlags()
+    val dismissPi = AlarmNotifications.ringActionIntent(
+      this, AlarmConstants.ACTION_ALARM_DISMISS, firingId, AlarmConstants.REQ_DISMISS
+    )
+    val snoozePi = AlarmNotifications.ringActionIntent(
+      this, AlarmConstants.ACTION_ALARM_SNOOZE, firingId, AlarmConstants.REQ_SNOOZE
     )
 
     // Lead with the alarm's label (event emoji + name) — this notification is the
     // ring surface when the phone is unlocked and in use (heads-up banner).
-    val label = firingId?.let { AlarmController.findAlarm(this, it)?.label }.orEmpty()
-    return NotificationCompat.Builder(this, AlarmConstants.CHANNEL_ID)
+    val entry = firingId?.let { AlarmController.findAlarm(this, it) }
+    val label = entry?.label.orEmpty()
+    val builder = NotificationCompat.Builder(this, AlarmConstants.CHANNEL_ID)
       .setContentTitle(label.ifBlank { getString(R.string.fallback_ring_title) })
       .setContentText(getString(R.string.fallback_ring_text))
       .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
@@ -156,12 +156,12 @@ class AlarmForegroundService : Service() {
       .setSilent(true)
       .setFullScreenIntent(fullScreenPi, true)
       .setContentIntent(fullScreenPi)
-      .addAction(
-        android.R.drawable.ic_lock_idle_alarm,
-        getString(R.string.ring_dismiss),
-        dismissPi
-      )
-      .build()
+    // Snooze needs a KNOWN entry to re-arm; otherwise only Dismiss makes sense.
+    if (entry != null) {
+      builder.addAction(android.R.drawable.ic_lock_idle_alarm, getString(R.string.ring_snooze), snoozePi)
+    }
+    builder.addAction(android.R.drawable.ic_lock_idle_alarm, getString(R.string.ring_dismiss), dismissPi)
+    return builder.build()
   }
 
   private fun piFlags(): Int =
