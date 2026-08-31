@@ -107,11 +107,20 @@ the snoozed instant is already in the past so `planNativeAlarms` omits it.
 - `AlarmController.snooze` logs a warning when the id is unknown (the
   silence-only path), so a degraded snooze is diagnosable in logcat.
 - `AlarmReceiver`: `ACTION_ALARM_SNOOZE → AlarmController.snooze(context, id)`.
-- `AlarmActivity`: snooze pill above the dismiss pill, built only when
-  `firingId != null`; tap → `snooze` then `finish()`. Back stays a no-op.
+- `AlarmActivity`: snooze pill above the dismiss pill (translucent white with
+  a thin border, 16 dp gap), built only when the persisted entry for the
+  firing id is KNOWN (an unknown id cannot be re-armed, so no snooze
+  affordance there); tap → `snooze` then `finish()`. Back stays a no-op. The
+  screen also closes by itself when the ring ends from outside it: `stopRinging`
+  sends an in-app `ACTION_RING_ENDED` broadcast (with the alarm id; null =
+  every ring) and the activity finishes when it matches its own alarm —
+  otherwise a notification Snooze would leave a silent ring screen whose
+  Dismiss cancels the snooze just taken.
 - `AlarmForegroundService.buildNotification` and
-  `AlarmNotifications.notifyFallbackRing`: add the Snooze action (broadcast
-  PendingIntent) when the alarm id is known.
+  `AlarmNotifications.notifyFallbackRing`: add the Snooze action ahead of
+  Dismiss when the entry is known; both build their Dismiss/Snooze
+  PendingIntents through one `AlarmNotifications.ringActionIntent` helper
+  (per-surface request codes as before).
 - No change to `BootReceiver` / `consumeMissedAlarms`: a snoozed entry is a
   normal future entry, so it is re-armed after reboot and reported as *missed*
   if the OS killed it before it rang.
