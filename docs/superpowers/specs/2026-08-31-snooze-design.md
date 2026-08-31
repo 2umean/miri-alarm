@@ -90,9 +90,11 @@ the snoozed instant is already in the past so `planNativeAlarms` omits it.
 - `AlarmController.scheduleAlarms` (the replace): cancel the previous set's
   PendingIntents as today, then keep two kinds of persisted entries whose id
   is not in the incoming set: **pending snoozes** (`snoozed && at > now`,
-  re-scheduled) and **ringing entries** (`fired && now − at < RING_GRACE_MS`,
-  10 min — persisted only, never passed to `setAlarmClock`, because a past
-  instant would fire again immediately). Renumber `reqCode = REQ_FIRE_BASE +
+  re-scheduled) and **ringing entries** (`fired && at <= now && now − at <
+  RING_GRACE_MS`, 10 min — persisted only, never passed to `setAlarmClock`,
+  because a past instant would fire again immediately; the `at <= now` bound
+  keeps the two sets disjoint and keeps a fired-but-future entry, which only a
+  backwards clock change can produce, on the armed path). Renumber `reqCode = REQ_FIRE_BASE +
   index` over `incoming + snoozes + ringing`, persist all, schedule the
   non-`fired` ones. One deterministic numbering; no collision handling.
   Why the ringing carry-over (found in code review): opening the app while an
