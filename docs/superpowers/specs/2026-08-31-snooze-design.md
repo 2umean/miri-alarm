@@ -28,11 +28,14 @@ again 5 minutes later, full-screen, exactly like the first time. In between,
 the status-bar alarm icon shows (a `setAlarmClock` property) — no extra
 "snoozed" notification.
 
-**iOS** — the AlarmKit alert keeps our localized Stop control and gains a
-secondary **"Snooze 5 min"** button (`zzz` symbol, Soft Sky tint). Tapping it
-moves the alarm into AlarmKit's countdown state; it re-alerts 5 minutes later
-through Silent mode and Focus like the first ring. No countdown UI during the
-5 minutes (a Live Activity would need a widget extension — deliberately out).
+**iOS** — the AlarmKit alert shows the system slide-to-stop control (iOS 26.5
+renders it regardless of any custom stop button — spike-verified 2026-08-31,
+so the module no longer passes one) and gains a secondary **"Snooze 5 min"**
+text button (Soft Sky tint; the system alert does not draw the `zzz` glyph).
+Tapping it moves the alarm into AlarmKit's countdown state; it re-alerts
+5 minutes later through Silent mode and Focus like the first ring. No countdown
+UI during the 5 minutes (a Live Activity would need a widget extension —
+deliberately out).
 
 **Unchanged** — the chain screen, armed chip, presets, arm/disarm. The armed
 chip keeps showing the *planned* instant; the snooze is a transient native
@@ -94,10 +97,14 @@ the snoozed instant is already in the past so `planNativeAlarms` omits it.
 ## 4. iOS (`modules/schedularm-alarm/ios/SchedularmAlarmModule.swift`)
 
 - Presentation:
-  `AlarmPresentation.Alert(title:, stopButton:, secondaryButton: snoozeButton, secondaryButtonBehavior: .countdown)`
-  — keeps the custom localized Stop label (the 4-argument init is deprecated in
-  the 26.1 SDK but compiles, same status as the 2-argument init used today).
-  `snoozeButton = AlarmButton(text: ring_snooze, textColor: .white, systemImageName: "zzz")`.
+  `AlarmPresentation.Alert(title:, secondaryButton: snoozeButton, secondaryButtonBehavior: .countdown)`
+  — the non-deprecated init with the system-provided stop control. (Task 1
+  first shipped the deprecated 4-argument init to keep the custom Stop label;
+  the 2026-08-31 simulator spike showed iOS 26.5 renders its own slide-to-stop
+  and never shows the custom button, so plan Task 6 drops it together with the
+  now-dead iOS `ring_dismiss` strings. Android keeps its own `ring_dismiss`.)
+  `snoozeButton = AlarmButton(text: ring_snooze, textColor: .white, systemImageName: "zzz")`
+  — the glyph is not rendered by the system alert; harmless.
 - Configuration: replace the `.alarm(schedule:attributes:sound:)` factory with
   `AlarmManager.AlarmConfiguration(countdownDuration: Alarm.CountdownDuration(preAlert: nil, postAlert: 300), schedule: .fixed(date), attributes:, stopIntent: nil, secondaryIntent: nil, sound: .default)`.
   Verified against the AlarmKit docs (2026-08-31): `.countdown` = "a Repeat
@@ -151,6 +158,11 @@ keeps its signature and its replace semantics from JS's point of view.
 - **Time zone change during a snooze:** entries are epoch ms; unaffected.
 - **Unknown id at snooze time (redelivered null-intent restart):** silence
   only, set untouched — the same scope rule as `dismissFired`.
+- **Foregrounding the app while an alarm is alerting (iOS, accepted):** the
+  system ends the alert when the app comes to the foreground — spike-verified
+  with a control chain, independent of our re-arm code (the `.alerting` alarm
+  is still kept in the persisted list). Unreachable on a device: the
+  full-screen alert offers only Snooze and Stop.
 - **Old chain's snooze during a brand-new arm (accepted):** if every alarm
   of the armed chain has passed, a cold launch clears the armed snapshot
   without re-arming; if the user then snoozes that last ring and arms a new
