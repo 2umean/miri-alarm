@@ -31,6 +31,10 @@ public class SchedularmAlarmModule: Module {
   // Legacy single-alarm key (pre-Phase-3) — cancelled too so an upgrade can't
   // leave an orphaned alarm armed.
   private let legacyAlarmIdKey = "schedularm.alarm.id"
+  /// Snooze length for every alarm: AlarmKit re-alerts this long after the
+  /// secondary ("Snooze") button is tapped (countdownDuration.postAlert).
+  /// Mirrors AlarmConstants.SNOOZE_MINUTES on Android — change both together.
+  private static let snoozeSeconds: TimeInterval = 5 * 60
 
   public func definition() -> ModuleDefinition {
     Name("SchedularmAlarm")
@@ -38,18 +42,29 @@ public class SchedularmAlarmModule: Module {
     // Arm the whole set atomically: cancel any prior alarms, then schedule one
     // AlarmKit alarm per entry and persist their UUIDs. Re-arming replaces the set.
     AsyncFunction("scheduleAlarms") { (alarms: [NativeAlarmRecord]) in
-      self.cancelPersisted()
+      // Cancel the previous set EXCEPT alarms the user is interacting with right
+      // now (counting down after a snooze, paused, or alerting): the launch-time
+      // self-heal re-arm must never drop a pending snooze. Their ids seed the
+      // persisted list so a later dismissAll (Disarm) still cancels them.
+      var scheduled = self.cancelPersisted(keepLive: true)
 
-      // Stop button and tint are shared; the alert itself is per-alarm because
-      // its title is that alarm's label.
+      // Buttons and tint are shared; the alert itself is per-alarm because its
+      // title is that alarm's label.
       let stopButton = AlarmButton(
         text: LocalizedStringResource("ring_dismiss", table: "SchedularmAlarm"),
         textColor: .white,
         systemImageName: "alarm.fill"
       )
+      // The secondary button with `.countdown` behaviour IS AlarmKit's snooze:
+      // tapping it moves the alarm back into a countdown of `postAlert`, after
+      // which it alerts again. No App Intent is needed for that transition.
+      let snoozeButton = AlarmButton(
+        text: LocalizedStringResource("ring_snooze", table: "SchedularmAlarm"),
+        textColor: .white,
+        systemImageName: "zzz"
+      )
       let tintColor = Color(red: 0x4F / 255.0, green: 0xA8 / 255.0, blue: 0xFF / 255.0) // sky500
 
-      var scheduled: [String] = []
       for a in alarms {
         // Interpolating keeps the runtime label out of localization-key/format-
         // string parsing — text and emoji pass through verbatim.
@@ -58,7 +73,12 @@ public class SchedularmAlarmModule: Module {
           : LocalizedStringResource("\(a.label)")
         let attributes = AlarmAttributes<EmptyMetadata>(
           presentation: AlarmPresentation(
-            alert: AlarmPresentation.Alert(title: title, stopButton: stopButton)
+            alert: AlarmPresentation.Alert(
+              title: title,
+              stopButton: stopButton,
+              secondaryButton: snoozeButton,
+              secondaryButtonBehavior: .countdown
+            )
           ),
           metadata: nil,
           tintColor: tintColor
@@ -69,18 +89,24 @@ public class SchedularmAlarmModule: Module {
         // dismissAll / re-arm can still cancel them — no uncancellable orphans.
         scheduled.append(id.uuidString)
         UserDefaults.standard.set(scheduled, forKey: self.alarmIdsKey)
-        let configuration = AlarmManager.AlarmConfiguration.alarm(
+        // No preAlert (a fixed-date alarm, not a timer); postAlert is the snooze
+        // length. No countdown/paused presentation is declared, so AlarmKit shows
+        // nothing during the snooze — the alert simply comes back.
+        let configuration = AlarmManager.AlarmConfiguration<EmptyMetadata>(
+          countdownDuration: Alarm.CountdownDuration(preAlert: nil, postAlert: Self.snoozeSeconds),
           schedule: .fixed(Date(timeIntervalSince1970: a.at / 1000.0)),
           attributes: attributes,
+          stopIntent: nil,
+          secondaryIntent: nil,
           sound: .default
         )
         _ = try await AlarmManager.shared.schedule(id: id, configuration: configuration)
       }
     }
 
-    // Cancel every scheduled (or ringing) alarm and clear persistence.
+    // Cancel every scheduled, snoozed or ringing alarm and clear persistence (Disarm).
     AsyncFunction("dismissAll") {
-      self.cancelPersisted()
+      _ = self.cancelPersisted(keepLive: false)
     }
 
     // AlarmKit authorization, requested lazily. Returns the resulting state.
@@ -115,18 +141,42 @@ public class SchedularmAlarmModule: Module {
     AsyncFunction("requestDisableBatteryOptimization") { () -> [String: Bool] in [:] }
   }
 
-  /// Cancel all persisted alarm ids (current list + legacy single key) and clear them.
-  private func cancelPersisted() {
+  /// Cancel the persisted alarm ids (current list + legacy single key). With
+  /// `keepLive`, ids whose AlarmKit state is not `.scheduled` — counting down
+  /// after a snooze, paused, or alerting right now — are left alone, stay
+  /// persisted, and are RETURNED so the caller can extend that list. The legacy
+  /// key is always cancelled. If the daemon query fails, nothing counts as live
+  /// and everything is cancelled (the pre-snooze behaviour).
+  private func cancelPersisted(keepLive: Bool) -> [String] {
+    let live: Set<String> = keepLive ? Self.liveAlarmIds() : []
+    var kept: [String] = []
     if let ids = UserDefaults.standard.array(forKey: alarmIdsKey) as? [String] {
       for s in ids where !s.isEmpty {
-        if let id = UUID(uuidString: s) { try? AlarmManager.shared.cancel(id: id) }
+        if live.contains(s) {
+          kept.append(s)
+          NSLog("[SchedularmAlarm] keeping live alarm %@ across re-arm", s)
+        } else if let id = UUID(uuidString: s) {
+          try? AlarmManager.shared.cancel(id: id)
+        }
       }
     }
     if let s = UserDefaults.standard.string(forKey: legacyAlarmIdKey), let id = UUID(uuidString: s) {
       try? AlarmManager.shared.cancel(id: id)
     }
-    UserDefaults.standard.removeObject(forKey: alarmIdsKey)
     UserDefaults.standard.removeObject(forKey: legacyAlarmIdKey)
+    if kept.isEmpty {
+      UserDefaults.standard.removeObject(forKey: alarmIdsKey)
+    } else {
+      UserDefaults.standard.set(kept, forKey: alarmIdsKey)
+    }
+    return kept
+  }
+
+  /// UUID strings of this app's alarms that are NOT merely scheduled (the
+  /// daemon only holds this client's alarms). Empty when the query throws.
+  private static func liveAlarmIds() -> Set<String> {
+    let alarms = (try? AlarmManager.shared.alarms) ?? []
+    return Set(alarms.filter { $0.state != .scheduled }.map { $0.id.uuidString })
   }
 
   private static func stateString(_ state: AlarmManager.AuthorizationState) -> String {
