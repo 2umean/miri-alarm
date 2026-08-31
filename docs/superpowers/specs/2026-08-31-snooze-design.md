@@ -115,7 +115,10 @@ the snoozed instant is already in the past so `planNativeAlarms` omits it.
   sends an in-app `ACTION_RING_ENDED` broadcast (with the alarm id; null =
   every ring) and the activity finishes when it matches its own alarm —
   otherwise a notification Snooze would leave a silent ring screen whose
-  Dismiss cancels the snooze just taken.
+  Dismiss cancels the snooze just taken. For the sliver before that receiver
+  is registered, `onCreate` finishes immediately when the known entry is not
+  `fired` (every path to the screen runs `markFired` first, so a live ring
+  always is) — the ring was already snoozed or handled.
 - `AlarmForegroundService.buildNotification` and
   `AlarmNotifications.notifyFallbackRing`: add the Snooze action ahead of
   Dismiss when the entry is known; both build their Dismiss/Snooze
