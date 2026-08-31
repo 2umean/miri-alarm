@@ -81,7 +81,12 @@ the snoozed instant is already in the past so `planNativeAlarms` omits it.
   never touch the set; known id → the entry becomes
   `copy(at = now + SNOOZE_MINUTES min, fired = false, snoozed = true)`, is
   persisted, and re-armed with `setAlarmClock` under its existing `reqCode`
-  (the fired PendingIntent is spent, so re-creating it is safe).
+  (a broadcast PendingIntent without `FLAG_ONE_SHOT` stays valid after
+  delivery; only the alarm registered on it has fired). Store mutators
+  (`scheduleAlarms`, `snooze`, `dismissAll`, `dismissOne`, `markFired`,
+  `consumeMissedAlarms`, `stashMissed`) are `@Synchronized`: `snooze` runs on
+  the main thread while JS calls `scheduleAlarms` on its own thread, and both
+  read-modify-write the persisted set.
 - `AlarmController.scheduleAlarms` (the replace): cancel the previous set's
   PendingIntents as today, then keep two kinds of persisted entries whose id
   is not in the incoming set: **pending snoozes** (`snoozed && at > now`,
@@ -187,7 +192,9 @@ keeps its signature and its replace semantics from JS's point of view.
   chain, the old countdown survives (the rule keeps live alarms) and rings
   once more with its old label, invisible in the UI. Accepted: the user asked
   for that ring, the window is at most 5 minutes, and avoiding it would need
-  a native-contract change this spec rules out.
+  a native-contract change this spec rules out. iOS only: on Android the new
+  arm re-plans the same pill ids (the draft rolls forward), so the old snooze's
+  id is in the incoming set and is simply replaced — the better outcome.
 
 ## 7. Testing and QA
 
