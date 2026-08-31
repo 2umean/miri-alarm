@@ -15,7 +15,9 @@ import org.json.JSONObject
  *  exact same PendingIntent can be cancelled later (cancel ignores extras, so the
  *  request code is what makes each alarm's PendingIntent distinct). `fired` is
  *  set at broadcast delivery: a past entry WITHOUT it provably never rang, while
- *  one WITH it rang and may still be ringing (entries leave the store on dismiss). */
+ *  one WITH it rang and may still be ringing (entries leave the store on dismiss).
+ *  `snoozed` marks an entry re-armed by the ring surface's Snooze: scheduleAlarms
+ *  carries such entries over instead of dropping them (see snooze()). */
 data class AlarmEntry(
   val id: String,
   val at: Long,
@@ -23,6 +25,7 @@ data class AlarmEntry(
   val leaveAt: Long,
   val reqCode: Int,
   val fired: Boolean = false,
+  val snoozed: Boolean = false,
 )
 
 /**
@@ -35,11 +38,21 @@ object AlarmController {
 
   private const val MISSED_STASH_CAP = 5
 
-  /** Replace the armed set: cancel any prior alarms, persist + schedule the new set. */
+  /**
+   * Replace the armed set: cancel any prior alarms, persist + schedule the new set.
+   * Pending snoozes are carried over: a `snoozed` entry still in the future whose id
+   * is not in the incoming set survives the replace — the launch-time self-heal
+   * re-arm must never drop a snooze the user is counting on. Only dismissAll
+   * (Disarm) clears them. Everything is renumbered (base + index over the merged
+   * list), so carried entries get fresh request codes with no collision handling.
+   */
   fun scheduleAlarms(context: Context, alarms: List<AlarmEntry>) {
-    cancelAllScheduled(context) // cancel PendingIntents of the previously-persisted set
+    val now = System.currentTimeMillis()
+    val incomingIds = alarms.map { it.id }.toSet()
+    val pendingSnoozes = loadAll(context).filter { it.snoozed && it.at > now && it.id !in incomingIds }
+    cancelAllScheduled(context) // cancel PendingIntents of the previously-persisted set (snoozes are re-scheduled below)
     // Assign a stable, unique request code per alarm (base + index within this set).
-    val withCodes = alarms.mapIndexed { i, a -> a.copy(reqCode = AlarmConstants.REQ_FIRE_BASE + i) }
+    val withCodes = (alarms + pendingSnoozes).mapIndexed { i, a -> a.copy(reqCode = AlarmConstants.REQ_FIRE_BASE + i) }
     persistAll(context, withCodes)
     val am = alarmManager(context)
     for (e in withCodes) {
@@ -76,6 +89,30 @@ object AlarmController {
       remaining.remove(fired)
     }
     if (remaining.isEmpty()) clearAll(context) else persistAll(context, remaining)
+  }
+
+  /**
+   * Snooze the alarm that rang: silence the ring and re-arm the SAME entry
+   * SNOOZE_MINUTES from now (it rings again full-screen with the same label).
+   * Scope rule as dismissFired: a null/unknown id only silences and never touches
+   * the set. The entry keeps its reqCode — the fired PendingIntent is spent, so
+   * recreating it is safe — and is flagged `snoozed` so scheduleAlarms carries it
+   * over; `fired` resets so the missed-alarm detection applies to the new instant.
+   */
+  fun snooze(context: Context, id: String?) {
+    stopRinging(context)
+    if (id == null) return
+    val all = loadAll(context)
+    val entry = all.firstOrNull { it.id == id } ?: return
+    val snoozedEntry = entry.copy(
+      at = System.currentTimeMillis() + AlarmConstants.SNOOZE_MS,
+      fired = false,
+      snoozed = true,
+    )
+    persistAll(context, all.map { if (it.id == id) snoozedEntry else it })
+    val info = AlarmManager.AlarmClockInfo(snoozedEntry.at, showPendingIntent(context, snoozedEntry))
+    alarmManager(context).setAlarmClock(info, firePendingIntent(context, snoozedEntry))
+    Log.i(AlarmConstants.TAG, "Snoozed alarm $id until ${snoozedEntry.at}")
   }
 
   /** The persisted entry for an id (for the ring screen's label + leave chip). */
@@ -179,7 +216,8 @@ object AlarmController {
           .put("label", e.label)
           .put("leaveAt", e.leaveAt)
           .put("reqCode", e.reqCode)
-          .put("fired", e.fired),
+          .put("fired", e.fired)
+          .put("snoozed", e.snoozed),
       )
     }
     return arr.toString()
@@ -207,6 +245,7 @@ object AlarmController {
             leaveAt = o.optLong("leaveAt", 0L),
             reqCode = o.getInt("reqCode"),
             fired = o.optBoolean("fired", false),
+            snoozed = o.optBoolean("snoozed", false),
           ),
         )
       } catch (e: Exception) {
