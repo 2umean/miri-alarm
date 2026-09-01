@@ -71,6 +71,8 @@ is a separate free hosted service (the `.aab` is uploaded to EAS and submitted f
 
 ```sh
 eas build -p android --profile production --local --non-interactive   # → build-<ts>.aab in repo root
+# Production-track upload as a DRAFT (roll out manually in Play Console; use once the app is live):
+# eas submit -p android --profile play-production --path build-<ts>.aab --non-interactive
 eas submit -p android --profile production --path build-*.aab --non-interactive
 ```
 
