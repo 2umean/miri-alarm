@@ -21,6 +21,7 @@ jest.mock('../chainPushAlerts', () => ({
 
 import * as native from '../../../modules/schedularm-alarm';
 import { AlarmService } from '../AlarmService';
+import { scheduleChainPush } from '../chainPushAlerts';
 
 const event = (id: string, dur: number): EventPill => ({ id, type: 'none', icon: '⬜', name: id, dur });
 const marker = (id: string, type: 'push' | 'alarm' = 'alarm'): MarkerPill => ({ id, type });
@@ -54,6 +55,30 @@ test('armChain schedules natively when an alarm instant is still in the future',
     AlarmService.armChain(chainArriving(inHours(2)), 'start'),
   ).resolves.toBeUndefined();
   expect(native.scheduleAlarms).toHaveBeenCalledTimes(1);
+});
+
+// ⏰ passed, 🔔 still ahead: the arm gate lets this through (alarms-passed is a
+// nudge), so the service must schedule the remaining pushes, not reject.
+test('armChain resolves and schedules pushes when only a push instant is still ahead', async () => {
+  const wakePassedPushAhead: Chain = {
+    arrival: inHours(1),
+    zone: 'UTC',
+    // ⏰ wake at −1h; 🔔 leave at +30min.
+    pills: [event('sleep', 60), marker('wake', 'alarm'), event('shower', 90), marker('leave', 'push'), event('commute', 30)],
+  };
+  await expect(AlarmService.armChain(wakePassedPushAhead, 'start')).resolves.toBeUndefined();
+  expect(native.scheduleAlarms).not.toHaveBeenCalled(); // the passed ⏰ is never re-scheduled
+  expect(scheduleChainPush).toHaveBeenCalledTimes(1);
+});
+
+test('armChain still rejects when the alarms AND the pushes have all passed', async () => {
+  const allPassed: Chain = {
+    arrival: inHours(-1),
+    zone: 'UTC',
+    pills: [event('sleep', 60), marker('wake', 'alarm'), event('shower', 30), marker('leave', 'push'), event('commute', 30)],
+  };
+  await expect(AlarmService.armChain(allPassed, 'start')).rejects.toThrow();
+  expect(scheduleChainPush).not.toHaveBeenCalled();
 });
 
 // A push-only chain legitimately plans zero native alarms — that must stay a

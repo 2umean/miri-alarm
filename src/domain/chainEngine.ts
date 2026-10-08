@@ -1,5 +1,5 @@
 import { MINUTE_MS } from './schedule';
-import { Chain, Pill, pillDur } from './pill';
+import { Chain, isMarkerPill, Pill, pillDur } from './pill';
 
 /**
  * Reverse-calc for the v3 pill chain. Same DST-safe philosophy as v1's engine:
@@ -52,14 +52,14 @@ export function computeChain(chain: Chain): ChainComputed | null {
   return { start, items, arrival };
 }
 
-// Alarm selectors. Input-shape convention: `latestAlarmInstant` takes a raw
+// Alarm selectors. Input-shape convention: the `latest*Instant` pair takes a raw
 // Chain (it computes internally); the rest take an already-built ChainComputed,
 // so a caller that already has one never triggers a second computeChain pass.
 
 /**
  * The LATEST alarm end instant in an already-computed chain, or null with no
- * alarm pills. Shared by the arm gate (chainValidation: past-event fires when
- * this has passed) and armed liveness (below) so the two can never drift.
+ * alarm pills. The arm gate (chainValidation) uses it to tell "every alarm
+ * passed" apart from "every alert passed" (latestAlertFromComputed).
  */
 export function latestAlarmFromComputed(computed: ChainComputed): number | null {
   const alarmEnds = computed.items.filter((it) => it.pill.type === 'alarm').map((it) => it.endAt);
@@ -68,9 +68,7 @@ export function latestAlarmFromComputed(computed: ChainComputed): number | null 
 
 /**
  * The LATEST alarm-pill end instant (the last alarm to ring), or null if there's
- * no alarm pill / no arrival. Used to decide whether an armed chain is still
- * live: with several alarm pills it stays armed until the LAST one has passed,
- * not the first.
+ * no alarm pill / no arrival.
  */
 export function latestAlarmInstant(chain: Chain): number | null {
   const computed = computeChain(chain);
@@ -78,14 +76,40 @@ export function latestAlarmInstant(chain: Chain): number | null {
 }
 
 /**
- * The alarm item the user should be watching: the FIRST alarm still in the
- * future — else the LAST alarm (a fully-elapsed chain, e.g. an armed snapshot
- * about to expire) — else null when the chain has no alarm pills. The armed
- * summary uses this instead of the earliest alarm, which may already have
- * passed and been skipped at arm time (v0.3 arrival-date spec).
+ * The LATEST marker instant — ⏰ alarm OR 🔔 push — in an already-computed
+ * chain, or null with no markers. Once every alarm has passed, a push still
+ * ahead keeps the chain armable (chainValidation) and live (below).
+ */
+export function latestAlertFromComputed(computed: ChainComputed): number | null {
+  const alertEnds = computed.items.filter((it) => isMarkerPill(it.pill)).map((it) => it.endAt);
+  return alertEnds.length ? Math.max(...alertEnds) : null;
+}
+
+/**
+ * The LATEST marker instant of a raw chain, or null with no markers / no
+ * arrival. Decides whether an armed chain is still live: it stays armed until
+ * the LAST alert has gone off — a backup alarm, or a push after the last alarm.
+ */
+export function latestAlertInstant(chain: Chain): number | null {
+  const computed = computeChain(chain);
+  return computed ? latestAlertFromComputed(computed) : null;
+}
+
+/**
+ * The item the armed summary should name: the FIRST alarm still in the future
+ * — else the first PUSH still in the future (every alarm passed; the remaining
+ * pushes are what's armed) — else the LAST alarm (a fully-elapsed chain, e.g.
+ * an armed snapshot about to expire) — else null when the chain has no alarm
+ * pills. Passed items were skipped at arm time (v0.3 arrival-date spec), so
+ * advertising their dead time would mislead.
  */
 export function upcomingAlarmItem(computed: ChainComputed, nowMs: number): ComputedItem | null {
   const alarms = computed.items.filter((it) => it.pill.type === 'alarm');
   if (alarms.length === 0) return null;
-  return alarms.find((it) => it.endAt > nowMs) ?? alarms[alarms.length - 1];
+  const isAhead = (it: ComputedItem) => it.endAt > nowMs;
+  return (
+    alarms.find(isAhead) ??
+    computed.items.find((it) => it.pill.type === 'push' && isAhead(it)) ??
+    alarms[alarms.length - 1]
+  );
 }

@@ -2,6 +2,7 @@ import { AppState } from 'react-native';
 import { act, create, ReactTestRenderer } from 'react-test-renderer';
 
 import type { AlarmHealth } from '../../alarm/alarmHealth';
+import type { Chain } from '../../domain';
 
 jest.mock('../../alarm/AlarmService', () => ({
   AlarmService: {
@@ -22,6 +23,7 @@ jest.mock('../../storage/presets', () => ({
 jest.mock('../../telemetry', () => ({ track: jest.fn() }));
 
 import { AlarmService } from '../../alarm/AlarmService';
+import { clearArmedChain, loadArmedChain } from '../../storage/armedChain';
 import { useArmingChain } from '../useArmingChain';
 
 const BLOCKED: AlarmHealth = {
@@ -63,4 +65,44 @@ test('returning to the foreground re-derives health for banner consumers', async
     renderer.unmount();
   });
   expect((AppState as unknown as { _listeners: Set<unknown> })._listeners.size).toBe(0);
+});
+
+// An armed snapshot whose ⏰ already rang but whose 🔔 is still ahead is LIVE:
+// relaunching must keep it armed (and self-heal the push), not silently clear it
+// while the push is still scheduled.
+test('relaunch keeps a snapshot armed while a push is still ahead after its last alarm', async () => {
+  (AlarmService.getHealth as jest.Mock).mockReturnValue(READY);
+  const MIN = 60_000;
+  const now = Date.now();
+  const snapshot: Chain = {
+    arrival: now + 60 * MIN,
+    zone: 'UTC',
+    // ⏰ wake at −60min (rang); 🔔 leave at +30min (ahead).
+    pills: [
+      { id: 'sleep', type: 'none', icon: '😴', name: 'sleep', dur: 60 },
+      { id: 'wake', type: 'alarm' },
+      { id: 'shower', type: 'none', icon: '🚿', name: 'shower', dur: 90 },
+      { id: 'leave', type: 'push' },
+      { id: 'commute', type: 'none', icon: '🚇', name: 'commute', dur: 30 },
+    ],
+  };
+  (loadArmedChain as jest.Mock).mockResolvedValueOnce(snapshot);
+  let armed: Chain | null = null;
+  function ArmedProbe() {
+    armed = useArmingChain().armed;
+    return null;
+  }
+
+  let renderer!: ReactTestRenderer;
+  await act(async () => {
+    renderer = create(<ArmedProbe />);
+  });
+
+  expect(armed).toEqual(snapshot);
+  expect(clearArmedChain).not.toHaveBeenCalled();
+  expect(AlarmService.armChain).toHaveBeenCalledWith(snapshot, expect.any(String));
+
+  await act(async () => {
+    renderer.unmount();
+  });
 });

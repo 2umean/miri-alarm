@@ -1,5 +1,5 @@
 import { Chain, MAX_PILL_MINUTES, isEventPill } from './pill';
-import { computeChain, latestAlarmFromComputed, totalSpanMinutes } from './chainEngine';
+import { computeChain, latestAlarmFromComputed, latestAlertFromComputed, totalSpanMinutes } from './chainEngine';
 
 /** Max total chain span (sum of all pill durations), in minutes. ~26h — covers a long sleep + commute + buffers.
  *  Module-local (not exported) to avoid a barrel name-clash with v1 validation.ts during the migration. */
@@ -16,7 +16,8 @@ export type ChainValidationIssue =
   | { kind: 'infeasible' } // a negative pill duration (shouldn't occur via the reducer; defensive)
   | { kind: 'chain-too-long' } // total span exceeds MAX_CHAIN_SPAN
   | { kind: 'no-alarm' } // no alarm pill — a safety alarm needs ≥1 OS-guaranteed ring, not just pushes
-  | { kind: 'past-event' } // every alarm instant has passed — nothing left that can ring
+  | { kind: 'past-event' } // every alarm AND push instant has passed — nothing left that can go off
+  | { kind: 'alarms-passed' } // every alarm passed, a push is still ahead (non-blocking nudge)
   | { kind: 'start-passed' }; // the chain start already passed (non-blocking nudge)
 
 export function validateChain(chain: Chain, nowMs: number): ChainValidationIssue[] {
@@ -47,21 +48,25 @@ export function validateChain(chain: Chain, nowMs: number): ChainValidationIssue
   if (!computed) {
     issues.push({ kind: 'no-arrival' });
   } else {
-    // Arming needs at least one OS-guaranteed ring still ahead (spec D5 —
-    // earlier alarms may pass; they're skipped at arm time). Alarm-less chains
-    // are already blocked by no-alarm, so past-event never stacks on top.
+    // Arming needs at least one alert still ahead (spec D5, amended 2026-10-08 —
+    // passed alerts are skipped at arm time). Once every alarm has passed, the
+    // remaining pushes stay armable: the wake ring is behind the user, and the
+    // alarms-passed nudge says only pushes are left. Alarm-less chains are
+    // already blocked by no-alarm, so neither stacks on top.
     const lastAlarm = latestAlarmFromComputed(computed);
+    const lastAlert = latestAlertFromComputed(computed);
     if (lastAlarm != null && lastAlarm <= nowMs) {
-      issues.push({ kind: 'past-event' });
+      const isPushAhead = lastAlert != null && lastAlert > nowMs;
+      issues.push({ kind: isPushAhead ? 'alarms-passed' : 'past-event' });
     } else if (computed.start <= nowMs) {
-      issues.push({ kind: 'start-passed' }); // start-passed is the nudge; past-event supersedes it
+      issues.push({ kind: 'start-passed' }); // start-passed is the nudge; both above supersede it
     }
   }
 
   return issues;
 }
 
-/** The safety gate: which issue kinds block arming. start-passed is a nudge, not a blocker. */
+/** The safety gate: which issue kinds block arming. alarms-passed and start-passed are nudges, not blockers. */
 const BLOCKING: ReadonlyArray<ChainValidationIssue['kind']> = [
   'no-arrival',
   'pill-out-of-range',

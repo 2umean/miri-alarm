@@ -145,6 +145,7 @@ export const ko: typeof en = {
     'chain-too-long': '전체 일정이 비현실적으로 길어요.',
     'no-alarm': '⏰ 알람을 추가해 주세요 — 알림만으로는 확실히 깨우지 못해요.',
     'past-event': '울릴 알람 시각이 모두 지났어요.',
+    'alarms-passed': '⏰ 알람 시각은 모두 지났어요 — 남은 🔔 알림만 울려요.',
     'start-passed': '주의: 시작 시간이 이미 지났어요.',
   },
 };
