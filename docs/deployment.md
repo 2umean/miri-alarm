@@ -103,6 +103,16 @@ eas submit -p android --profile production --path build-*.aab --non-interactive
 
 ## iOS local-build troubleshooting
 
+- **Xcode 27 (2026-10):** two hard errors, both fixed in the repo — keep them when upgrading.
+  (1) `expo-modules-jsi` ≤ 56.0.12 fails Swift 6.4 at `JavaScriptRuntime.swift:219` ("a C function
+  pointer can only be formed from a reference to a 'func' or a literal closure") — fixed upstream in
+  56.0.13; the lockfile pins 56.0.14 (`npm update expo-modules-jsi`; it's transitive via
+  expo-modules-core `~56.0.x`). (2) Pods' resource-bundle targets keep their podspec's iOS 11.0–13.4
+  deployment target, which Xcode 27 rejects (supported range 15.0+); `react_native_post_install` only
+  raises main pod targets, so `plugins/withResourceBundleDeploymentTarget.js` adds a Podfile
+  `post_install` step raising the bundles to 15.1. Verified with `prebuild --clean` + Release builds
+  for device and simulator (the simulator build launched fine).
+
 - **Debug link fails with ~25 undefined `facebook::react::…getDebug…`/`Sealable`/`RCTPackagerConnection` arm64 symbols** (an `ld: cannot link directly with 'SwiftUICore'` *warning* appears alongside — it's a red herring, not the fatal error): the prebuilt RN core at `ios/Pods/React-Core-prebuilt/React.xcframework` is stuck on the **Release** flavor, which lacks those debug-only symbols. RN 0.85 swaps the framework Debug↔Release with a before-compile script (`react-native/scripts/replace-rncore-version.js`) keyed on `ios/Pods/React-Core-prebuilt/.last_build_configuration`; if that marker file is lost (e.g. an interrupted build after an in-place Release build), the script assumes the pristine Debug install from `pod install` and never swaps back — and `pod install` won't fix it because the pod itself is unchanged. **Diagnose:** `stat -f%z ios/Pods/React-Core-prebuilt/React.xcframework/ios-arm64_x86_64-simulator/React.framework/React` — Release ≈ 24 MB, Debug ≈ 132 MB (RN 0.85.3). **Repair:** `printf 'Release' > ios/Pods/React-Core-prebuilt/.last_build_configuration` then rebuild (the script re-extracts the Debug flavor from `ios/Pods/ReactNativeCore-artifacts/`), or the sledgehammer `npx expo prebuild -p ios --clean`. Hermes uses the same mechanism (`ios/Pods/hermes-engine/.last_build_configuration`) and can wedge the same way. Fixed this way 2026-07-27 on the admob branch.
 
 ## Ads (AdMob)
