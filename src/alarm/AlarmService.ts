@@ -1,7 +1,7 @@
 import { Linking, Platform } from 'react-native';
 
 import * as native from '../../modules/schedularm-alarm';
-import { Chain, computeChain } from '../domain';
+import { Chain, computeChain, latestAlertFromComputed } from '../domain';
 import { AlarmHealth, deriveHealth, deriveIosHealth } from './alarmHealth';
 import { planNativeAlarms } from './alarmPlan';
 import { cancelChainPush, scheduleChainPush } from './chainPushAlerts';
@@ -41,13 +41,17 @@ export const AlarmService = {
     if (!isAndroid && !isIos) return;
     const computed = computeChain(chain);
     if (!computed) return;
-    const alarms = planNativeAlarms(computed, Date.now(), startLabel);
-    // Alarm pills present but nothing plannable = every alarm instant already
-    // passed (the UI's arm gate ticks on a 60s-stale nowMs, so a boundary tap
-    // can slip through). Proceeding would mark the chain "armed" while nothing
-    // will ever ring — reject instead; the caller leaves it un-armed.
-    if (!alarms.length && chain.pills.some((p) => p.type === 'alarm')) {
-      throw new Error('every alarm instant has already passed');
+    const nowMs = Date.now();
+    const alarms = planNativeAlarms(computed, nowMs, startLabel);
+    // Alarm pills present but no alert left ahead = every alarm AND push instant
+    // already passed (the UI's arm gate ticks on a 60s-stale nowMs, so a boundary
+    // tap can slip through). Proceeding would mark the chain "armed" while
+    // nothing will ever go off — reject instead; the caller leaves it un-armed.
+    // Passed alarms with a push still ahead arm the pushes alone.
+    const lastAlert = latestAlertFromComputed(computed);
+    const isAlertAhead = lastAlert != null && lastAlert > nowMs;
+    if (!isAlertAhead && chain.pills.some((p) => p.type === 'alarm')) {
+      throw new Error('every alert instant has already passed');
     }
     // Await native FIRST — if it throws, the caller leaves the chain un-armed.
     if (alarms.length) await native.scheduleAlarms(alarms);

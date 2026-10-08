@@ -148,6 +148,7 @@ export const en = {
     'chain-too-long': 'The total span is unrealistically long.',
     'no-alarm': 'Add an ⏰ alarm — a notification alone isn’t guaranteed to wake you.',
     'past-event': 'All alarm times have already passed.',
+    'alarms-passed': 'All ⏰ alarm times have passed — only the remaining 🔔 notifications will go off.',
     'start-passed': 'Heads up: your start time has already passed.',
   } satisfies Record<ChainValidationIssue['kind'], string>,
 };

@@ -3,7 +3,7 @@ import { AppState } from 'react-native';
 
 import { AlarmService } from '../alarm/AlarmService';
 import { AlarmHealth } from '../alarm/alarmHealth';
-import { Chain, latestAlarmInstant } from '../domain';
+import { Chain, latestAlertInstant } from '../domain';
 import { clearArmedChain, loadArmedChain, saveArmedChain } from '../storage/armedChain';
 import { loadPresets } from '../storage/presets';
 import { track } from '../telemetry';
@@ -13,8 +13,9 @@ import type { MissedAlarm } from '../../modules/schedularm-alarm';
 
 /**
  * v2 twin of useArming: owns the armed-chain snapshot + native arming. An armed
- * chain stays live until its LAST alarm has fired (latestAlarmInstant), not the
- * first — so dismissing the wake alarm doesn't hide a still-scheduled backup.
+ * chain stays live until its LAST alert has gone off (latestAlertInstant), not
+ * the first — so dismissing the wake alarm doesn't hide a still-scheduled backup
+ * alarm or a push after it.
  * Also surfaces alarms that provably never rang (`missed`) so the user learns
  * their phone killed the alarm instead of silently trusting it again.
  */
@@ -63,7 +64,7 @@ export function useArmingChain() {
     const presetsPromise = loadPresets().catch(() => null);
     loadArmedChain().then(async (c) => {
       if (cancelled) return;
-      const last = c ? latestAlarmInstant(c) : null;
+      const last = c ? latestAlertInstant(c) : null;
       if (c && last != null && last > Date.now()) {
         setArmed(c);
         // Re-ensure native scheduling matches the snapshot — self-heals after an

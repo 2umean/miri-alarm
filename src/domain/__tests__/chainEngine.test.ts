@@ -4,6 +4,7 @@ import {
   computeChain,
   latestAlarmFromComputed,
   latestAlarmInstant,
+  latestAlertInstant,
   totalSpanMinutes,
   upcomingAlarmItem,
 } from '../chainEngine';
@@ -133,6 +134,24 @@ describe('latestAlarm selectors', () => {
   });
 });
 
+describe('latestAlertInstant', () => {
+  const zone = 'UTC';
+
+  test('counts pushes too — a 🔔 after the last ⏰ keeps the chain live until it fires', () => {
+    // hero: ⏰ wake 07:30, 🔔 leave 08:25.
+    expect(clock(latestAlertInstant(hero(zone))!, zone)).toBe('08:25');
+  });
+
+  test('equals the last alarm when no push comes after it', () => {
+    expect(latestAlertInstant(twoAlarms())).toBe(latestAlarmInstant(twoAlarms()));
+  });
+
+  test('is null with no markers / before an arrival exists', () => {
+    expect(latestAlertInstant({ arrival: at(zone, 2026, 6, 30, 9, 0), zone, pills: [event('a', 30)] })).toBeNull();
+    expect(latestAlertInstant({ arrival: null, zone, pills: [marker('m')] })).toBeNull();
+  });
+});
+
 describe('upcomingAlarmItem', () => {
   const zone = 'UTC';
 
@@ -158,6 +177,12 @@ describe('upcomingAlarmItem', () => {
       pills: [event('p', 30), marker('p-m', 'push')],
     })!;
     expect(upcomingAlarmItem(r, at(zone, 2026, 6, 30, 8, 0))).toBeNull();
+  });
+
+  test('after every alarm, with a push still ahead: that push (the next thing that will go off)', () => {
+    // hero: ⏰ wake 07:30 passed; 🔔 leave 08:25 ahead.
+    const r = computeChain(hero(zone))!;
+    expect(upcomingAlarmItem(r, at(zone, 2026, 6, 30, 8, 0))!.pill.id).toBe('leave');
   });
 
   test('an alarm ringing exactly now counts as passed → the next one', () => {

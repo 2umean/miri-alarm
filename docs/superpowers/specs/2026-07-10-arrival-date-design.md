@@ -26,6 +26,7 @@ requirement: **passed alerts are skipped; the remaining ones arm.**
 | D3 | The date is shown **always**, on: the 📍 arrival anchor row AND every ⏰ alarm / 🔔 push event row. (Pill duration cards and the 🛏 bedtime cap are unchanged.) |
 | D4 | Auto-roll is kept but re-keyed: the chain rolls to the next day **when the arrival instant passes** — not when the first alarm passes. Rolling stays visible via D3. |
 | D5 | Arming keys on the **last alarm**: `past-event` blocks only when *no alarm instant is still in the future*. At arm time, already-passed alarms/pushes are skipped (the schedulers already filter); the remaining future ones are scheduled. |
+| D5′ | **Amended 2026-10-08 (user report):** once every ⏰ has passed, a 🔔 push still ahead keeps the chain armable — `past-event` now blocks only when *no alert (⏰ or 🔔) is still in the future*; the non-blocking `alarms-passed` nudge says only pushes remain. Armed liveness keys on the last alert (`latestAlertInstant`), and the armed chip names the next push once no ⏰ is ahead. The structural `no-alarm` rule (a chain must contain an ⏰) is unchanged. |
 
 Worked timeline (chain ⏰ 07:45 · ⏰ 08:30 · 📍 09:00 on 7/10):
 

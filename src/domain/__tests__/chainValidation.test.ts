@@ -55,6 +55,28 @@ test('past-event blocks arming once ALL alarms have passed, even with the arriva
   expect(isChainArmable(issues)).toBe(false);
 });
 
+// The ⏰ wake alarm passed but a 🔔 is still ahead (user report 2026-10-08):
+// arming must stay possible for the remaining pushes, with a heads-up that no
+// strong alarm is left.
+const wakeThenPush = (): Chain => ({
+  arrival: at(ZONE, 2026, 6, 30, 9, 0),
+  zone: ZONE,
+  // ⏰ wake 07:50; 🔔 leave 08:25.
+  pills: [event('sleep', 420), marker('wake'), event('shower', 20), event('prep', 15), marker('leave', 'push'), event('commute', 35)],
+});
+
+test('every alarm passed but a push is still ahead → armable, with the alarms-passed nudge', () => {
+  const issues = validateChain(wakeThenPush(), at(ZONE, 2026, 6, 30, 8, 0));
+  expect(kinds(issues)).toEqual(['alarms-passed']); // supersedes start-passed, never past-event
+  expect(isChainArmable(issues)).toBe(true);
+});
+
+test('past-event still blocks once the remaining pushes have passed too', () => {
+  const issues = validateChain(wakeThenPush(), at(ZONE, 2026, 6, 30, 8, 30));
+  expect(kinds(issues)).toEqual(['past-event']);
+  expect(isChainArmable(issues)).toBe(false);
+});
+
 test('an alarm-less chain past its arrival reports no-alarm but never past-event', () => {
   const c: Chain = {
     arrival: at(ZONE, 2026, 6, 30, 9, 0),

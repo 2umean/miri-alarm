@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { clearArmedChain, loadArmedChain, saveArmedChain } from '../armedChain';
-import { Chain, latestAlarmInstant } from '../../domain';
+import { Chain, latestAlarmInstant, latestAlertInstant } from '../../domain';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
@@ -92,10 +92,10 @@ describe('v2 → v3 armed migration (an app update must never be why someone ove
   });
 
   test('the stays-armed invariant: the migrated snapshot still passes the liveness gate', async () => {
-    // useArmingChain keeps a snapshot armed iff latestAlarmInstant(c) > now.
+    // useArmingChain keeps a snapshot armed iff latestAlertInstant(c) > now.
     await AsyncStorage.setItem(V2_ARMED_KEY, v2Armed);
     const migrated = await loadArmedChain();
-    const last = latestAlarmInstant(migrated!);
+    const last = latestAlertInstant(migrated!);
     const nowBeforeAlarm = ARRIVAL - 60 * MIN;
     expect(last).not.toBeNull();
     expect(last! > nowBeforeAlarm).toBe(true);
