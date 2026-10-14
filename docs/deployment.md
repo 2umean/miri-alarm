@@ -117,14 +117,22 @@ eas submit -p android --profile production --path build-*.aab --non-interactive
   phase print a bogus `error: … failed with exit code 0`, and Xcode 27 fails any script phase that
   emits errors ("Command PhaseScriptExecution emitted errors but did not return a nonzero exit
   code"). A plain `build` only warns, so this shows up at archive time. Fixed upstream in
-  expo-modules-jsi 57.0.5 (#49120, SDK 57 only); `patches/expo-modules-jsi+56.0.14.patch` backports
-  it via `patch-package` (`postinstall`). **Delete the patch when moving to SDK 57.**
+  expo-modules-jsi 57.0.5 (#49120); SDK 57 includes it (the SDK 56 patch-package backport was
+  removed with the SDK 57 upgrade).
+  (4) **iOS 27 SDK builds MUST adopt the UIScene lifecycle — 1.2.1 (build 13, the first Xcode 27
+  build) crashed at launch on every iOS 27 device** (`_UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`
+  → SIGTRAP; iOS 26 ran it fine, which is why sim QA on the 26.5 runtime missed it). UIKit gates
+  this on the SDK the app links against, so an Xcode 26 build is unaffected. Fixed by SDK 57 +
+  `expo-build-properties` `ios.enableSceneSupport: true` (app.config.ts) — React Native now starts
+  from Expo's `EXExpoAppSceneDelegate`. **Always QA iOS on an iOS 27 simulator runtime**
+  (`xcodebuild -downloadPlatform iOS`), and confirm the built `Info.plist` has a
+  `UIApplicationSceneManifest`. Drop the property on SDK 58+ (template adopts scenes).
 
 - **Debug link fails with ~25 undefined `facebook::react::…getDebug…`/`Sealable`/`RCTPackagerConnection` arm64 symbols** (an `ld: cannot link directly with 'SwiftUICore'` *warning* appears alongside — it's a red herring, not the fatal error): the prebuilt RN core at `ios/Pods/React-Core-prebuilt/React.xcframework` is stuck on the **Release** flavor, which lacks those debug-only symbols. RN 0.85 swaps the framework Debug↔Release with a before-compile script (`react-native/scripts/replace-rncore-version.js`) keyed on `ios/Pods/React-Core-prebuilt/.last_build_configuration`; if that marker file is lost (e.g. an interrupted build after an in-place Release build), the script assumes the pristine Debug install from `pod install` and never swaps back — and `pod install` won't fix it because the pod itself is unchanged. **Diagnose:** `stat -f%z ios/Pods/React-Core-prebuilt/React.xcframework/ios-arm64_x86_64-simulator/React.framework/React` — Release ≈ 24 MB, Debug ≈ 132 MB (RN 0.85.3). **Repair:** `printf 'Release' > ios/Pods/React-Core-prebuilt/.last_build_configuration` then rebuild (the script re-extracts the Debug flavor from `ios/Pods/ReactNativeCore-artifacts/`), or the sledgehammer `npx expo prebuild -p ios --clean`. Hermes uses the same mechanism (`ios/Pods/hermes-engine/.last_build_configuration`) and can wedge the same way. Fixed this way 2026-07-27 on the admob branch.
 
 ## Ads (AdMob)
 
-- **`react-native-google-mobile-ads` is exact-pinned to 16.3.4** (no `^`): 16.4.0 bundles Android GMA SDK 25.4.0, whose Kotlin 2.3.0 metadata fails to compile against RN 0.85's Kotlin 2.1.20 (invertase/react-native-google-mobile-ads#863). Before ANY upgrade, check that invertase PR #866 (or a release containing it) has shipped.
-- **Never `npx expo install` this package** — it is not in Expo SDK 56's `bundledNativeModules`, so `expo install` resolves the broken latest instead of respecting the pin.
+- **`react-native-google-mobile-ads` is exact-pinned to 16.3.4** (no `^`): 16.4.0 bundles Android GMA SDK 25.4.0, whose Kotlin 2.3.0 metadata fails to compile against RN 0.85/0.86's Kotlin 2.1.20 (invertase/react-native-google-mobile-ads#863). Before ANY upgrade, check that invertase PR #866 (or a release containing it) has shipped.
+- **Never `npx expo install` this package** — it is not in the Expo SDK's `bundledNativeModules`, so `expo install` resolves the broken latest instead of respecting the pin.
 - **Adding this native module invalidated all previous dev clients** — builds made before the ads release lack the native code; build fresh dev clients.
 - **Dev builds serve Google test ads** (`TestIds.ADAPTIVE_BANNER`); release builds serve the live units. Register physical QA devices in AdMob (**Settings → Test devices**) BEFORE running release builds on them.
