@@ -48,6 +48,16 @@ const config: ExpoConfig = {
   plugins: [
     './modules/schedularm-alarm/plugin/withSchedularmAlarm',
     './plugins/withResourceBundleDeploymentTarget',
+    [
+      'expo-build-properties',
+      {
+        // Apps built with the iOS 27 SDK (Xcode 27) must use the UIScene
+        // lifecycle or UIKit aborts them at launch on iOS 27 — that crash
+        // shipped in 1.2.1. Moves React Native startup into Expo's scene
+        // delegate. Drop on SDK 58+, whose template already does this.
+        ios: { enableSceneSupport: true },
+      },
+    ],
     'expo-font',
     [
       'expo-splash-screen',
