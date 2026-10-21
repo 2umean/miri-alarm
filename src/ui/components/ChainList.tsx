@@ -173,19 +173,22 @@ const styles = StyleSheet.create({
   eventDate: { color: colors.ink2, fontSize: 11, fontFamily: fonts.clock },
   eventTime: { fontSize: 16, fontFamily: fonts.clock },
 
+  // White card with an amber outline only — arrival is the reference point, not
+  // an alert, so it must not out-shout the 🔔/⏰ rows.
   anchor: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.s + 2,
-    backgroundColor: colors.amber,
+    backgroundColor: colors.bubble,
+    borderWidth: 1.5,
+    borderColor: colors.amber,
     borderRadius: radii.bubble - 4,
-    paddingVertical: spacing.m,
+    paddingVertical: spacing.m - 1,
     paddingHorizontal: spacing.l - 2,
-    ...shadows.button,
-    shadowColor: colors.amber,
+    ...shadows.bubble,
   },
   anchorIcon: { fontSize: 18, width: ICON_W, textAlign: 'center' },
-  anchorLabel: { flex: 1, color: colors.ink, fontFamily: fonts.extra, fontSize: 14 },
-  anchorDate: { color: colors.ink, fontSize: 12, fontFamily: fonts.clock },
-  anchorTime: { color: colors.ink, fontSize: 19, fontFamily: fonts.clock },
+  anchorLabel: { flex: 1, color: colors.ink, fontFamily: fonts.bold, fontSize: 13.5 },
+  anchorDate: { color: colors.ink2, fontSize: 11, fontFamily: fonts.clock },
+  anchorTime: { color: colors.ink, fontSize: 16, fontFamily: fonts.clock },
 });

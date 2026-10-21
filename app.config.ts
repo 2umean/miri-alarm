@@ -55,7 +55,11 @@ const config: ExpoConfig = {
         // lifecycle or UIKit aborts them at launch on iOS 27 — that crash
         // shipped in 1.2.1. Moves React Native startup into Expo's scene
         // delegate. Drop on SDK 58+, whose template already does this.
-        ios: { enableSceneSupport: true },
+        // usePrecompiledModules: Expo's precompiled module xcframeworks are
+        // built with Swift 6.3.1 (Xcode 27.0), which Xcode 27.1's Swift 6.4
+        // refuses to import — build the modules from source instead. Drop once
+        // Expo ships xcframeworks built with the installed Xcode's Swift.
+        ios: { enableSceneSupport: true, usePrecompiledModules: false },
       },
     ],
     'expo-font',

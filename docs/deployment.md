@@ -127,6 +127,13 @@ eas submit -p android --profile production --path build-*.aab --non-interactive
   from Expo's `EXExpoAppSceneDelegate`. **Always QA iOS on an iOS 27 simulator runtime**
   (`xcodebuild -downloadPlatform iOS`), and confirm the built `Info.plist` has a
   `UIApplicationSceneManifest`. Drop the property on SDK 58+ (template adopts scenes).
+  (5) **Xcode 27.1 (Swift 6.4) can't import Expo 57's precompiled module xcframeworks** (built with
+  Swift 6.3.1): `failed to build module 'ExpoModulesCore'; this SDK is not supported by the compiler`.
+  Fixed by `expo-build-properties` `ios.usePrecompiledModules: false` (app.config.ts), which builds
+  the Expo modules from source. For an in-place `ios/` dir, also rebuild the locally cached
+  `ExpoModulesJSI` slice if you see `cannot find type '__ObjC::expo' in scope`:
+  `PODS_ROOT=$PWD/ios/Pods PLATFORM_NAME=iphonesimulator node_modules/expo-modules-jsi/apple/scripts/build-xcframework.sh --clean`
+  (the build phase kept a stale Swift 6.3.1 slice). Fresh EAS local builds don't hit this.
 
 - **Debug link fails with ~25 undefined `facebook::react::…getDebug…`/`Sealable`/`RCTPackagerConnection` arm64 symbols** (an `ld: cannot link directly with 'SwiftUICore'` *warning* appears alongside — it's a red herring, not the fatal error): the prebuilt RN core at `ios/Pods/React-Core-prebuilt/React.xcframework` is stuck on the **Release** flavor, which lacks those debug-only symbols. RN 0.85 swaps the framework Debug↔Release with a before-compile script (`react-native/scripts/replace-rncore-version.js`) keyed on `ios/Pods/React-Core-prebuilt/.last_build_configuration`; if that marker file is lost (e.g. an interrupted build after an in-place Release build), the script assumes the pristine Debug install from `pod install` and never swaps back — and `pod install` won't fix it because the pod itself is unchanged. **Diagnose:** `stat -f%z ios/Pods/React-Core-prebuilt/React.xcframework/ios-arm64_x86_64-simulator/React.framework/React` — Release ≈ 24 MB, Debug ≈ 132 MB (RN 0.85.3). **Repair:** `printf 'Release' > ios/Pods/React-Core-prebuilt/.last_build_configuration` then rebuild (the script re-extracts the Debug flavor from `ios/Pods/ReactNativeCore-artifacts/`), or the sledgehammer `npx expo prebuild -p ios --clean`. Hermes uses the same mechanism (`ios/Pods/hermes-engine/.last_build_configuration`) and can wedge the same way. Fixed this way 2026-07-27 on the admob branch.
 
