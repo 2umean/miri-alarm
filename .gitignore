@@ -11,6 +11,9 @@ npm-debug.log*
 yarn-error.log*
 *.log
 
+# Python (store-listing screenshot scripts)
+__pycache__/
+
 # Expo / React Native (generated)
 .expo/
 .expo-shared/
