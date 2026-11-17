@@ -4,8 +4,8 @@ export type YMD = { year: number; month: number; day: number };
 
 /**
  * Resolve a wall-clock time in `zone` to the soonest future instant strictly after `nowMs`.
- * With an explicit date, resolves that date. Luxon resolves DST-nonexistent local times
- * forward and ambiguous (fall-back) times to the earlier offset, matching the spec policy.
+ * With an explicit date, resolves that date. DST-nonexistent local times shift forward and
+ * ambiguous (fall-back) times resolve to the earlier offset, matching the spec policy.
  */
 export function resolveArrivalInstant(
   hour: number,
@@ -16,7 +16,10 @@ export function resolveArrivalInstant(
 ): number {
   const now = DateTime.fromMillis(nowMs, { zone });
   let target = date
-    ? DateTime.fromObject({ ...date, hour, minute, second: 0, millisecond: 0 }, { zone })
+    ? DateTime.utc(date.year, date.month, date.day)
+        .minus({ days: 1 })
+        .setZone(zone)
+        .set({ ...date, hour, minute, second: 0, millisecond: 0 })
     : now.set({ hour, minute, second: 0, millisecond: 0 });
   if (!date && target <= now) {
     target = target.plus({ days: 1 });
