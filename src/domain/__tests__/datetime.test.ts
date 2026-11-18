@@ -1,4 +1,4 @@
-import { DateTime } from 'luxon';
+import { DateTime, Settings } from 'luxon';
 import { resolveArrivalInstant, toLocalClock, relativeDayLabel, instantToYMD } from '../datetime';
 
 const nowAt = (zone: string, y: number, mo: number, d: number, h: number, mi: number) =>
@@ -42,12 +42,21 @@ test('toLocalClock formats HH:mm in zone', () => {
   expect(toLocalClock(ms, 'Asia/Seoul')).toBe('03:45');
 });
 
-test('a fall-back ambiguous local time resolves to the EARLIER occurrence', () => {
-  // US Eastern 2026-11-01: clocks fall back 02:00 EDT -> 01:00 EST, so 01:30 occurs twice.
-  // Spec policy: resolve to the earlier occurrence (EDT, offset -240).
-  const now = nowAt('America/New_York', 2026, 10, 31, 12, 0);
-  const ms = resolveArrivalInstant(1, 30, 'America/New_York', now, { year: 2026, month: 11, day: 1 });
-  expect(DateTime.fromMillis(ms, { zone: 'America/New_York' }).offset).toBe(-240); // EDT, the earlier 01:30
+describe('a fall-back ambiguous local time resolves to the EARLIER occurrence', () => {
+  const systemNow = Settings.now;
+  afterEach(() => {
+    Settings.now = systemNow;
+  });
+
+  test.each([
+    ['before the fall-back', '2026-10-20T12:00:00Z'],
+    ['after the fall-back', '2026-11-17T12:00:00Z'],
+  ])('with the system clock %s', (_label, systemClock) => {
+    Settings.now = () => Date.parse(systemClock);
+    const now = Date.parse('2026-10-31T16:00:00Z');
+    const ms = resolveArrivalInstant(1, 30, 'America/New_York', now, { year: 2026, month: 11, day: 1 });
+    expect(DateTime.fromMillis(ms, { zone: 'America/New_York' }).toFormat('HH:mm ZZ')).toBe('01:30 -04:00');
+  });
 });
 
 test('relativeDayLabel detects previous day', () => {
